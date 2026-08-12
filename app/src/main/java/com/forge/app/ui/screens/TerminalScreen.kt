@@ -1,0 +1,165 @@
+package com.forge.app.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.forge.app.ui.theme.*
+
+data class TerminalLine(
+    val type: String, // CMD, TX, RX
+    val text: String
+)
+
+@Composable
+fun TerminalScreen() {
+    var cmdInput by remember { mutableStateOf("01 0C") }
+    val logs = remember {
+        mutableStateListOf(
+            TerminalLine("RX", "ELM327 v2.1 Initialized"),
+            TerminalLine("TX", "AT Z"),
+            TerminalLine("RX", "ELM327 v2.1"),
+            TerminalLine("TX", "AT SP 6"),
+            TerminalLine("RX", "OK (ISO 15765-4 CAN 11/500)"),
+            TerminalLine("TX", "01 00"),
+            TerminalLine("RX", "41 00 BE 3F A8 13")
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Header
+        Surface(
+            color = ForgeSurface,
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ForgeGreen)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.Terminal, contentDescription = null, tint = ForgeGreen)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "ELM327 RAW DIAGNOSTIC TERMINAL",
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        color = ForgeGreen
+                    )
+                }
+                Text(
+                    text = "Baud Rate: 38400 • Protocol: AUTO (ISO 15765-4)",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Terminal Log View
+        Surface(
+            color = Color.Black,
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ForgeGreen),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            LazyColumn(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(logs) { line ->
+                    val color = when (line.type) {
+                        "TX" -> ForgeAmber
+                        "RX" -> ForgeGreen
+                        else -> ForgeCyan
+                    }
+                    Text(
+                        text = "[${line.type}] ${line.text}",
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = color
+                    )
+                }
+            }
+        }
+
+        // Quick Command Pills
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = {
+                    logs.add(TerminalLine("TX", "01 0C"))
+                    logs.add(TerminalLine("RX", "41 0C 0D 80 (864 RPM)"))
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = ForgeSurfaceVariant)
+            ) { Text("01 0C (RPM)", fontSize = 10.sp, fontFamily = FontFamily.Monospace) }
+
+            Button(
+                onClick = {
+                    logs.add(TerminalLine("TX", "03"))
+                    logs.add(TerminalLine("RX", "43 02 03 00 01 71"))
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = ForgeSurfaceVariant)
+            ) { Text("03 (Get DTCs)", fontSize = 10.sp, fontFamily = FontFamily.Monospace) }
+
+            Button(
+                onClick = {
+                    logs.add(TerminalLine("TX", "AT RV"))
+                    logs.add(TerminalLine("RX", "14.2V"))
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = ForgeSurfaceVariant)
+            ) { Text("AT RV (Volts)", fontSize = 10.sp, fontFamily = FontFamily.Monospace) }
+        }
+
+        // Input Line
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = cmdInput,
+                onValueChange = { cmdInput = it.uppercase() },
+                placeholder = { Text("Enter OBD PID or AT command...") },
+                modifier = Modifier.weight(1f),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = ForgeGreen,
+                    unfocusedBorderColor = ForgeBorder,
+                    focusedContainerColor = ForgeSurface,
+                    unfocusedContainerColor = ForgeSurface
+                ),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = {
+                    if (cmdInput.isNotBlank()) {
+                        logs.add(TerminalLine("TX", cmdInput))
+                        logs.add(TerminalLine("RX", "41 ${cmdInput.take(2)} OK"))
+                        cmdInput = ""
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = ForgeGreen, contentColor = Color.Black),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Icon(imageVector = Icons.Default.Send, contentDescription = "Send")
+            }
+        }
+    }
+}

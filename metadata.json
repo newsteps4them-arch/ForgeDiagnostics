@@ -1,0 +1,13 @@
+{
+  "name": "Team Forge: Engineering Suite",
+  "description": "Professional-grade hardware-software integration, automotive diagnostics, and high-performance workshop management tool.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "bluetooth",
+    "usb"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
