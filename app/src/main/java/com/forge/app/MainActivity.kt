@@ -33,6 +33,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var usbHardwareService: UsbHardwareCommunicationService
     private lateinit var telemetryService: ObdTelemetryService
     private lateinit var authAndSyncService: com.forge.app.services.AuthAndSyncService
+    private lateinit var geminiService: com.forge.app.services.GeminiService
+    private lateinit var agentOrchestrator: com.forge.app.services.ForgeAgentOrchestrator
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,6 +45,15 @@ class MainActivity : ComponentActivity() {
         usbHardwareService = UsbHardwareCommunicationService(lifecycleScope)
         telemetryService = ObdTelemetryService(lifecycleScope, usbHardwareService)
         authAndSyncService = com.forge.app.services.AuthAndSyncService(repository = repository)
+        geminiService = com.forge.app.services.GeminiService()
+        agentOrchestrator = com.forge.app.services.ForgeAgentOrchestrator(
+            scope = lifecycleScope,
+            repository = repository,
+            usbHardwareService = usbHardwareService,
+            telemetryService = telemetryService,
+            authAndSyncService = authAndSyncService,
+            geminiService = geminiService
+        )
 
 
         // Seed initial sample vehicle, project, task, and inventory if database is fresh
@@ -244,6 +255,7 @@ class MainActivity : ComponentActivity() {
                                 "wiring" -> WiringDiagramsScreen()
                                 "time_clock" -> TimeClockScreen()
                                 "crm" -> CrmDashboardScreen()
+                                "orchestrator" -> AgentOrchestratorScreen(orchestrator = agentOrchestrator)
                                 "settings" -> SettingsScreen(
                                     currentConnectionType = telemetry.connectionType,
                                     authAndSyncService = authAndSyncService,

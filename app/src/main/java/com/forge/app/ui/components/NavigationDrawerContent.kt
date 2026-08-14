@@ -47,6 +47,7 @@ val drawerMenuItems = listOf(
     DrawerMenuItem("crm", "CRM & Job Status", "Customer jobs & vehicle updates", "WORKSHOP MANAGEMENT", Icons.Default.People),
 
     // Settings
+    DrawerMenuItem("orchestrator", "Agent Orchestrator", "Multi-tier AI & HW Agents", "SYSTEM", Icons.Default.SmartToy),
     DrawerMenuItem("settings", "System Settings", "Dongle connection & units", "SYSTEM", Icons.Default.Settings)
 )
 

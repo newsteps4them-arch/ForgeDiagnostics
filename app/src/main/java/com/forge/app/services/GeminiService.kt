@@ -616,3 +616,14 @@ object GeminiClient {
     }
 }
 
+class GeminiService {
+    suspend fun generateDiagnosticAnalysis(prompt: String): String {
+        return GeminiClient.queryAssistant(
+            prompt = prompt,
+            skill = AssistantSkill.GENERAL,
+            vehicleContext = "Active Fleet Context",
+            telemetryContext = "USB OTG Stream Active"
+        )
+    }
+}
+
