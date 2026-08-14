@@ -132,3 +132,46 @@ interface ChatMessageDao {
     suspend fun clearChatHistory()
 }
 
+@Dao
+interface ObdTelemetryDao {
+    @Query("SELECT * FROM obd_telemetry_records ORDER BY timestamp DESC")
+    fun getAllTelemetryRecords(): Flow<List<ObdTelemetryRecordEntity>>
+
+    @Query("SELECT * FROM obd_telemetry_records WHERE vin = :vin ORDER BY timestamp DESC")
+    fun getTelemetryForVin(vin: String): Flow<List<ObdTelemetryRecordEntity>>
+
+    @Query("SELECT * FROM obd_telemetry_records ORDER BY timestamp DESC LIMIT 1")
+    fun getLatestTelemetryRecord(): Flow<ObdTelemetryRecordEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTelemetryRecord(record: ObdTelemetryRecordEntity): Long
+
+    @Query("DELETE FROM obd_telemetry_records")
+    suspend fun clearTelemetryRecords()
+}
+
+@Dao
+interface DtcErrorCodeDao {
+    @Query("SELECT * FROM dtc_error_codes ORDER BY timestamp DESC")
+    fun getAllDtcCodes(): Flow<List<DtcErrorCodeEntity>>
+
+    @Query("SELECT * FROM dtc_error_codes WHERE vin = :vin ORDER BY timestamp DESC")
+    fun getDtcCodesForVin(vin: String): Flow<List<DtcErrorCodeEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDtcCode(dtc: DtcErrorCodeEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDtcCodes(dtcs: List<DtcErrorCodeEntity>)
+
+    @Query("DELETE FROM dtc_error_codes WHERE id = :id")
+    suspend fun deleteDtcCodeById(id: Long)
+
+    @Query("DELETE FROM dtc_error_codes WHERE vin = :vin")
+    suspend fun clearDtcCodesForVin(vin: String)
+
+    @Query("DELETE FROM dtc_error_codes")
+    suspend fun clearAllDtcCodes()
+}
+
+

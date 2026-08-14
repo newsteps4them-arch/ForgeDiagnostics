@@ -48,5 +48,23 @@ class ForgeRepository(private val db: AppDatabase) {
     suspend fun saveSetting(key: String, value: String) {
         db.userSettingDao().saveSetting(UserSettingEntity(key, value))
     }
+
+    // OBD-II Real-time Telemetry & DTC Methods
+    val telemetryRecords: Flow<List<ObdTelemetryRecordEntity>> = db.obdTelemetryDao().getAllTelemetryRecords()
+    val dtcErrorCodes: Flow<List<DtcErrorCodeEntity>> = db.dtcErrorCodeDao().getAllDtcCodes()
+    val latestTelemetryRecord: Flow<ObdTelemetryRecordEntity?> = db.obdTelemetryDao().getLatestTelemetryRecord()
+
+    fun getTelemetryForVin(vin: String): Flow<List<ObdTelemetryRecordEntity>> = db.obdTelemetryDao().getTelemetryForVin(vin)
+    fun getDtcCodesForVin(vin: String): Flow<List<DtcErrorCodeEntity>> = db.dtcErrorCodeDao().getDtcCodesForVin(vin)
+
+    suspend fun addTelemetryRecord(record: ObdTelemetryRecordEntity): Long = db.obdTelemetryDao().insertTelemetryRecord(record)
+    suspend fun clearTelemetryRecords() = db.obdTelemetryDao().clearTelemetryRecords()
+
+    suspend fun addDtcCode(dtc: DtcErrorCodeEntity): Long = db.dtcErrorCodeDao().insertDtcCode(dtc)
+    suspend fun addDtcCodes(dtcs: List<DtcErrorCodeEntity>) = db.dtcErrorCodeDao().insertDtcCodes(dtcs)
+    suspend fun deleteDtcCodeById(id: Long) = db.dtcErrorCodeDao().deleteDtcCodeById(id)
+    suspend fun clearDtcCodesForVin(vin: String) = db.dtcErrorCodeDao().clearDtcCodesForVin(vin)
+    suspend fun clearAllDtcCodes() = db.dtcErrorCodeDao().clearAllDtcCodes()
 }
+
 

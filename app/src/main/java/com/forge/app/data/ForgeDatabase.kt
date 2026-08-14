@@ -14,9 +14,11 @@ import androidx.room.RoomDatabase
         WorkOrderEntity::class,
         DiagnosticLogEntity::class,
         UserSettingEntity::class,
-        ChatMessageEntity::class
+        ChatMessageEntity::class,
+        ObdTelemetryRecordEntity::class,
+        DtcErrorCodeEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -28,6 +30,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun diagnosticLogDao(): DiagnosticLogDao
     abstract fun userSettingDao(): UserSettingDao
     abstract fun chatMessageDao(): ChatMessageDao
+    abstract fun obdTelemetryDao(): ObdTelemetryDao
+    abstract fun dtcErrorCodeDao(): DtcErrorCodeDao
 
     companion object {
         @Volatile

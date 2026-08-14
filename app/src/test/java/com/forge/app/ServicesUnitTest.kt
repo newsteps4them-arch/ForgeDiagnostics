@@ -1,5 +1,9 @@
 package com.forge.app
 
+import com.forge.app.data.DtcErrorCodeEntity
+import com.forge.app.data.ObdSensorPidData
+import com.forge.app.data.ObdTelemetryRecordEntity
+import com.forge.app.data.ObdTelemetrySnapshot
 import com.forge.app.data.VehicleEntity
 import com.forge.app.services.*
 import org.junit.Assert.*
@@ -8,7 +12,71 @@ import org.junit.Test
 class ServicesUnitTest {
 
     @Test
+    fun testObdTelemetryRecordEntityAndSnapshot() {
+        val record = ObdTelemetryRecordEntity(
+            vin = "1G1YC2D70H5100001",
+            engineRpm = 2450,
+            vehicleSpeedMph = 68,
+            coolantTempCelsius = 92,
+            intakeAirTempCelsius = 28,
+            throttlePositionPercent = 22.5f,
+            batteryVoltage = 14.1f,
+            boostPressurePsi = 12.4f,
+            dtcCodesFormatted = "P0300,P0171",
+            connectionType = "USB_OTG",
+            connectionStatusText = "Connected OTG"
+        )
+
+        assertEquals("1G1YC2D70H5100001", record.vin)
+        assertEquals(2450, record.engineRpm)
+        assertEquals(68, record.vehicleSpeedMph)
+        assertEquals(92, record.coolantTempCelsius)
+        assertEquals("P0300,P0171", record.dtcCodesFormatted)
+
+        val snapshot = ObdTelemetrySnapshot(
+            vin = record.vin,
+            rpm = record.engineRpm,
+            speedMph = record.vehicleSpeedMph,
+            coolantTempC = record.coolantTempCelsius,
+            activeDtcs = listOf("P0300", "P0171")
+        )
+
+        assertEquals(2, snapshot.activeDtcs.size)
+        assertEquals("P0300", snapshot.activeDtcs[0])
+
+        val pidData = ObdSensorPidData(
+            pidHex = "010C",
+            parameterName = "Engine RPM",
+            currentValue = "2450",
+            unit = "RPM",
+            status = "NORMAL"
+        )
+        assertEquals("010C", pidData.pidHex)
+        assertEquals("NORMAL", pidData.status)
+    }
+
+    @Test
+    fun testDtcErrorCodeEntity() {
+        val dtcEntity = DtcErrorCodeEntity(
+            vin = "1G1YC2D70H5100001",
+            dtcCode = "P0300",
+            systemCategory = "Powertrain",
+            description = "Random/Multiple Cylinder Misfire Detected",
+            status = "Stored",
+            severity = "High",
+            freezeFrameRpm = 2500,
+            freezeFrameCoolantTemp = 95
+        )
+
+        assertEquals("P0300", dtcEntity.dtcCode)
+        assertEquals("Powertrain", dtcEntity.systemCategory)
+        assertEquals("High", dtcEntity.severity)
+        assertEquals(2500, dtcEntity.freezeFrameRpm)
+    }
+
+    @Test
     fun testAgentTypesAndInitialState() {
+
         val frontendAgent = ForgeAgentType.FrontendUiAgent
         val hwAgent = ForgeAgentType.ClientHardwareAgent
         val telemetryAgent = ForgeAgentType.MiddlewareTelemetryAgent
