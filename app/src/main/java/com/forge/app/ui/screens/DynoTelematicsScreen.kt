@@ -49,7 +49,7 @@ fun DynoTelematicsScreen(
     var maxLateralG by remember { mutableStateOf(1.08f) }
 
     // Live calculated power based on RPM & Speed acceleration
-    val calculatedWHP = remember(telemetry.rpm, telemetry.speed) {
+    val calculatedWHP = remember(telemetry.rpm, telemetry.speedKmh) {
         val baseRpm = max(telemetry.rpm, 800)
         val volumetricEfficiency = 0.88f
         // Dynamic simulated dyno calculation with torque curve peak ~4400 RPM

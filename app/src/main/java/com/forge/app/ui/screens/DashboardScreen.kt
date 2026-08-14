@@ -1,5 +1,7 @@
 package com.forge.app.ui.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -22,6 +24,7 @@ import com.forge.app.data.ProjectEntity
 import com.forge.app.data.TaskEntity
 import com.forge.app.services.ObdTelemetryData
 import com.forge.app.ui.components.DashboardCoachMarkOverlay
+import com.forge.app.ui.components.ObdInstrumentCluster
 import com.forge.app.ui.components.ProjectDashboard
 import com.forge.app.ui.theme.*
 
@@ -40,6 +43,7 @@ fun DashboardScreen(
 ) {
     var showQuickStartGuide by remember { mutableStateOf(true) }
     var showCoachMarks by remember { mutableStateOf(false) }
+    var useRadialClusterView by remember { mutableStateOf(true) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -211,48 +215,93 @@ fun DashboardScreen(
             }
         }
 
-        // Live Gauge Metrics Row
+        // Live Gauge Metrics & Instrument Cluster Header
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                GaugeTile(
-                    title = "ENGINE RPM",
-                    value = "${telemetry.rpm}",
-                    unit = "RPM",
-                    color = ForgeAmber,
-                    modifier = Modifier.weight(1f)
+                Text(
+                    text = "REAL-TIME TELEMETRY CLUSTER",
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    color = ForgeAmber
                 )
-                GaugeTile(
-                    title = "VEHICLE SPEED",
-                    value = "${telemetry.speedKmh}",
-                    unit = "KM/H",
-                    color = ForgeCyan,
-                    modifier = Modifier.weight(1f)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    FilterChip(
+                        selected = useRadialClusterView,
+                        onClick = { useRadialClusterView = true },
+                        label = { Text("Gauges", fontSize = 10.sp, fontFamily = FontFamily.Monospace) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = ForgeAmber,
+                            selectedLabelColor = Color.Black
+                        )
+                    )
+                    FilterChip(
+                        selected = !useRadialClusterView,
+                        onClick = { useRadialClusterView = false },
+                        label = { Text("Tiles", fontSize = 10.sp, fontFamily = FontFamily.Monospace) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = ForgeAmber,
+                            selectedLabelColor = Color.Black
+                        )
+                    )
+                }
             }
         }
 
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                GaugeTile(
-                    title = "COOLANT TEMP",
-                    value = "${telemetry.coolantTempC}",
-                    unit = "°C",
-                    color = if (telemetry.coolantTempC > 105) ForgeRed else ForgeGreen,
-                    modifier = Modifier.weight(1f)
-                )
-                GaugeTile(
-                    title = "BATTERY VOLTS",
-                    value = "${telemetry.batteryVoltage}",
-                    unit = "VDC",
-                    color = ForgeGreen,
-                    modifier = Modifier.weight(1f)
-                )
+        if (useRadialClusterView) {
+            item {
+                ObdInstrumentCluster(telemetry = telemetry)
+            }
+        } else {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    GaugeTile(
+                        title = "ENGINE RPM",
+                        value = "${telemetry.rpm}",
+                        unit = "RPM",
+                        color = ForgeAmber,
+                        modifier = Modifier.weight(1f)
+                    )
+                    GaugeTile(
+                        title = "VEHICLE SPEED",
+                        value = "${telemetry.speedKmh}",
+                        unit = "KM/H",
+                        color = ForgeCyan,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    GaugeTile(
+                        title = "COOLANT TEMP",
+                        value = "${telemetry.coolantTempC}",
+                        unit = "°C",
+                        color = if (telemetry.coolantTempC > 105) ForgeRed else ForgeGreen,
+                        modifier = Modifier.weight(1f)
+                    )
+                    GaugeTile(
+                        title = "BATTERY VOLTS",
+                        value = "${telemetry.batteryVoltage}",
+                        unit = "VDC",
+                        color = ForgeGreen,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
 
@@ -421,6 +470,12 @@ fun OnboardingGuideCard(
 
 @Composable
 fun GaugeTile(title: String, value: String, unit: String, color: Color, modifier: Modifier = Modifier) {
+    val animatedColor by animateColorAsState(
+        targetValue = color,
+        animationSpec = tween(durationMillis = 200),
+        label = "tile_color_anim"
+    )
+
     Surface(
         color = ForgeSurface,
         shape = RoundedCornerShape(10.dp),
@@ -431,9 +486,24 @@ fun GaugeTile(title: String, value: String, unit: String, color: Color, modifier
             Text(text = title, fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(text = value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = color, fontFamily = FontFamily.Monospace)
+                AnimatedContent(
+                    targetState = value,
+                    transitionSpec = {
+                        (slideInVertically { height -> height / 2 } + fadeIn(tween(100))) togetherWith
+                                (slideOutVertically { height -> -height / 2 } + fadeOut(tween(100)))
+                    },
+                    label = "gauge_tile_anim"
+                ) { targetVal ->
+                    Text(
+                        text = targetVal,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = animatedColor,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(text = unit, fontSize = 11.sp, color = color, modifier = Modifier.padding(bottom = 3.dp))
+                Text(text = unit, fontSize = 11.sp, color = animatedColor, modifier = Modifier.padding(bottom = 3.dp))
             }
         }
     }

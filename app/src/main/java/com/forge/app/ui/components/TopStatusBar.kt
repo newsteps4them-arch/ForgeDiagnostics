@@ -1,14 +1,17 @@
 package com.forge.app.ui.components
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,6 +31,29 @@ fun TopStatusBar(
     onOpenAiChat: () -> Unit,
     onOpenDrawer: () -> Unit
 ) {
+    // Pulse animation for active OBD link heartbeat
+    val infiniteTransition = rememberInfiniteTransition(label = "status_pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "heartbeat_alpha"
+    )
+
+    // CAN bus live packet activity flicker
+    val canRxFlicker by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "can_rx_flicker"
+    )
+
     Surface(
         color = ForgeSurface,
         modifier = Modifier
@@ -72,6 +98,32 @@ fun TopStatusBar(
                                     color = ForgeAmber
                                 )
                             }
+
+                            // CAN Bus Rx/Tx Activity LED indicator
+                            if (telemetry.isConnected) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color(0xFF141721))
+                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(ForgeGreen.copy(alpha = canRxFlicker))
+                                    )
+                                    Text(
+                                        text = "CAN 10Hz",
+                                        fontSize = 8.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = ForgeGreen
+                                    )
+                                }
+                            }
                         }
                         Text(
                             text = activeVehicleName,
@@ -82,14 +134,17 @@ fun TopStatusBar(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // OBD Status Badge
+                    // OBD Status Badge with Live Heartbeat Pulse
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(if (telemetry.isConnected) ForgeGreen.copy(alpha = 0.15f) else ForgeRed.copy(alpha = 0.15f))
+                            .background(
+                                if (telemetry.isConnected) ForgeGreen.copy(alpha = pulseAlpha * 0.2f)
+                                else ForgeRed.copy(alpha = 0.15f)
+                            )
                             .border(
                                 width = 1.dp,
-                                color = if (telemetry.isConnected) ForgeGreen else ForgeRed,
+                                color = if (telemetry.isConnected) ForgeGreen.copy(alpha = pulseAlpha) else ForgeRed,
                                 shape = RoundedCornerShape(6.dp)
                             )
                             .clickable { onToggleConnection() }
@@ -113,7 +168,7 @@ fun TopStatusBar(
                         }
                     }
 
-                    // Gemini AI Assistant FAB
+                    // Gemini AI Assistant FAB with subtle breathing glow
                     IconButton(
                         onClick = onOpenAiChat,
                         modifier = Modifier
