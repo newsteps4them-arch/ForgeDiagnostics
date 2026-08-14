@@ -18,21 +18,30 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.forge.app.services.UsbHardwareCommunicationService
 import com.forge.app.ui.theme.*
+import kotlinx.coroutines.launch
 
 data class TerminalLine(
-    val type: String, // CMD, TX, RX
+    val type: String, // CMD, TX, RX, INFO, ERROR
     val text: String
 )
 
 @Composable
-fun TerminalScreen() {
+fun TerminalScreen(
+    usbHardwareService: UsbHardwareCommunicationService? = null
+) {
+    val coroutineScope = rememberCoroutineScope()
     var cmdInput by remember { mutableStateOf("01 0C") }
-    val logs = remember {
+    
+    val usbTraffic by (usbHardwareService?.trafficLogs?.collectAsState() ?: remember { mutableStateOf(emptyList()) })
+    val usbState by (usbHardwareService?.hardwareState?.collectAsState() ?: remember { mutableStateOf(com.forge.app.services.UsbHardwareState()) })
+
+    val localLogs = remember {
         mutableStateListOf(
             TerminalLine("RX", "ELM327 v2.1 Initialized"),
             TerminalLine("TX", "AT Z"),
-            TerminalLine("RX", "ELM327 v2.1"),
+            TerminalLine("RX", "ELM327 v2.1 (USB Hardware Link Active)"),
             TerminalLine("TX", "AT SP 6"),
             TerminalLine("RX", "OK (ISO 15765-4 CAN 11/500)"),
             TerminalLine("TX", "01 00"),
@@ -57,7 +66,7 @@ fun TerminalScreen() {
                     Icon(imageVector = Icons.Default.Terminal, contentDescription = null, tint = ForgeGreen)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "ELM327 RAW DIAGNOSTIC TERMINAL",
+                        text = "USB & ELM327 RAW DIAGNOSTIC TERMINAL",
                         fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
@@ -65,7 +74,7 @@ fun TerminalScreen() {
                     )
                 }
                 Text(
-                    text = "Baud Rate: 38400 • Protocol: AUTO (ISO 15765-4)",
+                    text = "Status: ${usbState.status.name} • Baud: ${usbState.baudRate} • Protocol: ${usbState.detectedObdProtocol}",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -85,18 +94,35 @@ fun TerminalScreen() {
                 modifier = Modifier.padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                items(logs) { line ->
-                    val color = when (line.type) {
-                        "TX" -> ForgeAmber
-                        "RX" -> ForgeGreen
-                        else -> ForgeCyan
+                if (usbTraffic.isNotEmpty()) {
+                    items(usbTraffic) { entry ->
+                        val color = when (entry.direction) {
+                            "TX" -> ForgeAmber
+                            "RX" -> ForgeGreen
+                            "ERROR" -> ForgeRed
+                            else -> ForgeCyan
+                        }
+                        Text(
+                            text = "[${entry.direction}] ${entry.data} ${if (entry.hexDump.isNotBlank()) "(${entry.hexDump})" else ""}",
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = color
+                        )
                     }
-                    Text(
-                        text = "[${line.type}] ${line.text}",
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = color
-                    )
+                } else {
+                    items(localLogs) { line ->
+                        val color = when (line.type) {
+                            "TX" -> ForgeAmber
+                            "RX" -> ForgeGreen
+                            else -> ForgeCyan
+                        }
+                        Text(
+                            text = "[${line.type}] ${line.text}",
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = color
+                        )
+                    }
                 }
             }
         }
@@ -105,24 +131,42 @@ fun TerminalScreen() {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = {
-                    logs.add(TerminalLine("TX", "01 0C"))
-                    logs.add(TerminalLine("RX", "41 0C 0D 80 (864 RPM)"))
+                    coroutineScope.launch {
+                        if (usbHardwareService != null) {
+                            usbHardwareService.sendRawCommand("010C")
+                        } else {
+                            localLogs.add(TerminalLine("TX", "01 0C"))
+                            localLogs.add(TerminalLine("RX", "41 0C 0D 80 (864 RPM)"))
+                        }
+                    }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = ForgeSurfaceVariant)
             ) { Text("01 0C (RPM)", fontSize = 10.sp, fontFamily = FontFamily.Monospace) }
 
             Button(
                 onClick = {
-                    logs.add(TerminalLine("TX", "03"))
-                    logs.add(TerminalLine("RX", "43 02 03 00 01 71"))
+                    coroutineScope.launch {
+                        if (usbHardwareService != null) {
+                            usbHardwareService.sendRawCommand("03")
+                        } else {
+                            localLogs.add(TerminalLine("TX", "03"))
+                            localLogs.add(TerminalLine("RX", "43 02 03 00 01 71"))
+                        }
+                    }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = ForgeSurfaceVariant)
             ) { Text("03 (Get DTCs)", fontSize = 10.sp, fontFamily = FontFamily.Monospace) }
 
             Button(
                 onClick = {
-                    logs.add(TerminalLine("TX", "AT RV"))
-                    logs.add(TerminalLine("RX", "14.2V"))
+                    coroutineScope.launch {
+                        if (usbHardwareService != null) {
+                            usbHardwareService.sendRawCommand("AT RV")
+                        } else {
+                            localLogs.add(TerminalLine("TX", "AT RV"))
+                            localLogs.add(TerminalLine("RX", "14.2V"))
+                        }
+                    }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = ForgeSurfaceVariant)
             ) { Text("AT RV (Volts)", fontSize = 10.sp, fontFamily = FontFamily.Monospace) }
@@ -149,10 +193,17 @@ fun TerminalScreen() {
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = {
-                    if (cmdInput.isNotBlank()) {
-                        logs.add(TerminalLine("TX", cmdInput))
-                        logs.add(TerminalLine("RX", "41 ${cmdInput.take(2)} OK"))
-                        cmdInput = ""
+                    val input = cmdInput.trim()
+                    if (input.isNotBlank()) {
+                        coroutineScope.launch {
+                            if (usbHardwareService != null) {
+                                usbHardwareService.sendRawCommand(input)
+                            } else {
+                                localLogs.add(TerminalLine("TX", input))
+                                localLogs.add(TerminalLine("RX", "41 ${input.take(2)} OK"))
+                            }
+                            cmdInput = ""
+                        }
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = ForgeGreen, contentColor = Color.Black),

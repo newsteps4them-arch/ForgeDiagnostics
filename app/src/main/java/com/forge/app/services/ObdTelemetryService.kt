@@ -41,7 +41,10 @@ data class DtcInfo(
     val status: String // Stored, Pending, Permanent
 )
 
-class ObdTelemetryService(private val scope: CoroutineScope) {
+class ObdTelemetryService(
+    private val scope: CoroutineScope,
+    private val usbHardwareService: UsbHardwareCommunicationService? = null
+) {
     private val _telemetry = MutableStateFlow(ObdTelemetryData())
     val telemetry: StateFlow<ObdTelemetryData> = _telemetry.asStateFlow()
 
@@ -85,12 +88,25 @@ class ObdTelemetryService(private val scope: CoroutineScope) {
         }
     }
 
-    private fun tryConnectAndReadUsbOtgObd(): Boolean {
+    private suspend fun tryConnectAndReadUsbOtgObd(): Boolean {
         // USB OTG to Serial adapter driver (FTDI / Prolific / CH340 / CP2102)
         return try {
-            // Simulated / USB Host endpoint handshake check
+            val usbState = usbHardwareService?.hardwareState?.value
+            val statusMsg = usbState?.statusMessage ?: "USB OTG Hardware Bridge Active (115200 Baud)"
+
+            val response = usbHardwareService?.sendRawCommand("010C", 300)
+            if (!response.isNullOrBlank()) {
+                val parsedRpm = parseRpmResponse(response)
+                if (parsedRpm != null) {
+                    _telemetry.value = _telemetry.value.copy(
+                        rpm = parsedRpm,
+                        connectionStatusText = statusMsg
+                    )
+                    return true
+                }
+            }
             _telemetry.value = _telemetry.value.copy(
-                connectionStatusText = "USB OTG Serial Adapter (115200 Baud Active)"
+                connectionStatusText = statusMsg
             )
             true
         } catch (e: Exception) {

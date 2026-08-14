@@ -26,21 +26,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import androidx.compose.ui.platform.LocalContext
 import com.forge.app.services.AuthAndSyncService
+import com.forge.app.services.UsbHardwareCommunicationService
+import com.forge.app.services.UsbConnectionStatus
+import androidx.compose.material.icons.filled.Usb
 import com.forge.app.ui.theme.*
 
 @Composable
 fun SettingsScreen(
     currentConnectionType: String = "SIMULATED",
     authAndSyncService: AuthAndSyncService? = null,
+    usbHardwareService: UsbHardwareCommunicationService? = null,
     onConnectionTypeChange: (String) -> Unit,
     onResetDatabase: () -> Unit
 ) {
+    val context = LocalContext.current
     var apiKeyInput by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
 
     val userProfile by (authAndSyncService?.currentUser?.collectAsState() ?: remember { mutableStateOf(com.forge.app.services.UserProfile()) })
     val syncStatus by (authAndSyncService?.syncStatus?.collectAsState() ?: remember { mutableStateOf(com.forge.app.services.SyncStatus()) })
+    val usbState by (usbHardwareService?.hardwareState?.collectAsState() ?: remember { mutableStateOf(com.forge.app.services.UsbHardwareState()) })
 
     Column(
         modifier = Modifier
@@ -280,6 +287,148 @@ fun SettingsScreen(
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // USB Hardware Communication Diagnostic Card
+        Surface(
+            color = ForgeSurface,
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ForgeGreen)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Default.Usb, contentDescription = null, tint = ForgeGreen)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "USB HARDWARE HOST & SCANNER DRIVER",
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = ForgeGreen,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Surface(
+                        color = when (usbState.status) {
+                            UsbConnectionStatus.CONNECTED -> ForgeGreen.copy(alpha = 0.2f)
+                            UsbConnectionStatus.CONNECTING, UsbConnectionStatus.SCANNING -> ForgeAmber.copy(alpha = 0.2f)
+                            else -> ForgeSurfaceVariant
+                        },
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = usbState.status.name,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            color = when (usbState.status) {
+                                UsbConnectionStatus.CONNECTED -> ForgeGreen
+                                UsbConnectionStatus.CONNECTING, UsbConnectionStatus.SCANNING -> ForgeAmber
+                                else -> ForgeOnSurfaceVariant
+                            },
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Text(
+                    text = usbState.statusMessage,
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = ForgeOnSurface
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { usbHardwareService?.scanUsbDevices(context) },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForgeSurfaceVariant, contentColor = ForgeGreen),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Scan USB Bus", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    if (usbState.status == UsbConnectionStatus.CONNECTED) {
+                        OutlinedButton(
+                            onClick = { usbHardwareService?.disconnect() },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ForgeRed),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ForgeRed),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Disconnect USB", fontSize = 11.sp)
+                        }
+                    }
+                }
+
+                if (usbState.availableDevices.isNotEmpty()) {
+                    Text(
+                        "DETECTED USB HARDWARE DEVICES:",
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = ForgeAmber,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    usbState.availableDevices.forEach { devInfo ->
+                        Surface(
+                            color = ForgeSurfaceVariant.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(6.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ForgeBorder),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = devInfo.chipsetVendor,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ForgeOnSurface
+                                    )
+                                    Text(
+                                        text = "VID: 0x${devInfo.vendorId.toString(16).uppercase()} | PID: 0x${devInfo.productId.toString(16).uppercase()} | ${devInfo.deviceName}",
+                                        fontSize = 10.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = ForgeOnSurfaceVariant
+                                    )
+                                }
+
+                                Button(
+                                    onClick = {
+                                        val usbMgr = context.getSystemService(android.content.Context.USB_SERVICE) as? android.hardware.usb.UsbManager
+                                        val deviceObj = usbMgr?.deviceList?.values?.firstOrNull { it.deviceName == devInfo.deviceName }
+                                        if (deviceObj != null) {
+                                            usbHardwareService?.requestUsbPermission(context, deviceObj)
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = ForgeGreen, contentColor = Color.Black),
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(if (devInfo.hasPermission) "Connect" else "Grant Access", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Protocol: ${usbState.detectedObdProtocol}", fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = ForgeCyan)
+                    Text("TX: ${usbState.txByteCount}B | RX: ${usbState.rxByteCount}B", fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = ForgeAmber)
                 }
             }
         }

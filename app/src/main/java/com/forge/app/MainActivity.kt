@@ -19,6 +19,7 @@ import com.forge.app.data.TaskEntity
 import com.forge.app.data.VehicleEntity
 import com.forge.app.data.WorkOrderEntity
 import com.forge.app.services.ObdTelemetryService
+import com.forge.app.services.UsbHardwareCommunicationService
 import com.forge.app.ui.components.BottomNavBar
 import com.forge.app.ui.components.GeminiChatSheet
 import com.forge.app.ui.components.NavigationDrawerContent
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var repository: ForgeRepository
+    private lateinit var usbHardwareService: UsbHardwareCommunicationService
     private lateinit var telemetryService: ObdTelemetryService
     private lateinit var authAndSyncService: com.forge.app.services.AuthAndSyncService
 
@@ -38,7 +40,8 @@ class MainActivity : ComponentActivity() {
 
         val db = AppDatabase.getDatabase(applicationContext)
         repository = ForgeRepository(db)
-        telemetryService = ObdTelemetryService(lifecycleScope)
+        usbHardwareService = UsbHardwareCommunicationService(lifecycleScope)
+        telemetryService = ObdTelemetryService(lifecycleScope, usbHardwareService)
         authAndSyncService = com.forge.app.services.AuthAndSyncService(repository = repository)
 
 
@@ -200,7 +203,7 @@ class MainActivity : ComponentActivity() {
                                 "topology" -> TopologyScreen()
                                 "guided_diag" -> GuidedDiagnosticsScreen()
                                 "oscilloscope" -> OscilloscopeScreen()
-                                "terminal" -> TerminalScreen()
+                                "terminal" -> TerminalScreen(usbHardwareService = usbHardwareService)
                                 "garage" -> GarageScreen(
                                     vehicles = vehicles,
                                     onAddVehicle = { vin, make, model, year ->
@@ -244,6 +247,7 @@ class MainActivity : ComponentActivity() {
                                 "settings" -> SettingsScreen(
                                     currentConnectionType = telemetry.connectionType,
                                     authAndSyncService = authAndSyncService,
+                                    usbHardwareService = usbHardwareService,
                                     onConnectionTypeChange = { type -> telemetryService.setConnectionType(type) },
                                     onResetDatabase = {
                                         lifecycleScope.launch {
@@ -317,6 +321,14 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::usbHardwareService.isInitialized) {
+            usbHardwareService.unregisterPermissionReceiver(applicationContext)
+            usbHardwareService.disconnect()
         }
     }
 }

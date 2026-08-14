@@ -1,20 +1,21 @@
 # Team Forge: Engineering Suite
 
-[![Download Android APK](https://img.shields.io/badge/Download-Android%20APK-00E676?style=for-the-badge&logo=android&logoColor=black)](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases/latest)
-[![Latest Release](https://img.shields.io/github/v/release/newsteps4them-arch/ForgeDiagnostics?style=for-the-badge&color=2196F3)](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases)
+[![Direct APK Download](https://img.shields.io/badge/⚡_Direct_Download-Android_.APK-00E676?style=for-the-badge&logo=android&logoColor=black)](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases/latest/download/Forge-debug-1.0.0.apk)
+[![Releases Page](https://img.shields.io/github/v/release/newsteps4them-arch/ForgeDiagnostics?style=for-the-badge&color=2196F3)](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases)
 
 Native Android application built with **Kotlin** and **Jetpack Compose**, featuring a high-end hardware diagnostic tool aesthetic.
 
 ---
 
-## 📲 Download & Install APK
+## ⚡ 1-Step Direct APK Download
 
-You can download the compiled Android APK directly to install on your Android phone, tablet, or diagnostic scan tool:
+Tap the button below to instantly download the `.apk` file directly to your device with 1 click:
 
-1. 📥 **[Download Latest APK Releases](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases/latest)**
-2. Select `Forge-debug-1.0.0.apk` (or the latest release `.apk`) from the **Assets** section at the bottom of the release page.
-3. On your Android device, tap the downloaded `.apk` file to install.
-   *(Note: If prompted, enable **"Install from Unknown Sources"** or **"Allow from this source"** in your device Settings).*
+👉 **[📥 Instant 1-Step APK Download (Forge-debug-1.0.0.apk)](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases/latest/download/Forge-debug-1.0.0.apk)**
+
+> **Installation Note:** Once downloaded, open `Forge-debug-1.0.0.apk` from your browser or file manager and tap **Install**. If prompted, allow your browser permission to install apps from "Unknown Sources".
+
+For all releases and Google Play AAB bundles, visit the [GitHub Releases Page](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases).
 
 ---
 
