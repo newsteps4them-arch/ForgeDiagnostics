@@ -2,6 +2,9 @@
   "name": "team-forge-android",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0 <=26.x"
+  },
   "scripts": {
     "build": "echo 'Android Gradle Build'"
   }
