@@ -1,0 +1,75 @@
+name: Download APK for Sideloading
+
+on:
+  workflow_run:
+    workflows: ["Build Android APK"]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  download-apk:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Download Latest APK Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: app-ci-build-artifacts
+          path: ./apk-output
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      
+      - name: List Downloaded APKs
+        run: |
+          echo "=== Downloaded APKs ==="
+          ls -lah ./apk-output/
+          file ./apk-output/*
+      
+      - name: Create Release Notes
+        run: |
+          cat > ./apk-output/INSTALL_INSTRUCTIONS.txt << 'EOF'
+          # ForgeDiagnostics APK Installation Guide
+          
+          ## For Sideloading on Android:
+          
+          1. **Enable Developer Mode** (if not already enabled)
+             - Go to Settings > About Phone
+             - Tap "Build Number" 7 times
+             - Back to Settings > Developer Options
+             - Enable "USB Debugging"
+          
+          2. **Using ADB (Recommended)**
+             - Connect your Android device via USB
+             - Open terminal/command prompt
+             - Run: adb install ./Forge-debug.apk
+             
+             OR
+             
+             - Run: adb install ./Forge-release-unsigned.apk
+          
+          3. **Manual Installation**
+             - Transfer APK file to your Android device
+             - Open file manager and tap the APK file
+             - Tap "Install" (you may need to allow unknown sources)
+          
+          ## Download Location:
+          EOF
+          cat ./apk-output/INSTALL_INSTRUCTIONS.txt
+      
+      - name: Upload APK Summary as Artifact
+        uses: actions/upload-artifact@v8
+        with:
+          name: sideload-ready-apk
+          path: ./apk-output/
+          retention-days: 30
+
+      - name: Create GitHub Release (Optional)
+        uses: softprops/action-gh-release@v1
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          files: ./apk-output/*.apk
+          tag_name: ${{ github.run_number }}
+          body: "Auto-downloaded APK ready for sideloading"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
