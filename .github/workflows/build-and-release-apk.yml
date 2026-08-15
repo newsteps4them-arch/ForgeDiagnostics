@@ -43,37 +43,40 @@ jobs:
           gradle :app:assembleDebug :app:assembleRelease :app:bundleRelease
 
       - name: Locate and Rename Artifacts
+        id: artifacts
+        if: success()
         run: |
           mkdir -p artifacts
           
-          # Find and copy Debug APK
           DEBUG_APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -n 1)
           if [ -n "$DEBUG_APK" ]; then
             cp "$DEBUG_APK" "artifacts/Forge-debug-${{ steps.version.outputs.version }}.apk"
+            echo "debug_apk=artifacts/Forge-debug-${{ steps.version.outputs.version }}.apk" >> $GITHUB_OUTPUT
             echo "Found debug APK: $DEBUG_APK"
           else
             echo "Warning: Debug APK not found"
           fi
           
-          # Find and copy Release APK  
           RELEASE_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
           if [ -n "$RELEASE_APK" ]; then
             cp "$RELEASE_APK" "artifacts/Forge-release-unsigned-${{ steps.version.outputs.version }}.apk"
+            echo "release_apk=artifacts/Forge-release-unsigned-${{ steps.version.outputs.version }}.apk" >> $GITHUB_OUTPUT
             echo "Found release APK: $RELEASE_APK"
           else
             echo "Warning: Release APK not found"
           fi
           
-          # Find and copy Release AAB
           RELEASE_AAB=$(find app/build/outputs/bundle/release -name "*.aab" | head -n 1)
           if [ -n "$RELEASE_AAB" ]; then
             cp "$RELEASE_AAB" "artifacts/Forge-production-release-${{ steps.version.outputs.version }}.aab"
+            echo "release_aab=artifacts/Forge-production-release-${{ steps.version.outputs.version }}.aab" >> $GITHUB_OUTPUT
             echo "Found release AAB: $RELEASE_AAB"
           else
             echo "Warning: Release AAB not found"
           fi
 
       - name: Create GitHub Release
+        if: steps.artifacts.outputs.debug_apk != ''
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -84,17 +87,17 @@ jobs:
           name: "Forge Diagnostics v${{ steps.version.outputs.version }}"
           make_latest: true
           body: |
-            # 🏎️ Forge Diagnostics Native Android Release (v${{ steps.version.outputs.version }})
+            # Forge Diagnostics Native Android Release (v${{ steps.version.outputs.version }})
             
             **Version:** ${{ steps.version.outputs.version }}
             
-            ## 📦 Downloadable Assets
-            - 📲 **Pre-signed Debug APK (Install Directly):** `Forge-debug-${{ steps.version.outputs.version }}.apk`
-            - 🔑 **Unsigned Production Release APK:** `Forge-release-unsigned-${{ steps.version.outputs.version }}.apk`
-            - 🚀 **Google Play App Bundle (AAB):** `Forge-production-release-${{ steps.version.outputs.version }}.aab`
+            ## Downloadable Assets
+            - Pre-signed Debug APK: `Forge-debug-${{ steps.version.outputs.version }}.apk`
+            - Unsigned Production Release APK: `Forge-release-unsigned-${{ steps.version.outputs.version }}.apk`
+            - Google Play App Bundle (AAB): `Forge-production-release-${{ steps.version.outputs.version }}.aab`
             
-            ## ⚡ Direct 1-Step Installation
-            1. Download `Forge-debug-${{ steps.version.outputs.version }}.apk` directly onto your Android device or diagnostic tool.
+            ## Direct Installation
+            1. Download `Forge-debug-${{ steps.version.outputs.version }}.apk` directly onto your Android device.
             2. Tap the downloaded file and select **Install**.
             *(If prompted, enable "Install from unknown sources" in device Settings).*
           draft: false
@@ -103,9 +106,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload APKs and AAB as artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: app-production-ready-artifacts
           path: artifacts/*
           retention-days: 30
-
