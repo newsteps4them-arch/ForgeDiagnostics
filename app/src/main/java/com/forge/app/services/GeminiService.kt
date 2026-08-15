@@ -237,6 +237,7 @@ object GeminiClient {
         vehicleContext: String = "2021 Audi S5 (3.0T V6)",
         telemetryContext: String = "RPM: 2,450 | Coolant: 92°C | Voltage: 14.1V | STFT: +14.2% | Boost: 1.2 bar",
         projectContext: String = "Engine Performance Misfire Diagnostic",
+        screenContext: String = "Workshop Dashboard",
         base64Image: String? = null,
         userApiKey: String? = null
     ): String = withContext(Dispatchers.IO) {
@@ -245,6 +246,7 @@ object GeminiClient {
         val systemContext = """
             You are Team Forge AI — an elite multidisciplinary automotive diagnostic assistant and shop workflow agent.
             Current Active Context:
+            - Active Screen: $screenContext
             - Active Vehicle: $vehicleContext
             - Active Project: $projectContext
             - Live OBD-II Telemetry: $telemetryContext
@@ -297,6 +299,7 @@ object GeminiClient {
         vehicleContext: String = "2021 Audi S5 (3.0T V6)",
         telemetryContext: String = "RPM: 2,450 | Temp: 92°C | STFT: +14.2%",
         projectContext: String = "Engine Performance Misfire Diagnostic",
+        screenContext: String = "Workshop Dashboard",
         base64Image: String? = null,
         userApiKey: String? = null
     ): String = withContext(Dispatchers.IO) {
@@ -305,6 +308,7 @@ object GeminiClient {
         val systemContext = """
             You are Team Forge AI — an elite multidisciplinary automotive diagnostic assistant and shop workflow agent.
             Current Active Context:
+            - Active Screen: $screenContext
             - Active Vehicle: $vehicleContext
             - Active Project: $projectContext
             - Live OBD-II Telemetry: $telemetryContext

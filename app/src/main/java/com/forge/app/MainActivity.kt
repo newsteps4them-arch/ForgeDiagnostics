@@ -7,7 +7,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.forge.app.data.AppDatabase
@@ -23,6 +25,7 @@ import com.forge.app.services.UsbHardwareCommunicationService
 import com.forge.app.ui.components.BottomNavBar
 import com.forge.app.ui.components.GeminiChatSheet
 import com.forge.app.ui.components.NavigationDrawerContent
+import com.forge.app.ui.components.PersistentAiFab
 import com.forge.app.ui.components.TopStatusBar
 import com.forge.app.ui.screens.*
 import com.forge.app.ui.theme.TeamForgeTheme
@@ -116,6 +119,7 @@ class MainActivity : ComponentActivity() {
                 val coroutineScope = rememberCoroutineScope()
                 var currentRoute by remember { mutableStateOf("dashboard") }
                 var showAiChatSheet by remember { mutableStateOf(false) }
+                var aiInitialPrompt by remember { mutableStateOf<String?>(null) }
 
                 val telemetry by telemetryService.telemetry.collectAsStateWithLifecycle()
                 val projects by repository.projects.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -318,15 +322,31 @@ class MainActivity : ComponentActivity() {
                                     onClearDtcs = { telemetryService.clearDtcs() }
                                 )
                             }
+
+                            // Persistent Screen-Specialized AI Assistant floating button
+                            PersistentAiFab(
+                                currentRoute = currentRoute,
+                                onOpenAiChat = { prompt ->
+                                    aiInitialPrompt = prompt
+                                    showAiChatSheet = true
+                                },
+                                modifier = Modifier.align(Alignment.BottomEnd)
+                            )
                         }
 
                         if (showAiChatSheet) {
                             GeminiChatSheet(
+                                currentRoute = currentRoute,
+                                initialPrompt = aiInitialPrompt,
                                 activeVehicle = activeVehicleName,
                                 activeTelemetry = "RPM: ${telemetry.rpm} | Temp: ${telemetry.coolantTempC}°C | Voltage: ${"%.1f".format(telemetry.batteryVoltage)}V",
                                 activeProject = "Engine Performance Misfire Diagnostic",
+                                repository = repository,
                                 authAndSyncService = authAndSyncService,
-                                onDismiss = { showAiChatSheet = false }
+                                onDismiss = {
+                                    showAiChatSheet = false
+                                    aiInitialPrompt = null
+                                }
                             )
                         }
 
