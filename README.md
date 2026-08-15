@@ -11,7 +11,7 @@ Native Android application built with **Kotlin** and **Jetpack Compose**, featur
 
 Tap the button below to instantly download the `.apk` file directly to your device with 1 click:
 
-👉 **[📥 Instant 1-Step APK Download (Forge-debug-1.0.0.apk)](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases/latest/download/Forge-debug-1.0.0.apk)**
+👉 **[📥 Instant 1-Step APK Download](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases/latest)**
 
 > **Installation Note:** Once downloaded, open `Forge-debug-1.0.0.apk` from your browser or file manager and tap **Install**. If prompted, allow your browser permission to install apps from "Unknown Sources".
 
