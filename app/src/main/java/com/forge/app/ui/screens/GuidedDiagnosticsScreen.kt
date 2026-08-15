@@ -1,31 +1,39 @@
 package com.forge.app.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Psychology
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.forge.app.services.DiagnosticReportData
+import com.forge.app.services.DiagnosticReportService
+import com.forge.app.services.DtcInfo
 import com.forge.app.services.GeminiClient
+import com.forge.app.ui.components.DiagnosticReportDialog
 import com.forge.app.ui.theme.*
 import kotlinx.coroutines.launch
 
 @Composable
 fun GuidedDiagnosticsScreen() {
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var dtcInput by remember { mutableStateOf("P0300") }
     var analysisResult by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -40,16 +48,33 @@ fun GuidedDiagnosticsScreen() {
             border = androidx.compose.foundation.BorderStroke(1.dp, ForgeAmber)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.Psychology, contentDescription = null, tint = ForgeAmber)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "AI GUIDED DIAGNOSTIC WORKFLOW",
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        color = ForgeAmber
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Default.Psychology, contentDescription = null, tint = ForgeAmber)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "AI GUIDED DIAGNOSTIC WORKFLOW",
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            color = ForgeAmber
+                        )
+                    }
+
+                    Button(
+                        onClick = { showReportDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForgeCyan, contentColor = Color.Black),
+                        shape = RoundedCornerShape(6.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Assessment, contentDescription = null, modifier = Modifier.size(13.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("EXPORT REPORT", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
@@ -109,13 +134,45 @@ fun GuidedDiagnosticsScreen() {
                 .fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "OEM TEST PROCEDURE & GUIDANCE",
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    color = ForgeCyan
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "OEM TEST PROCEDURE & GUIDANCE",
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        color = ForgeCyan
+                    )
+
+                    if (analysisResult.isNotBlank()) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            IconButton(
+                                onClick = {
+                                    val rpt = DiagnosticReportData(
+                                        dtcList = listOf(DtcInfo(dtcInput, "Fault Code Analysis", "Active")),
+                                        aiGuidanceSummary = analysisResult
+                                    )
+                                    val pdf = DiagnosticReportService.generatePdfReport(context, rpt)
+                                    DiagnosticReportService.printPdfReport(context, pdf, "OEM_Procedure_$dtcInput")
+                                },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(Icons.Default.Print, contentDescription = "Print", tint = ForgeAmber, modifier = Modifier.size(16.dp))
+                            }
+                            IconButton(
+                                onClick = {
+                                    DiagnosticReportService.shareTextReport(context, "OEM Diagnostic Procedure for $dtcInput:\n\n$analysisResult", "OEM Procedure $dtcInput")
+                                },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(Icons.Default.Share, contentDescription = "Share", tint = ForgeCyan, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(12.dp))
 
                 if (isLoading) {
@@ -131,14 +188,27 @@ fun GuidedDiagnosticsScreen() {
                         "Tap search or enter a DTC code above to analyze causes, symptoms, and pinout checks."
                     } else analysisResult
 
-                    Text(
-                        text = textToDisplay,
-                        fontSize = 13.sp,
-                        color = ForgeOnSurface,
-                        lineHeight = 20.sp
-                    )
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        item {
+                            Text(
+                                text = textToDisplay,
+                                fontSize = 13.sp,
+                                color = ForgeOnSurface,
+                                lineHeight = 20.sp
+                            )
+                        }
+                    }
                 }
             }
         }
+
+        DiagnosticReportDialog(
+            visible = showReportDialog,
+            telemetry = com.forge.app.services.ObdTelemetryData(
+                activeDtcCodes = listOf(DtcInfo(dtcInput, "Diagnostic Trouble Code Analysis", "Pending"))
+            ),
+            onDismiss = { showReportDialog = false }
+        )
     }
 }
+

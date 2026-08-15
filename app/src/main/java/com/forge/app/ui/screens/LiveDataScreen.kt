@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.forge.app.services.ObdTelemetryData
 import com.forge.app.ui.components.CoolantTempGauge
+import com.forge.app.ui.components.DiagnosticReportDialog
 import com.forge.app.ui.components.ObdInstrumentCluster
 import com.forge.app.ui.components.RadialGauge
 import com.forge.app.ui.theme.*
@@ -52,6 +53,7 @@ fun LiveDataScreen(
     var displayMode by remember { mutableStateOf(LiveDataDisplayMode.GAUGE_CLUSTER) }
     var peakRpmRecorded by remember { mutableStateOf(telemetry.rpm) }
     var snapshotSavedNotice by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(telemetry.rpm) {
         if (telemetry.rpm > peakRpmRecorded) {
@@ -117,6 +119,28 @@ fun LiveDataScreen(
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Button(
+                            onClick = { showReportDialog = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ForgeAmber,
+                                contentColor = Color.Black
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Assessment,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                "REPORT",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
                         Button(
                             onClick = { isRecording = !isRecording },
                             colors = ButtonDefaults.buttonColors(
@@ -377,5 +401,11 @@ fun LiveDataScreen(
                 }
             }
         }
+
+        DiagnosticReportDialog(
+            visible = showReportDialog,
+            telemetry = telemetry,
+            onDismiss = { showReportDialog = false }
+        )
     }
 }

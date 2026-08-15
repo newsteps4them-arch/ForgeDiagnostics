@@ -24,6 +24,7 @@ import com.forge.app.data.ProjectEntity
 import com.forge.app.data.TaskEntity
 import com.forge.app.services.ObdTelemetryData
 import com.forge.app.ui.components.DashboardCoachMarkOverlay
+import com.forge.app.ui.components.DiagnosticReportDialog
 import com.forge.app.ui.components.ObdInstrumentCluster
 import com.forge.app.ui.components.ProjectDashboard
 import com.forge.app.ui.theme.*
@@ -44,6 +45,7 @@ fun DashboardScreen(
     var showQuickStartGuide by remember { mutableStateOf(true) }
     var showCoachMarks by remember { mutableStateOf(false) }
     var useRadialClusterView by remember { mutableStateOf(true) }
+    var showReportDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -330,9 +332,29 @@ fun DashboardScreen(
                             )
                         }
 
-                        if (telemetry.activeDtcCodes.isNotEmpty()) {
-                            TextButton(onClick = onClearDtcs) {
-                                Text("CLEAR DTCs", fontSize = 11.sp, color = ForgeRed)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // Generate Report Button
+                            Button(
+                                onClick = { showReportDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = ForgeAmber, contentColor = Color.Black),
+                                shape = RoundedCornerShape(6.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
+                            ) {
+                                Icon(imageVector = Icons.Default.Assessment, contentDescription = null, modifier = Modifier.size(13.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("REPORT", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            if (telemetry.activeDtcCodes.isNotEmpty()) {
+                                OutlinedButton(
+                                    onClick = onClearDtcs,
+                                    shape = RoundedCornerShape(6.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ForgeRed),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, ForgeRed),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                ) {
+                                    Text("CLEAR", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
@@ -391,12 +413,12 @@ fun DashboardScreen(
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 QuickToolButton("Live Data", Icons.Default.BarChart, "live_data", onNavigate, Modifier.weight(1f))
-                QuickToolButton("ECU Topology", Icons.Default.AccountTree, "topology", onNavigate, Modifier.weight(1f))
-                QuickToolButton("Oscilloscope", Icons.Default.ShowChart, "oscilloscope", onNavigate, Modifier.weight(1f))
-                QuickToolButton("ELM Terminal", Icons.Default.Terminal, "terminal", onNavigate, Modifier.weight(1f))
+                QuickToolButton("Topology", Icons.Default.AccountTree, "topology", onNavigate, Modifier.weight(1f))
+                QuickToolButton("Scope", Icons.Default.ShowChart, "oscilloscope", onNavigate, Modifier.weight(1f))
+                QuickToolButton("Terminal", Icons.Default.Terminal, "terminal", onNavigate, Modifier.weight(1f))
             }
         }
 
@@ -418,6 +440,12 @@ fun DashboardScreen(
         visible = showCoachMarks,
         onDismiss = { showCoachMarks = false },
         onNavigateToFeature = onNavigate
+    )
+
+    DiagnosticReportDialog(
+        visible = showReportDialog,
+        telemetry = telemetry,
+        onDismiss = { showReportDialog = false }
     )
 }
 }
