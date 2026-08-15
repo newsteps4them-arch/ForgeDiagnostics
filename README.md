@@ -1,6 +1,6 @@
 # Team Forge: Engineering Suite
 
-[![Direct APK Download](https://img.shields.io/badge/⚡_Direct_Download-Android_.APK-00E676?style=for-the-badge&logo=android&logoColor=black)](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases/latest/download/Forge-debug-1.0.0.apk)
+[![Direct APK Download](https://img.shields.io/badge/⚡_Direct_Download-Android_.APK-00E676?style=for-the-badge&logo=android&logoColor=black)](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases/latest)
 [![Releases Page](https://img.shields.io/github/v/release/newsteps4them-arch/ForgeDiagnostics?style=for-the-badge&color=2196F3)](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases)
 
 Native Android application built with **Kotlin** and **Jetpack Compose**, featuring a high-end hardware diagnostic tool aesthetic.
