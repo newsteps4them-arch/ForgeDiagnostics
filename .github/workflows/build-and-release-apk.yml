@@ -40,7 +40,7 @@ jobs:
 
       - name: Build APK and App Bundle
         run: |
-          gradle :app:assembleDebug :app:assembleRelease :app:bundleRelease
+          ./gradlew :app:assembleDebug :app:assembleRelease :app:bundleRelease
 
       - name: Locate and Rename Artifacts
         run: |

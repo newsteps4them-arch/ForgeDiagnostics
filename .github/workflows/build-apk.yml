@@ -24,7 +24,7 @@ jobs:
 
       - name: Run Gradle Compile (All Targets)
         run: |
-          gradle :app:assembleDebug :app:assembleRelease :app:bundleRelease
+          ./gradlew :app:assembleDebug :app:assembleRelease :app:bundleRelease
 
       - name: Organize Artifacts
         run: |
