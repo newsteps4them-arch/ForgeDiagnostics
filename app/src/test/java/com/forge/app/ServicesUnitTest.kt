@@ -82,15 +82,17 @@ class ServicesUnitTest {
         val telemetryAgent = ForgeAgentType.MiddlewareTelemetryAgent
         val syncAgent = ForgeAgentType.BackendSyncAgent
         val aiAgent = ForgeAgentType.ServerAiAgent
+        val julesAgent = ForgeAgentType.JulesEngineeringAgent
 
         assertEquals("agent_frontend_ui", frontendAgent.id)
         assertEquals("agent_client_hw", hwAgent.id)
         assertEquals("agent_middleware_telemetry", telemetryAgent.id)
         assertEquals("agent_backend_sync", syncAgent.id)
         assertEquals("agent_server_ai", aiAgent.id)
+        assertEquals("agent_jules_dev", julesAgent.id)
 
         val initialState = AgentOrchestratorState()
-        assertEquals(5, initialState.activeAgents.size)
+        assertEquals(6, initialState.activeAgents.size)
         assertEquals("No Active Vehicle Selected", initialState.globalContextVehicle)
         assertEquals(0, initialState.globalContextDtcCount)
         assertTrue(initialState.systemLog.isNotEmpty())

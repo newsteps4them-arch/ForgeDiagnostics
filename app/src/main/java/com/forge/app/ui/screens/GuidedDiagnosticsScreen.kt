@@ -124,6 +124,42 @@ fun GuidedDiagnosticsScreen() {
             }
         }
 
+        // Fast DTC Preset Chips for 1-Tap Automation
+        val presetCodes = listOf("P0300", "P0171", "P0420", "P0016", "U0100")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            presetCodes.forEach { code ->
+                Surface(
+                    onClick = {
+                        dtcInput = code
+                        isLoading = true
+                        coroutineScope.launch {
+                            analysisResult = GeminiClient.queryAssistant(
+                                prompt = "Provide step-by-step OEM diagnostic test procedures, component pinouts, and expected scope waveforms for DTC code $code on 2021 Audi S5 Sportback."
+                            )
+                            isLoading = false
+                        }
+                    },
+                    color = if (dtcInput == code) ForgeAmber.copy(alpha = 0.2f) else ForgeSurface,
+                    shape = RoundedCornerShape(6.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (dtcInput == code) ForgeAmber else ForgeBorder),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = code,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        color = if (dtcInput == code) ForgeAmber else ForgeOnSurface,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+        }
+
         // Result Surface
         Surface(
             color = ForgeSurface,
