@@ -22,7 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.forge.app.data.ProjectEntity
 import com.forge.app.data.TaskEntity
+import com.forge.app.services.AutoTriagePipelineService
 import com.forge.app.services.ObdTelemetryData
+import com.forge.app.ui.components.AutoTriagePipelineDialog
 import com.forge.app.ui.components.DashboardCoachMarkOverlay
 import com.forge.app.ui.components.DiagnosticReportDialog
 import com.forge.app.ui.components.ObdInstrumentCluster
@@ -34,6 +36,7 @@ fun DashboardScreen(
     telemetry: ObdTelemetryData,
     projects: List<ProjectEntity> = emptyList(),
     tasks: List<TaskEntity>,
+    autoTriageService: AutoTriagePipelineService? = null,
     onNavigate: (String) -> Unit,
     onAddTask: (projectId: Long, title: String, description: String, priority: String, category: String) -> Unit = { _, _, _, _, _ -> },
     onUpdateTaskStatus: (task: TaskEntity, newStatus: String) -> Unit = { _, _ -> },
@@ -46,6 +49,16 @@ fun DashboardScreen(
     var showCoachMarks by remember { mutableStateOf(false) }
     var useRadialClusterView by remember { mutableStateOf(true) }
     var showReportDialog by remember { mutableStateOf(false) }
+    var showAutoTriageDialog by remember { mutableStateOf(false) }
+
+    val triagePipeline = remember { autoTriageService ?: AutoTriagePipelineService() }
+    val triageState by triagePipeline.triageState.collectAsState()
+
+    // Real-Time Anomaly Watchdog (e.g. Fuel Trim surge, Overheating, Low Voltage)
+    val hasFuelTrimAnomaly = (telemetry.fuelTrimShortPct + telemetry.fuelTrimLongPct) > 10.0f
+    val hasCoolantAnomaly = telemetry.coolantTempC > 95
+    val hasBatteryAnomaly = telemetry.batteryVoltage < 12.2f && telemetry.batteryVoltage > 0.0f
+    val isAnomalyDetected = hasFuelTrimAnomaly || hasCoolantAnomaly || hasBatteryAnomaly
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -213,6 +226,217 @@ fun DashboardScreen(
                         fontFamily = FontFamily.Monospace,
                         color = ForgeCyan
                     )
+                }
+            }
+        }
+
+        // 1-Click Autonomous Diagnostic Triage & Multi-Service Dispatcher
+        item {
+            Surface(
+                color = ForgeSurface,
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, ForgeCyan)
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Bolt, contentDescription = null, tint = ForgeCyan)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "AUTONOMOUS DIAGNOSTIC PIPELINE",
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                color = ForgeCyan
+                            )
+                        }
+                        Surface(
+                            color = ForgeCyan.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = "1-CLICK AUTOMATION",
+                                fontSize = 8.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                color = ForgeCyan,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "Instantly execute 5-tier triage: OBD DTC extract -> NHTSA VIN & safety recalls -> ALLDATA TSBs -> Nexpart B2B parts check -> Mitchell labor estimate & work order auto-dispatch.",
+                        fontSize = 11.sp,
+                        color = ForgeOnSurfaceVariant,
+                        lineHeight = 15.sp
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                showAutoTriageDialog = true
+                                triagePipeline.runAutoTriage(
+                                    vin = "WAUZZZF58MA019284",
+                                    dtcCodes = telemetry.activeDtcCodes.map { it.code }
+                                )
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = ForgeCyan, contentColor = Color.Black),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("RUN 1-CLICK AUTO-TRIAGE", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        OutlinedButton(
+                            onClick = { showAutoTriageDialog = true },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ForgeCyan),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ForgeCyan),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("View Pipeline", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Real-Time Anomaly Watchdog Alert (Automated Live Telemetry Spike Trigger)
+        if (isAnomalyDetected) {
+            item {
+                Surface(
+                    color = ForgeRed.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ForgeRed)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.WarningAmber, contentDescription = null, tint = ForgeRed)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "AUTONOMOUS PID ANOMALY WATCHDOG",
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ForgeRed
+                                )
+                            }
+                            Text(
+                                text = "FREEZE-FRAME CAPTURED",
+                                fontSize = 8.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                color = ForgeAmber
+                            )
+                        }
+
+                        Text(
+                            text = buildString {
+                                if (hasFuelTrimAnomaly) append("• Fuel Trim Threshold Exceeded: STFT ${telemetry.fuelTrimShortPct}% + LTFT ${telemetry.fuelTrimLongPct}% (Lean Surge)\n")
+                                if (hasCoolantAnomaly) append("• Engine Thermal Warning: Coolant reached ${telemetry.coolantTempC}°C\n")
+                                if (hasBatteryAnomaly) append("• Low Voltage Threshold: Charging system at ${telemetry.batteryVoltage}V")
+                            }.trimEnd(),
+                            fontSize = 11.sp,
+                            color = ForgeOnSurface,
+                            lineHeight = 15.sp
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = { onNavigate("guided_diag") },
+                                colors = ButtonDefaults.buttonColors(containerColor = ForgeRed, contentColor = Color.White),
+                                shape = RoundedCornerShape(6.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(imageVector = Icons.Default.Psychology, contentDescription = null, modifier = Modifier.size(13.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("AI Fault Isolation", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                            OutlinedButton(
+                                onClick = { onNavigate("oscilloscope") },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = ForgeAmber),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, ForgeAmber),
+                                shape = RoundedCornerShape(6.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(imageVector = Icons.Default.ShowChart, contentDescription = null, modifier = Modifier.size(13.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Scope Waveform", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fast Hands-Free Diagnostic Action Macros Bar
+        item {
+            Surface(
+                color = ForgeSurface,
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, ForgeBorder)
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "FAST AUTOMATION MACROS",
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        color = ForgeAmber
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        MacroButton(
+                            title = "DVI PDF",
+                            icon = Icons.Default.Assessment,
+                            color = ForgeAmber,
+                            onClick = { showReportDialog = true },
+                            modifier = Modifier.weight(1f)
+                        )
+                        MacroButton(
+                            title = "Actuators",
+                            icon = Icons.Default.Tune,
+                            color = ForgeCyan,
+                            onClick = { onNavigate("actuators") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        MacroButton(
+                            title = "Inventory",
+                            icon = Icons.Default.Inventory2,
+                            color = ForgeGreen,
+                            onClick = { onNavigate("inventory") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        MacroButton(
+                            title = "Recalls",
+                            icon = Icons.Default.Security,
+                            color = ForgeRed,
+                            onClick = { onNavigate("settings") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }
@@ -447,7 +671,55 @@ fun DashboardScreen(
         telemetry = telemetry,
         onDismiss = { showReportDialog = false }
     )
+
+    if (showAutoTriageDialog) {
+        AutoTriagePipelineDialog(
+            triageService = triagePipeline,
+            onDismiss = { showAutoTriageDialog = false },
+            onNavigateToEstimator = {
+                showAutoTriageDialog = false
+                onNavigate("estimator")
+            },
+            onNavigateToParts = {
+                showAutoTriageDialog = false
+                onNavigate("inventory")
+            }
+        )
+    }
+    }
 }
+
+@Composable
+fun MacroButton(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        color = ForgeBackground,
+        shape = RoundedCornerShape(8.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.4f)),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(imageVector = icon, contentDescription = title, tint = color, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = title,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+                color = ForgeOnSurface
+            )
+        }
+    }
 }
 
 @Composable

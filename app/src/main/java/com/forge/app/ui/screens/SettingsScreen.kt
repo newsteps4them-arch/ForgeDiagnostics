@@ -1,19 +1,16 @@
 package com.forge.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.CloudSync
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,33 +18,59 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import androidx.compose.ui.platform.LocalContext
-import com.forge.app.services.AuthAndSyncService
-import com.forge.app.services.UsbHardwareCommunicationService
-import com.forge.app.services.UsbConnectionStatus
-import androidx.compose.material.icons.filled.Usb
+import com.forge.app.BuildConfig
+import com.forge.app.services.*
 import com.forge.app.ui.theme.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
     currentConnectionType: String = "SIMULATED",
     authAndSyncService: AuthAndSyncService? = null,
     usbHardwareService: UsbHardwareCommunicationService? = null,
+    cloudConnectorsManager: CloudConnectorsManager? = null,
     onConnectionTypeChange: (String) -> Unit,
     onResetDatabase: () -> Unit
 ) {
     val context = LocalContext.current
-    var apiKeyInput by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
-    val userProfile by (authAndSyncService?.currentUser?.collectAsState() ?: remember { mutableStateOf(com.forge.app.services.UserProfile()) })
-    val syncStatus by (authAndSyncService?.syncStatus?.collectAsState() ?: remember { mutableStateOf(com.forge.app.services.SyncStatus()) })
-    val usbState by (usbHardwareService?.hardwareState?.collectAsState() ?: remember { mutableStateOf(com.forge.app.services.UsbHardwareState()) })
+    val connectorsManager = remember { cloudConnectorsManager ?: CloudConnectorsManager() }
+    val hubState by connectorsManager.hubState.collectAsState()
+
+    var apiKeyInput by remember { mutableStateOf(if (BuildConfig.GEMINI_API_KEY.contains("PLACEHOLDER")) "" else BuildConfig.GEMINI_API_KEY) }
+    var alldataKeyInput by remember { mutableStateOf(BuildConfig.ALLDATA_API_KEY) }
+    var nexpartKeyInput by remember { mutableStateOf(BuildConfig.NEXPART_API_KEY) }
+    var openAiKeyInput by remember { mutableStateOf(BuildConfig.OPENAI_API_KEY) }
+
+    // NHTSA Live Recall Lookup Demo state
+    var vinQueryInput by remember { mutableStateOf("WAUZZZF58MA019284") }
+    var nhtsaDecodedSpecs by remember { mutableStateOf<DecodedVehicleSpecs?>(null) }
+    var nhtsaRecallsList by remember { mutableStateOf<List<NhtsaRecallItem>>(emptyList()) }
+    var isNhtsaLoading by remember { mutableStateOf(false) }
+
+    val userProfile by (authAndSyncService?.currentUser?.collectAsState() ?: remember { mutableStateOf(UserProfile()) })
+    val syncStatus by (authAndSyncService?.syncStatus?.collectAsState() ?: remember { mutableStateOf(SyncStatus()) })
+    val usbState by (usbHardwareService?.hardwareState?.collectAsState() ?: remember { mutableStateOf(UsbHardwareState()) })
+
+    val julesService = remember { JulesAgentService() }
+    var isJulesDialogOpen by remember { mutableStateOf(false) }
+    var julesKeyInput by remember { mutableStateOf(if (BuildConfig.GEMINI_API_KEY.contains("PLACEHOLDER")) "" else BuildConfig.GEMINI_API_KEY) }
+
+    if (isJulesDialogOpen) {
+        com.forge.app.ui.components.JulesAgentDialog(
+            julesService = julesService,
+            onDismiss = { isJulesDialogOpen = false }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -56,29 +79,294 @@ fun SettingsScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Header Banner
         Surface(
             color = ForgeSurface,
             shape = RoundedCornerShape(12.dp),
             border = androidx.compose.foundation.BorderStroke(1.dp, ForgeAmber)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.Settings, contentDescription = null, tint = ForgeAmber)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "TEAM FORGE SYSTEM & AUTH SETTINGS",
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        color = ForgeAmber
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Default.Hub, contentDescription = null, tint = ForgeAmber)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "TEAM FORGE CONNECTORS & INTEGRATIONS HUB",
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            color = ForgeAmber
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(ForgeGreen.copy(alpha = 0.2f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "${hubState.healthyCount}/${hubState.totalActiveConnectors} ACTIVE",
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            color = ForgeGreen
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Manage Google Authentication, real-time Firestore database sync, OBD hardware, & AI memory context.",
+                    text = "High-performance connector pipeline: Google Cloud Project APIs, Firebase Cloud Firestore, US DOT NHTSA Safety Recalls, ALLDATA OEM, Nexpart B2B, OpenAI Compute, and USB/Bluetooth hardware bridges.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+
+        // Live Cloud Connectors Health Check & Ping Card
+        Surface(
+            color = ForgeSurface,
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ForgeCyan)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Default.CloudSync, contentDescription = null, tint = ForgeCyan)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("CLOUD CONNECTORS & API PIPELINE", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = ForgeCyan, fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = { connectorsManager.runFullSystemHealthCheck() },
+                        enabled = !hubState.isRunningFullHealthCheck,
+                        colors = ButtonDefaults.buttonColors(containerColor = ForgeCyan, contentColor = Color.Black),
+                        shape = RoundedCornerShape(6.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        modifier = Modifier.testTag("ping_all_connectors_btn")
+                    ) {
+                        if (hubState.isRunningFullHealthCheck) {
+                            CircularProgressIndicator(modifier = Modifier.size(12.dp), color = Color.Black, strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Testing...", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        } else {
+                            Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(12.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Ping & Test All", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                // Grid of Connectors
+                hubState.connectors.forEach { connector ->
+                    Surface(
+                        color = ForgeSurfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(8.dp),
+                        border = androidx.compose.foundation.BorderStroke(0.8.dp, if (connector.status == ConnectorStatus.CONNECTED_HEALTHY) ForgeBorder else ForgeAmber),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                when (connector.status) {
+                                                    ConnectorStatus.CONNECTED_HEALTHY -> ForgeGreen
+                                                    ConnectorStatus.TESTING_PING -> ForgeAmber
+                                                    else -> ForgeCyan
+                                                }
+                                            )
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = connector.name,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ForgeOnSurface
+                                    )
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(ForgeBackground)
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "${connector.latencyMs} ms",
+                                            fontSize = 9.sp,
+                                            fontFamily = FontFamily.Monospace,
+                                            color = ForgeAmber,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+
+                            Text(
+                                text = connector.details,
+                                fontSize = 10.sp,
+                                color = ForgeOnSurfaceVariant,
+                                lineHeight = 14.sp
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Provider: ${connector.provider}",
+                                    fontSize = 9.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = ForgeCyan
+                                )
+                                Text(
+                                    text = connector.category,
+                                    fontSize = 8.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = ForgeOnSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Live NHTSA Safety Recalls & VPIC VIN Query Connector Card
+        Surface(
+            color = ForgeSurface,
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ForgeAmber)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Default.Security, contentDescription = null, tint = ForgeAmber)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "US DOT / NHTSA SAFETY RECALLS API",
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = ForgeAmber,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Surface(
+                        color = ForgeGreen.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = "LIVE GOVERNMENT API",
+                            fontSize = 8.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            color = ForgeGreen,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Query real-time safety recalls, campaign numbers, and VIN engineering specifications directly from the National Highway Traffic Safety Administration:",
+                    fontSize = 11.sp,
+                    color = ForgeOnSurfaceVariant
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = vinQueryInput,
+                        onValueChange = { vinQueryInput = it.uppercase() },
+                        label = { Text("Vehicle Identification Number (VIN)", fontSize = 10.sp) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = ForgeAmber,
+                            unfocusedBorderColor = ForgeBorder
+                        )
+                    )
+
+                    Button(
+                        onClick = {
+                            if (vinQueryInput.isNotBlank()) {
+                                isNhtsaLoading = true
+                                coroutineScope.launch {
+                                    nhtsaDecodedSpecs = NhtsaSafetyClient.decodeVinLive(vinQueryInput)
+                                    nhtsaRecallsList = NhtsaSafetyClient.fetchSafetyRecalls(vinQueryInput)
+                                    isNhtsaLoading = false
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForgeAmber, contentColor = Color.Black),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.testTag("query_nhtsa_btn")
+                    ) {
+                        if (isNhtsaLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), color = Color.Black, strokeWidth = 2.dp)
+                        } else {
+                            Text("Query API", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                nhtsaDecodedSpecs?.let { specs ->
+                    Surface(
+                        color = ForgeBackground,
+                        shape = RoundedCornerShape(8.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ForgeBorder),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("DECODED VEHICLE SPECIFICATIONS (VPIC API):", fontSize = 9.sp, fontFamily = FontFamily.Monospace, color = ForgeCyan, fontWeight = FontWeight.Bold)
+                            Text("${specs.modelYear} ${specs.make} ${specs.model} — ${specs.engineCylinders} Cyl ${specs.displacementL} (${specs.driveType})", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = ForgeOnSurface)
+                            Text("Plant: ${specs.plantCountry} | Transmission: ${specs.transmissionStyle} | Fuel: ${specs.fuelTypePrimary}", fontSize = 10.sp, color = ForgeOnSurfaceVariant)
+                        }
+                    }
+                }
+
+                if (nhtsaRecallsList.isNotEmpty()) {
+                    Text("ACTIVE SAFETY RECALL CAMPAIGNS (${nhtsaRecallsList.size}):", fontSize = 9.sp, fontFamily = FontFamily.Monospace, color = ForgeRed, fontWeight = FontWeight.Bold)
+                    nhtsaRecallsList.forEach { recall ->
+                        Surface(
+                            color = ForgeRed.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ForgeRed.copy(alpha = 0.5f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("NHTSA CAMPAIGN #${recall.nhtsaCampaignNumber}", fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, color = ForgeRed)
+                                    Text(recall.component, fontSize = 9.sp, color = ForgeOnSurfaceVariant, maxLines = 1)
+                                }
+                                Text(recall.summary, fontSize = 11.sp, color = ForgeOnSurface)
+                                Text("Remedy: ${recall.remedy}", fontSize = 10.sp, color = ForgeAmber)
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -135,7 +423,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(userProfile.displayName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = ForgeOnSurface)
-                        Text(userProfile.email.ifEmpty { "no-email@forge.app" }, fontSize = 12.sp, color = ForgeOnSurfaceVariant)
+                        Text(userProfile.email.ifEmpty { "newsteps4them@gmail.com" }, fontSize = 12.sp, color = ForgeOnSurfaceVariant)
                         Text(userProfile.role, fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = ForgeAmber)
                     }
                 }
@@ -433,25 +721,113 @@ fun SettingsScreen(
             }
         }
 
-        // Enterprise Automotive API Integration Credentials
-        var alldataKeyInput by remember { mutableStateOf(com.forge.app.BuildConfig.ALLDATA_API_KEY) }
-        var nexpartKeyInput by remember { mutableStateOf(com.forge.app.BuildConfig.NEXPART_API_KEY) }
-        var openAiKeyInput by remember { mutableStateOf(com.forge.app.BuildConfig.OPENAI_API_KEY) }
+        // Google Jules Autonomous Coding Agent Card
+        Surface(
+            color = ForgeSurface,
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ForgeCyan)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Default.SmartToy, contentDescription = null, tint = ForgeCyan)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "GOOGLE JULES REST API AGENT",
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = ForgeCyan,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Surface(
+                        color = ForgeCyan.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = "v1alpha",
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            color = ForgeCyan,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
 
+                Text(
+                    text = "Automate software engineering workflows, generate Pull Requests (AUTO_CREATE_PR), review telemetry patches, and conduct multi-turn agent sessions directly with Google Jules API.",
+                    fontSize = 11.sp,
+                    color = ForgeOnSurfaceVariant
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { isJulesDialogOpen = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForgeCyan, contentColor = Color.Black),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(imageVector = Icons.Default.Terminal, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Open Jules Console", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            coroutineScope.launch {
+                                julesService.listSources()
+                                isJulesDialogOpen = true
+                            }
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ForgeCyan)
+                    ) {
+                        Icon(imageVector = Icons.Default.Source, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Sources", fontSize = 11.sp)
+                    }
+                }
+            }
+        }
+
+        // Enterprise Automotive API Integration Credentials
         Surface(
             color = ForgeSurface,
             shape = RoundedCornerShape(12.dp),
             border = androidx.compose.foundation.BorderStroke(1.dp, ForgeCyan)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("ENTERPRISE API CONNECTORS & INTEGRATIONS", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = ForgeCyan, fontWeight = FontWeight.Bold)
-                Text("Configure live production API authorization keys for OEM manuals, parts distributors, and AI engines:", fontSize = 11.sp, color = ForgeOnSurfaceVariant)
+                Text("ENTERPRISE API CONNECTORS & SECRETS CONFIG", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = ForgeCyan, fontWeight = FontWeight.Bold)
+                Text("Configure live production API authorization keys for Google Cloud, Jules REST API, OEM manuals, parts distributors, and AI engines:", fontSize = 11.sp, color = ForgeOnSurfaceVariant)
 
                 OutlinedTextField(
                     value = apiKeyInput,
-                    onValueChange = { apiKeyInput = it },
-                    label = { Text("Google Gemini API Key") },
+                    onValueChange = { 
+                        apiKeyInput = it 
+                        julesService.setApiKey(it)
+                    },
+                    label = { Text("Google Cloud / Gemini API Key (x-goog-api-key)") },
                     placeholder = { Text("AIzaSy...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = julesKeyInput,
+                    onValueChange = { 
+                        julesKeyInput = it
+                        julesService.setApiKey(it)
+                    },
+                    label = { Text("Google Jules REST API Key") },
+                    placeholder = { Text("ask_...") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -460,7 +836,7 @@ fun SettingsScreen(
                     value = alldataKeyInput,
                     onValueChange = { alldataKeyInput = it },
                     label = { Text("ALLDATA OEM Repair & Wiring API Key") },
-                    placeholder = { Text("Live ALLDATA Partner API Key") },
+                    placeholder = { Text("Live ALLDATA Partner Key") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -477,7 +853,7 @@ fun SettingsScreen(
                 OutlinedTextField(
                     value = openAiKeyInput,
                     onValueChange = { openAiKeyInput = it },
-                    label = { Text("OpenAI API Key (GPT-4o / o3-mini Engine)") },
+                    label = { Text("OpenAI API Key (GPT-4o Engine)") },
                     placeholder = { Text("sk-proj-...") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -496,4 +872,3 @@ fun SettingsScreen(
         }
     }
 }
-

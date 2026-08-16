@@ -38,6 +38,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var authAndSyncService: com.forge.app.services.AuthAndSyncService
     private lateinit var geminiService: com.forge.app.services.GeminiService
     private lateinit var agentOrchestrator: com.forge.app.services.ForgeAgentOrchestrator
+    private lateinit var cloudConnectorsManager: com.forge.app.services.CloudConnectorsManager
+    private lateinit var autoTriageService: com.forge.app.services.AutoTriagePipelineService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,6 +50,8 @@ class MainActivity : ComponentActivity() {
         usbHardwareService = UsbHardwareCommunicationService(lifecycleScope)
         telemetryService = ObdTelemetryService(lifecycleScope, usbHardwareService)
         authAndSyncService = com.forge.app.services.AuthAndSyncService(repository = repository)
+        cloudConnectorsManager = com.forge.app.services.CloudConnectorsManager(repository = repository, scope = lifecycleScope)
+        autoTriageService = com.forge.app.services.AutoTriagePipelineService(repository = repository, authAndSyncService = authAndSyncService, scope = lifecycleScope)
         geminiService = com.forge.app.services.GeminiService()
         agentOrchestrator = com.forge.app.services.ForgeAgentOrchestrator(
             scope = lifecycleScope,
@@ -171,6 +175,7 @@ class MainActivity : ComponentActivity() {
                                     telemetry = telemetry,
                                     projects = projects,
                                     tasks = tasks,
+                                    autoTriageService = autoTriageService,
                                     onNavigate = { currentRoute = it },
                                     onAddTask = { projId, title, desc, prio, cat ->
                                         lifecycleScope.launch {
@@ -264,6 +269,7 @@ class MainActivity : ComponentActivity() {
                                     currentConnectionType = telemetry.connectionType,
                                     authAndSyncService = authAndSyncService,
                                     usbHardwareService = usbHardwareService,
+                                    cloudConnectorsManager = cloudConnectorsManager,
                                     onConnectionTypeChange = { type -> telemetryService.setConnectionType(type) },
                                     onResetDatabase = {
                                         lifecycleScope.launch {

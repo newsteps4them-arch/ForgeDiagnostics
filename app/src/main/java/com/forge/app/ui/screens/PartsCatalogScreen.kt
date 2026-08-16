@@ -193,6 +193,71 @@ fun PartsCatalogScreen(
             }
         }
 
+        // Automated Low-Stock Re-Order & Replenishment Watchdog Card
+        val lowStockItems = remember(inventory) { inventory.filter { it.stockQuantity <= 2 } }
+        if (lowStockItems.isNotEmpty()) {
+            Surface(
+                color = ForgeAmber.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, ForgeAmber)
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Inventory2, contentDescription = null, tint = ForgeAmber)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "AUTOMATED RE-ORDER WATCHDOG (${lowStockItems.size} LOW)",
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                color = ForgeAmber
+                            )
+                        }
+                        Surface(
+                            color = ForgeAmber.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = "THRESHOLD <= 2",
+                                fontSize = 8.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                color = ForgeAmber,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "The inventory engine detected ${lowStockItems.size} item(s) below reserve threshold (${lowStockItems.joinToString { "${it.name} (${it.stockQuantity})" }}).",
+                        fontSize = 11.sp,
+                        color = ForgeOnSurface,
+                        lineHeight = 15.sp
+                    )
+
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                lowStockItems.forEach { item ->
+                                    onUpdateStock(item, item.stockQuantity + 4)
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForgeAmber, contentColor = Color.Black),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("⚡ AUTO-REORDER ALL LOW-STOCK ITEMS (+4 Each)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
         // Inventory Category Distribution Visual Chart Summary Card
         if (inventory.isNotEmpty()) {
             val categoryColors = listOf(

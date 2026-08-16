@@ -20,6 +20,7 @@ sealed class ForgeAgentType(val id: String, val displayName: String, val role: S
     object MiddlewareTelemetryAgent : ForgeAgentType("agent_middleware_telemetry", "Middleware Telemetry Bridge", "Routes real-time PID streams to diagnostic screens & AI context buffers")
     object BackendSyncAgent : ForgeAgentType("agent_backend_sync", "Backend & Persistence Agent", "Handles Room SQLite transactions, Firestore cloud sync & offline queues")
     object ServerAiAgent : ForgeAgentType("agent_server_ai", "Server AI Specialist", "Executes Gemini Multimodal diagnostics, DTC root-cause analysis & parts identification")
+    object JulesEngineeringAgent : ForgeAgentType("agent_jules_dev", "Jules Autonomous Coding Agent", "Executes code patches, auto-creates PRs (AUTO_CREATE_PR), and manages repo sessions")
 }
 
 data class AgentActivityStatus(
@@ -36,7 +37,8 @@ data class AgentOrchestratorState(
         AgentActivityStatus(ForgeAgentType.ClientHardwareAgent, true, "Monitoring USB Serial / CAN Bus"),
         AgentActivityStatus(ForgeAgentType.MiddlewareTelemetryAgent, true, "Routing OBD-II Telemetry Stream"),
         AgentActivityStatus(ForgeAgentType.BackendSyncAgent, true, "Syncing Room DB & Firestore"),
-        AgentActivityStatus(ForgeAgentType.ServerAiAgent, true, "Gemini Pro / Flash Ready")
+        AgentActivityStatus(ForgeAgentType.ServerAiAgent, true, "Gemini Pro / Flash Ready"),
+        AgentActivityStatus(ForgeAgentType.JulesEngineeringAgent, true, "Jules REST API v1alpha Active")
     ),
     val globalContextVehicle: String = "No Active Vehicle Selected",
     val globalContextDtcCount: Int = 0,

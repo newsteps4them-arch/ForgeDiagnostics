@@ -47,8 +47,8 @@ class ForgeApplication : Application() {
         fun logEvent(message: String) {
             try {
                 FirebaseCrashlytics.getInstance().log(message)
-            } catch (t: Throwable) {
-                try { Log.d(TAG, "Crashlytics log: $message") } catch (_: Throwable) {}
+            } catch (_: Throwable) {
+                // Safe in tests or uninitialized environments
             }
         }
 
@@ -62,8 +62,8 @@ class ForgeApplication : Application() {
                     crashlytics.setCustomKey("last_error_tag", contextTag)
                 }
                 crashlytics.recordException(throwable)
-            } catch (t: Throwable) {
-                try { Log.e(TAG, "Crashlytics exception record failed: ${throwable.message}") } catch (_: Throwable) {}
+            } catch (_: Throwable) {
+                // Safe in tests or uninitialized environments
             }
         }
 
@@ -76,8 +76,8 @@ class ForgeApplication : Application() {
                 crashlytics.setCustomKey("vehicle_vin", vin)
                 crashlytics.setCustomKey("vehicle_model", model)
                 crashlytics.setCustomKey("obd_protocol", protocol)
-            } catch (t: Throwable) {
-                try { Log.d(TAG, "Crashlytics setVehicleContext: $vin") } catch (_: Throwable) {}
+            } catch (_: Throwable) {
+                // Safe in tests or uninitialized environments
             }
         }
 
