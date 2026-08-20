@@ -12,7 +12,7 @@ class AgentOrchestratorTest {
     @Test
     fun testAllSwarmAgentsConfigured() {
         val state = AgentOrchestratorState()
-        assertEquals(6, state.activeAgents.size)
+        assertEquals(10, state.activeAgents.size)
 
         val agentIds = state.activeAgents.map { it.agentType.id }
         assertTrue(agentIds.contains("agent_frontend_ui"))
@@ -20,6 +20,10 @@ class AgentOrchestratorTest {
         assertTrue(agentIds.contains("agent_middleware_telemetry"))
         assertTrue(agentIds.contains("agent_backend_sync"))
         assertTrue(agentIds.contains("agent_server_ai"))
+        assertTrue(agentIds.contains("agent_openmanus_auto"))
+        assertTrue(agentIds.contains("agent_can_uds"))
+        assertTrue(agentIds.contains("agent_elec_physics"))
+        assertTrue(agentIds.contains("agent_nhtsa_recall"))
         assertTrue(agentIds.contains("agent_jules_dev"))
     }
 

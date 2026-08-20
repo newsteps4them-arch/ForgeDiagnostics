@@ -37,6 +37,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var telemetryService: ObdTelemetryService
     private lateinit var authAndSyncService: com.forge.app.services.AuthAndSyncService
     private lateinit var geminiService: com.forge.app.services.GeminiService
+    private lateinit var openManusService: com.forge.app.services.OpenManusAgentService
+    private lateinit var obdHardwareModule: com.forge.app.services.ObdDiagnosticHardwareModule
     private lateinit var agentOrchestrator: com.forge.app.services.ForgeAgentOrchestrator
     private lateinit var cloudConnectorsManager: com.forge.app.services.CloudConnectorsManager
     private lateinit var autoTriageService: com.forge.app.services.AutoTriagePipelineService
@@ -53,13 +55,21 @@ class MainActivity : ComponentActivity() {
         cloudConnectorsManager = com.forge.app.services.CloudConnectorsManager(repository = repository, scope = lifecycleScope)
         autoTriageService = com.forge.app.services.AutoTriagePipelineService(repository = repository, authAndSyncService = authAndSyncService, scope = lifecycleScope)
         geminiService = com.forge.app.services.GeminiService()
+        openManusService = com.forge.app.services.OpenManusAgentService(geminiService = geminiService)
+        obdHardwareModule = com.forge.app.services.ObdDiagnosticHardwareModule(
+            scope = lifecycleScope,
+            usbHardwareService = usbHardwareService,
+            telemetryService = telemetryService,
+            openManusService = openManusService
+        )
         agentOrchestrator = com.forge.app.services.ForgeAgentOrchestrator(
             scope = lifecycleScope,
             repository = repository,
             usbHardwareService = usbHardwareService,
             telemetryService = telemetryService,
             authAndSyncService = authAndSyncService,
-            geminiService = geminiService
+            geminiService = geminiService,
+            openManusService = openManusService
         )
 
 
@@ -219,6 +229,25 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onClearDtcs = { telemetryService.clearDtcs() }
                                 )
+                                "openmanus" -> OpenManusScreen(
+                                    openManusService = openManusService,
+                                    telemetry = telemetry,
+                                    activeVehicleName = activeVehicleName,
+                                    hardwareModule = obdHardwareModule,
+                                    onAddTaskToWorkOrder = { title, desc ->
+                                        lifecycleScope.launch {
+                                            repository.addTask(
+                                                TaskEntity(
+                                                    projectId = 1L,
+                                                    title = title,
+                                                    description = desc,
+                                                    priority = "High",
+                                                    category = "OpenManus AI"
+                                                )
+                                            )
+                                        }
+                                    }
+                                )
                                 "live_data" -> LiveDataScreen(telemetry = telemetry)
                                 "topology" -> TopologyScreen()
                                 "guided_diag" -> GuidedDiagnosticsScreen()
@@ -264,7 +293,10 @@ class MainActivity : ComponentActivity() {
                                 "wiring" -> WiringDiagramsScreen()
                                 "time_clock" -> TimeClockScreen()
                                 "crm" -> CrmDashboardScreen()
-                                "orchestrator" -> AgentOrchestratorScreen(orchestrator = agentOrchestrator)
+                                "orchestrator" -> AgentOrchestratorScreen(
+                                    orchestrator = agentOrchestrator,
+                                    onNavigate = { currentRoute = it }
+                                )
                                 "settings" -> SettingsScreen(
                                     currentConnectionType = telemetry.connectionType,
                                     authAndSyncService = authAndSyncService,

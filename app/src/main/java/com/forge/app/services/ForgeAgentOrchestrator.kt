@@ -20,6 +20,10 @@ sealed class ForgeAgentType(val id: String, val displayName: String, val role: S
     object MiddlewareTelemetryAgent : ForgeAgentType("agent_middleware_telemetry", "Middleware Telemetry Bridge", "Routes real-time PID streams to diagnostic screens & AI context buffers")
     object BackendSyncAgent : ForgeAgentType("agent_backend_sync", "Backend & Persistence Agent", "Handles Room SQLite transactions, Firestore cloud sync & offline queues")
     object ServerAiAgent : ForgeAgentType("agent_server_ai", "Server AI Specialist", "Executes Gemini Multimodal diagnostics, DTC root-cause analysis & parts identification")
+    object OpenManusAgent : ForgeAgentType("agent_openmanus_auto", "OpenManus Autonomous Agent", "Orchestrates multi-step reasoning, tool invocations & physics simulations")
+    object CanBusUdsAgent : ForgeAgentType("agent_can_uds", "CAN-Bus & UDS Decoder Agent", "Reverse engineers ISO 15765-4 & ISO 14229 UDS frames & DIDs")
+    object ElectricalPhysicsAgent : ForgeAgentType("agent_elec_physics", "Electrical & Circuit Physics Agent", "Calculates Ohm's law drops, parasitic draw & sensor reference voltage")
+    object NhtsaRecallAgent : ForgeAgentType("agent_nhtsa_recall", "NHTSA Safety & TSB Agent", "Searches government safety recalls & OEM technical service bulletins")
     object JulesEngineeringAgent : ForgeAgentType("agent_jules_dev", "Jules Autonomous Coding Agent", "Executes code patches, auto-creates PRs (AUTO_CREATE_PR), and manages repo sessions")
 }
 
@@ -38,11 +42,15 @@ data class AgentOrchestratorState(
         AgentActivityStatus(ForgeAgentType.MiddlewareTelemetryAgent, true, "Routing OBD-II Telemetry Stream"),
         AgentActivityStatus(ForgeAgentType.BackendSyncAgent, true, "Syncing Room DB & Firestore"),
         AgentActivityStatus(ForgeAgentType.ServerAiAgent, true, "Gemini Pro / Flash Ready"),
+        AgentActivityStatus(ForgeAgentType.OpenManusAgent, true, "Autonomous Diagnostic Loop Ready"),
+        AgentActivityStatus(ForgeAgentType.CanBusUdsAgent, true, "ISO 14229 / CAN DBC Ready"),
+        AgentActivityStatus(ForgeAgentType.ElectricalPhysicsAgent, true, "Voltage Drop & Draw Math Ready"),
+        AgentActivityStatus(ForgeAgentType.NhtsaRecallAgent, true, "TSB & Recall Database Connected"),
         AgentActivityStatus(ForgeAgentType.JulesEngineeringAgent, true, "Jules REST API v1alpha Active")
     ),
     val globalContextVehicle: String = "No Active Vehicle Selected",
     val globalContextDtcCount: Int = 0,
-    val systemLog: List<String> = listOf("Forge Multi-Agent Orchestrator Initialized")
+    val systemLog: List<String> = listOf("Forge Multi-Agent Orchestrator Initialized with OpenManus")
 )
 
 class ForgeAgentOrchestrator(
@@ -51,7 +59,8 @@ class ForgeAgentOrchestrator(
     private val usbHardwareService: UsbHardwareCommunicationService?,
     private val telemetryService: ObdTelemetryService,
     private val authAndSyncService: AuthAndSyncService,
-    private val geminiService: GeminiService
+    private val geminiService: GeminiService,
+    val openManusService: OpenManusAgentService? = null
 ) {
 
     private val _orchestratorState = MutableStateFlow(AgentOrchestratorState())

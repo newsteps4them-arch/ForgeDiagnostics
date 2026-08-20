@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,6 +28,7 @@ import com.forge.app.services.ObdTelemetryData
 import com.forge.app.ui.components.AutoTriagePipelineDialog
 import com.forge.app.ui.components.DashboardCoachMarkOverlay
 import com.forge.app.ui.components.DiagnosticReportDialog
+import com.forge.app.ui.components.DtcExplanationDialog
 import com.forge.app.ui.components.ObdInstrumentCluster
 import com.forge.app.ui.components.ProjectDashboard
 import com.forge.app.ui.theme.*
@@ -50,6 +52,8 @@ fun DashboardScreen(
     var useRadialClusterView by remember { mutableStateOf(true) }
     var showReportDialog by remember { mutableStateOf(false) }
     var showAutoTriageDialog by remember { mutableStateOf(false) }
+    var showDtcExplainerDialog by remember { mutableStateOf(false) }
+    var selectedDtcForExplainer by remember { mutableStateOf<String?>(null) }
 
     val triagePipeline = remember { autoTriageService ?: AutoTriagePipelineService() }
     val triageState by triagePipeline.triageState.collectAsState()
@@ -388,6 +392,66 @@ fun DashboardScreen(
             }
         }
 
+        // Autonomous OpenManus Live Diagnostic Protocol Banner
+        item {
+            Surface(
+                color = ForgeSurface,
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, ForgeGreen.copy(alpha = 0.7f))
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(imageVector = Icons.Default.AutoMode, contentDescription = null, tint = ForgeGreen)
+                            Text(
+                                text = "AUTONOMOUS DIAGNOSTIC PROTOCOL",
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                color = ForgeGreen
+                            )
+                        }
+                        Surface(
+                            color = ForgeGreen.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(4.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ForgeGreen)
+                        ) {
+                            Text(
+                                text = "READY",
+                                fontSize = 9.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                color = ForgeGreen,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "Automated behind-the-scenes multi-agent pipeline analyzed OBD PIDs, CAN bus frames, and TSB databases. Final repair plan & OEM parts ready.",
+                        fontSize = 11.sp,
+                        color = ForgeOnSurfaceVariant,
+                        lineHeight = 15.sp
+                    )
+
+                    Button(
+                        onClick = { onNavigate("openmanus") },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForgeGreen, contentColor = Color.Black),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(imageVector = Icons.Default.Assessment, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("VIEW FINAL DIAGNOSTIC REPORT & ACTION PLAN", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
         // Fast Hands-Free Diagnostic Action Macros Bar
         item {
             Surface(
@@ -409,6 +473,13 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         MacroButton(
+                            title = "AI Protocol",
+                            icon = Icons.Default.AutoMode,
+                            color = ForgeGreen,
+                            onClick = { onNavigate("openmanus") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        MacroButton(
                             title = "DVI PDF",
                             icon = Icons.Default.Assessment,
                             color = ForgeAmber,
@@ -425,15 +496,8 @@ fun DashboardScreen(
                         MacroButton(
                             title = "Inventory",
                             icon = Icons.Default.Inventory2,
-                            color = ForgeGreen,
+                            color = ForgeAmber,
                             onClick = { onNavigate("inventory") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        MacroButton(
-                            title = "Recalls",
-                            icon = Icons.Default.Security,
-                            color = ForgeRed,
-                            onClick = { onNavigate("settings") },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -557,10 +621,27 @@ fun DashboardScreen(
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // AI Explain All Button
+                            if (telemetry.activeDtcCodes.isNotEmpty()) {
+                                Button(
+                                    onClick = {
+                                        selectedDtcForExplainer = telemetry.activeDtcCodes.firstOrNull()?.code
+                                        showDtcExplainerDialog = true
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = ForgeAmber, contentColor = Color.Black),
+                                    shape = RoundedCornerShape(6.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                ) {
+                                    Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text("AI EXPLAIN", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
                             // Generate Report Button
                             Button(
                                 onClick = { showReportDialog = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = ForgeAmber, contentColor = Color.Black),
+                                colors = ButtonDefaults.buttonColors(containerColor = ForgeCyan, contentColor = Color.Black),
                                 shape = RoundedCornerShape(6.dp),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
                             ) {
@@ -600,14 +681,37 @@ fun DashboardScreen(
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(ForgeRed.copy(alpha = 0.1f))
                                     .border(1.dp, ForgeRed.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        selectedDtcForExplainer = dtc.code
+                                        showDtcExplainerDialog = true
+                                    }
                                     .padding(10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
-                                    Text(text = dtc.code, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = ForgeRed)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(text = dtc.code, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = ForgeRed)
+                                        Surface(
+                                            color = ForgeAmber.copy(alpha = 0.2f),
+                                            shape = RoundedCornerShape(3.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = ForgeAmber, modifier = Modifier.size(10.dp))
+                                                Text("EXPLAIN", fontSize = 8.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, color = ForgeAmber)
+                                            }
+                                        }
+                                    }
                                     Text(text = dtc.description, fontSize = 12.sp, color = ForgeOnSurface)
                                 }
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(4.dp))
@@ -671,6 +775,21 @@ fun DashboardScreen(
         telemetry = telemetry,
         onDismiss = { showReportDialog = false }
     )
+
+    if (showDtcExplainerDialog) {
+        DtcExplanationDialog(
+            visible = showDtcExplainerDialog,
+            initialDtcCode = selectedDtcForExplainer,
+            allDetectedDtcs = telemetry.activeDtcCodes,
+            activeVehicleName = "2021 Audi S5 Sportback (3.0T V6)",
+            activeTelemetry = telemetry,
+            onDismiss = { showDtcExplainerDialog = false },
+            onSendToOpenManus = { onNavigate("openmanus") },
+            onAddTaskToWorkOrder = { title, desc ->
+                onAddTask(1L, title, desc, "High", "DTC Diagnostic")
+            }
+        )
+    }
 
     if (showAutoTriageDialog) {
         AutoTriagePipelineDialog(

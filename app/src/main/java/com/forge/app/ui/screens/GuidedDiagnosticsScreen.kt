@@ -23,6 +23,7 @@ import com.forge.app.services.DiagnosticReportService
 import com.forge.app.services.DtcInfo
 import com.forge.app.services.GeminiClient
 import com.forge.app.ui.components.DiagnosticReportDialog
+import com.forge.app.ui.components.DtcExplanationDialog
 import com.forge.app.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -34,6 +35,7 @@ fun GuidedDiagnosticsScreen() {
     var analysisResult by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var showReportDialog by remember { mutableStateOf(false) }
+    var showDtcExplainerDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -65,15 +67,28 @@ fun GuidedDiagnosticsScreen() {
                         )
                     }
 
-                    Button(
-                        onClick = { showReportDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = ForgeCyan, contentColor = Color.Black),
-                        shape = RoundedCornerShape(6.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.Assessment, contentDescription = null, modifier = Modifier.size(13.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("EXPORT REPORT", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Button(
+                            onClick = { showDtcExplainerDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = ForgeAmber, contentColor = Color.Black),
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("AI EXPLAINER", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = { showReportDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = ForgeCyan, contentColor = Color.Black),
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Assessment, contentDescription = null, modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("EXPORT REPORT", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
@@ -245,6 +260,20 @@ fun GuidedDiagnosticsScreen() {
             ),
             onDismiss = { showReportDialog = false }
         )
+
+        if (showDtcExplainerDialog) {
+            DtcExplanationDialog(
+                visible = showDtcExplainerDialog,
+                initialDtcCode = dtcInput.ifBlank { "P0300" },
+                allDetectedDtcs = listOf(
+                    DtcInfo("P0300", "Random/Multiple Cylinder Misfire Detected", "Stored"),
+                    DtcInfo("P0171", "System Too Lean (Bank 1)", "Pending"),
+                    DtcInfo("P0420", "Catalyst System Efficiency Below Threshold", "Stored")
+                ),
+                activeVehicleName = "2021 Audi S5 Sportback (3.0T V6)",
+                onDismiss = { showDtcExplainerDialog = false }
+            )
+        }
     }
 }
 

@@ -25,7 +25,8 @@ import com.forge.app.ui.theme.*
 
 @Composable
 fun AgentOrchestratorScreen(
-    orchestrator: ForgeAgentOrchestrator? = null
+    orchestrator: ForgeAgentOrchestrator? = null,
+    onNavigate: ((String) -> Unit)? = null
 ) {
     val state by (orchestrator?.orchestratorState?.collectAsState()
         ?: remember { mutableStateOf(com.forge.app.services.AgentOrchestratorState()) })
@@ -35,7 +36,7 @@ fun AgentOrchestratorScreen(
             .fillMaxSize()
             .background(ForgeBackground)
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // Top Banner
         Surface(
@@ -77,6 +78,25 @@ fun AgentOrchestratorScreen(
                     fontFamily = FontFamily.Monospace,
                     color = ForgeOnSurfaceVariant
                 )
+
+                if (onNavigate != null) {
+                    Button(
+                        onClick = { onNavigate("openmanus") },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForgeAmber),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(imageVector = Icons.Default.PrecisionManufacturing, contentDescription = null, tint = ForgeBackground)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "OPEN OPENMANUS AUTONOMOUS STUDIO",
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            color = ForgeBackground
+                        )
+                    }
+                }
             }
         }
 
@@ -134,7 +154,11 @@ fun AgentCard(agent: AgentActivityStatus) {
         ForgeAgentType.MiddlewareTelemetryAgent -> ForgeGreen
         ForgeAgentType.BackendSyncAgent -> ForgeCyan
         ForgeAgentType.ServerAiAgent -> Color(0xFFFF4081)
-        else -> ForgeOnSurface
+        ForgeAgentType.OpenManusAgent -> Color(0xFFFFB300)
+        ForgeAgentType.CanBusUdsAgent -> Color(0xFF00E5FF)
+        ForgeAgentType.ElectricalPhysicsAgent -> Color(0xFF76FF03)
+        ForgeAgentType.NhtsaRecallAgent -> Color(0xFFE040FB)
+        ForgeAgentType.JulesEngineeringAgent -> Color(0xFF448AFF)
     }
 
     Surface(

@@ -31,6 +31,7 @@ data class DrawerMenuItem(
 val drawerMenuItems = listOf(
     // Diagnostics Suite
     DrawerMenuItem("dashboard", "Dashboard", "Overview, OBD Gauges & Tasks", "DIAGNOSTICS SUITE", Icons.Default.Dashboard),
+    DrawerMenuItem("openmanus", "OpenManus Autonomous AI", "Autonomous multi-agent diagnostic loop", "DIAGNOSTICS SUITE", Icons.Default.PrecisionManufacturing),
     DrawerMenuItem("live_data", "Live Data Telemetry", "Real-time ECU PID sensor streams", "DIAGNOSTICS SUITE", Icons.Default.BarChart),
     DrawerMenuItem("topology", "ECU Network Topology", "CAN bus nodes & fault mapping", "DIAGNOSTICS SUITE", Icons.Default.AccountTree),
     DrawerMenuItem("guided_diag", "Guided AI Diagnostics", "AI trouble code repair assistant", "DIAGNOSTICS SUITE", Icons.Default.Psychology),
