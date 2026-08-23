@@ -96,7 +96,7 @@ object NexpartClient {
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build()
 
-    private val api: NexpartApi = retrofit.create(NexpartApi::class.java)
+    internal var api: NexpartApi = retrofit.create(NexpartApi::class.java)
 
     suspend fun searchB2bInventory(
         vin: String = "WAUZZZF58MA019284",
