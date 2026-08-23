@@ -15,6 +15,7 @@ import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
 import java.util.concurrent.TimeUnit
+import androidx.annotation.VisibleForTesting
 
 @Serializable
 data class NexpartStockRequest(
@@ -96,7 +97,8 @@ object NexpartClient {
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build()
 
-    private val api: NexpartApi = retrofit.create(NexpartApi::class.java)
+    @VisibleForTesting
+    var api: NexpartApi = retrofit.create(NexpartApi::class.java)
 
     suspend fun searchB2bInventory(
         vin: String = "WAUZZZF58MA019284",
