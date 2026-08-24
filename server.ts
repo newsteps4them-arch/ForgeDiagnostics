@@ -269,6 +269,11 @@ async function startServer() {
   app.post("/api/git/link", async (req, res) => {
     try {
       const { repoUrl, githubToken } = req.body;
+
+      if (/[;&|$<>\`\\]/.test(repoUrl) || (githubToken && /[;&|$<>\`\\]/.test(githubToken))) {
+        return res.status(400).json({ error: "Invalid characters in input." });
+      }
+
       if (!repoUrl) {
         return res.status(400).json({ error: "Repository URL is required." });
       }
@@ -303,6 +308,11 @@ async function startServer() {
   app.post("/api/git/sync", async (req, res) => {
     try {
       const { commitMessage } = req.body;
+
+      if (commitMessage && /[;&|$<>\`\\]/.test(commitMessage)) {
+         return res.status(400).json({ error: "Invalid characters in commit message." });
+      }
+
       const args = ["scripts/sync.sh", "sync"];
       if (commitMessage) args.push(commitMessage);
       const { stdout, stderr } = await execFileAsync("bash", args);
