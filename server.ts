@@ -272,6 +272,17 @@ async function startServer() {
       if (!repoUrl) {
         return res.status(400).json({ error: "Repository URL is required." });
       }
+
+      if (
+        !repoUrl.startsWith("https://") &&
+        !repoUrl.startsWith("http://") &&
+        !repoUrl.startsWith("git@")
+      ) {
+        return res
+          .status(400)
+          .json({ error: "Invalid repository URL format." });
+      }
+
       let finalUrl = repoUrl.trim();
       if (githubToken && githubToken.trim()) {
         const cleanToken = githubToken.trim();
@@ -281,11 +292,9 @@ async function startServer() {
           : withoutProto;
         finalUrl = `https://${cleanToken}@${cleanUrlPart}`;
       }
-      const { stdout, stderr } = await execFileAsync("bash", [
-        "scripts/sync.sh",
-        "--link",
-        finalUrl,
-      ]);
+      // 🔒 Security fix: Passed arguments via execFile array to prevent shell command injection.
+      const args = ["scripts/sync.sh", "--link", finalUrl];
+      const { stdout, stderr } = await execFileAsync("bash", args);
       res.json({
         success: true,
         message: "Repository linked successfully.",
