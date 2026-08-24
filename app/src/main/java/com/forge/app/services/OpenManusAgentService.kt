@@ -503,9 +503,9 @@ class OpenManusAgentService(
                 if (resp.isSuccessful && bodyStr.isNotBlank()) {
                     val jsonResp = JSONObject(bodyStr)
                     val generatedText = jsonResp.optString("response", "")
-                    if (generatedText.isNotBlank()) {
-                        return parseAiReportToStructured(generatedText, goal, vehicleContext)
-                    }
+                    if (generatedText.isBlank()) throw Exception("Blank generated text")
+
+                    return parseAiReportToStructured(generatedText, goal, vehicleContext)
                 }
             } catch (e: Exception) {
                 Log.w("OpenManus", "Local Ollama fallback to deterministic engine: ${e.message}")
