@@ -235,7 +235,7 @@ class ObdTelemetryService(
         }
     }
 
-    private fun parseRpmResponse(response: String): Int? {
+    internal fun parseRpmResponse(response: String): Int? {
         return try {
             val clean = response.replace(" ", "").replace("\r", "").replace("\n", "")
             if (clean.contains("410C")) {

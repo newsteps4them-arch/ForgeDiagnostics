@@ -1,0 +1,5 @@
+🧪 Test parsing logic for OBD RPM response
+
+🎯 What: Added table-driven parameterized unit tests for the `parseRpmResponse` logic in `ObdTelemetryService`. Changed the method visibility from private to internal to allow for testing.
+📊 Coverage: Tested valid valid OBD hex responses (including ones with varied spacing/whitespace characters), malformed strings, incomplete payloads, empty responses, invalid prefixes, and unexpected garbage input.
+✨ Result: Improved test coverage and reliability for OBD string parsing logic, making it more resilient to anomalies and unexpected formatted OBD hardware responses.
