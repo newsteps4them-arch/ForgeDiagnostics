@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +8,12 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.secrets)
+}
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
 }
 
 android {
@@ -24,9 +33,9 @@ android {
     signingConfigs {
         getByName("debug") {
             storeFile = file("${rootDir}/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            storePassword = localProperties.getProperty("DEBUG_STORE_PASSWORD") ?: System.getenv("DEBUG_STORE_PASSWORD")
+            keyAlias = localProperties.getProperty("DEBUG_KEY_ALIAS") ?: System.getenv("DEBUG_KEY_ALIAS")
+            keyPassword = localProperties.getProperty("DEBUG_KEY_PASSWORD") ?: System.getenv("DEBUG_KEY_PASSWORD")
         }
     }
 

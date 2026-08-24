@@ -62,14 +62,15 @@ class AutomotiveOscilloscopeMathTest {
             var maxGapLength = 0
 
             for (i in samples.indices) {
-                if (kotlin.math.abs(samples[i]) < 0.1f) {
-                    consecutiveZeros++
-                    if (consecutiveZeros > maxGapLength) {
-                        maxGapLength = consecutiveZeros
-                        maxGapIndex = i - consecutiveZeros + 1
-                    }
-                } else {
+                if (kotlin.math.abs(samples[i]) >= 0.1f) {
                     consecutiveZeros = 0
+                    continue
+                }
+
+                consecutiveZeros++
+                if (consecutiveZeros > maxGapLength) {
+                    maxGapLength = consecutiveZeros
+                    maxGapIndex = i - consecutiveZeros + 1
                 }
             }
             return maxGapIndex
