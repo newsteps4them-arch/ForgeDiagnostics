@@ -81,9 +81,9 @@ interface NexpartApi {
 
 object NexpartClient {
     private const val BASE_URL = "https://api.nexpart.com/"
-    private val json = Json { ignoreUnknownKeys = true }
+    val json = Json { ignoreUnknownKeys = true }
 
-    private val okHttpClient = OkHttpClient.Builder()
+    val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
         .addInterceptor(HttpLoggingInterceptor().apply {
@@ -91,7 +91,7 @@ object NexpartClient {
         })
         .build()
 
-    private val retrofit = Retrofit.Builder()
+    var retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(okHttpClient)
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
@@ -99,6 +99,24 @@ object NexpartClient {
 
     @VisibleForTesting
     var api: NexpartApi = retrofit.create(NexpartApi::class.java)
+
+    fun resetApi() {
+        retrofit = Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+        api = retrofit.create(NexpartApi::class.java)
+    }
+
+    fun setBaseUrl(url: String) {
+        retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+        api = retrofit.create(NexpartApi::class.java)
+    }
 
     suspend fun searchB2bInventory(
         vin: String = "WAUZZZF58MA019284",
