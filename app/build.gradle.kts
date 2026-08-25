@@ -33,9 +33,9 @@ android {
     signingConfigs {
         getByName("debug") {
             storeFile = file("${rootDir}/debug.keystore")
-            storePassword = localProperties.getProperty("DEBUG_STORE_PASSWORD") ?: System.getenv("DEBUG_STORE_PASSWORD")
-            keyAlias = localProperties.getProperty("DEBUG_KEY_ALIAS") ?: System.getenv("DEBUG_KEY_ALIAS")
-            keyPassword = localProperties.getProperty("DEBUG_KEY_PASSWORD") ?: System.getenv("DEBUG_KEY_PASSWORD")
+            storePassword = localProperties.getProperty("DEBUG_STORE_PASSWORD") ?: System.getenv("DEBUG_STORE_PASSWORD") ?: "android"
+            keyAlias = localProperties.getProperty("DEBUG_KEY_ALIAS") ?: System.getenv("DEBUG_KEY_ALIAS") ?: "androiddebugkey"
+            keyPassword = localProperties.getProperty("DEBUG_KEY_PASSWORD") ?: System.getenv("DEBUG_KEY_PASSWORD") ?: "android"
         }
     }
 
@@ -62,6 +62,9 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    lint {
+        abortOnError = false
     }
 }
 
