@@ -165,7 +165,7 @@ fun DiagnosticReportDialog(
                                     Text(text = msg, fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = ForgeGreen)
                                 }
                                 IconButton(onClick = { saveStatusMsg = null }, modifier = Modifier.size(20.dp)) {
-                                    Icon(imageVector = Icons.Default.Close, contentDescription = null, tint = ForgeGreen, modifier = Modifier.size(14.dp))
+                                    Icon(imageVector = Icons.Default.Close, contentDescription = "Dismiss message", tint = ForgeGreen, modifier = Modifier.size(14.dp))
                                 }
                             }
                         }
