@@ -1,0 +1,32 @@
+name: Forge Autonomous Guardian v2
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  auto-heal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Clean Dependency Installation
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run Linting
+        run: npm run lint --if-present
+
+      - name: Run Vitest Suite
+        run: npm test --if-present
+
+      - name: Run Virtual HIL Diagnostics Check
+        run: python3 test/hil_emulator/virtual_elm327.py <<< "010C"
