@@ -14,6 +14,17 @@ git clone https://github.com/newsteps4them-arch/team.forge.git
 cd team.forge
 ```
 
+
+## 2.5 Automated Environment Setup
+To automate configuring the environment variables and API keys (such as Google Cloud, Gemini, and Firebase integrations), use the provided automated script.
+
+Ensure you have `gcloud`, `firebase`, and `jq` installed on your system.
+Then run:
+```bash
+./setup_project.sh
+```
+This script will authenticate your Google Cloud and Firebase sessions, enable necessary APIs, create/fetch keys, and write them to `.env` and `local.properties`.
+
 ## 3. Install Node.js & Dependencies
 *   Download and install Node.js (v18 or higher) from [nodejs.org](https://nodejs.org/).
 *   Install the project dependencies:
