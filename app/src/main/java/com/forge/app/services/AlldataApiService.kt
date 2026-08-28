@@ -90,13 +90,23 @@ object AlldataClient {
         })
         .build()
 
-    private val retrofit = Retrofit.Builder()
+    var retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(okHttpClient)
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build()
 
-    private val api: AlldataApi = retrofit.create(AlldataApi::class.java)
+    internal var api: AlldataApi = retrofit.create(AlldataApi::class.java)
+
+    fun setBaseUrl(url: String) {
+        retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+        api = retrofit.create(AlldataApi::class.java)
+    }
+
 
     suspend fun fetchRepairProcedures(
         vin: String = "WAUZZZF58MA019284",
