@@ -99,20 +99,37 @@ object NhtsaSafetyClient {
         })
         .build()
 
-    private val vpicRetrofit = Retrofit.Builder()
+    var vpicRetrofit = Retrofit.Builder()
         .baseUrl(VPIC_BASE_URL)
         .client(okHttpClient)
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build()
 
-    private val recallsRetrofit = Retrofit.Builder()
+    var recallsRetrofit = Retrofit.Builder()
         .baseUrl(RECALLS_BASE_URL)
         .client(okHttpClient)
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build()
 
-    private val vpicApi: NhtsaApi = vpicRetrofit.create(NhtsaApi::class.java)
-    private val recallsApi: NhtsaRecallsApi = recallsRetrofit.create(NhtsaRecallsApi::class.java)
+    internal var vpicApi: NhtsaApi = vpicRetrofit.create(NhtsaApi::class.java)
+    internal var recallsApi: NhtsaRecallsApi = recallsRetrofit.create(NhtsaRecallsApi::class.java)
+
+    fun setBaseUrl(url: String) {
+        vpicRetrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+        vpicApi = vpicRetrofit.create(NhtsaApi::class.java)
+
+        recallsRetrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+        recallsApi = recallsRetrofit.create(NhtsaRecallsApi::class.java)
+    }
+
 
     /**
      * Real-world query to NHTSA VPIC database to decode vehicle specifications from VIN.
