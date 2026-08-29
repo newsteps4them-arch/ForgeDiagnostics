@@ -253,6 +253,7 @@ class MainActivity : ComponentActivity() {
                                 "guided_diag" -> GuidedDiagnosticsScreen()
                                 "oscilloscope" -> OscilloscopeScreen()
                                 "terminal" -> TerminalScreen(usbHardwareService = usbHardwareService)
+                                "hardware_test" -> HardwareTestScreen()
                                 "garage" -> GarageScreen(
                                     vehicles = vehicles,
                                     onAddVehicle = { vin, make, model, year ->
