@@ -7,7 +7,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Before
+import org.junit.After
 import org.junit.Test
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.StandardTestDispatcher
 
 class ObdDiagnosticHardwareModuleTest {
 
@@ -16,9 +20,11 @@ class ObdDiagnosticHardwareModuleTest {
     private lateinit var geminiService: GeminiService
     private lateinit var openManusService: OpenManusAgentService
     private lateinit var hardwareModule: ObdDiagnosticHardwareModule
+    private val testDispatcher = StandardTestDispatcher()
 
     @Before
     fun setup() {
+        Dispatchers.setMain(testDispatcher)
         telemetryService = ObdTelemetryService(testScope)
         geminiService = GeminiService()
         openManusService = OpenManusAgentService(geminiService)
@@ -28,6 +34,11 @@ class ObdDiagnosticHardwareModuleTest {
             telemetryService = telemetryService,
             openManusService = openManusService
         )
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
