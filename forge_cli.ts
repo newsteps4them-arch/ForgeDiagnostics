@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 import * as fs from 'fs';
 import * as path from 'path';
 import { ForgeAgent, AgentConfig } from './shared/a2a_bus/agent_core';

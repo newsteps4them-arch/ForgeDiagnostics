@@ -1,3 +1,8 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app.services
 
 import kotlinx.serialization.SerialName
