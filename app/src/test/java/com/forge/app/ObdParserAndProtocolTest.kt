@@ -52,6 +52,21 @@ class ObdParserAndProtocolTest {
             return ((a - 128) * 100f) / 128f
         }
 
+        private fun parseCodeHex(codeHex: String): String? {
+            if (codeHex == "0000") return null
+            val firstNibble = codeHex[0].digitToInt(16)
+            val prefix = when (firstNibble shr 2) {
+                0 -> "P"
+                1 -> "C"
+                2 -> "B"
+                3 -> "U"
+                else -> "P"
+            }
+            val firstCharNum = (firstNibble and 0x03).toString()
+            val restChars = codeHex.substring(1)
+            return "$prefix$firstCharNum$restChars"
+        }
+
         fun parseDtcResponse(hexResponse: String): List<String> {
             // Mode 03 response: "43 01 33 03 00 00 00" -> P0133, P0300
             val clean = hexResponse.replace(" ", "").trim()
@@ -61,18 +76,7 @@ class ObdParserAndProtocolTest {
             for (i in 0 until payload.length step 4) {
                 if (i + 4 <= payload.length) {
                     val codeHex = payload.substring(i, i + 4)
-                    if (codeHex == "0000") continue
-                    val firstNibble = codeHex[0].digitToInt(16)
-                    val prefix = when (firstNibble shr 2) {
-                        0 -> "P"
-                        1 -> "C"
-                        2 -> "B"
-                        3 -> "U"
-                        else -> "P"
-                    }
-                    val firstCharNum = (firstNibble and 0x03).toString()
-                    val restChars = codeHex.substring(1)
-                    dtcs.add("$prefix$firstCharNum$restChars")
+                    parseCodeHex(codeHex)?.let { dtcs.add(it) }
                 }
             }
             return dtcs
