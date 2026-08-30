@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -43,7 +44,8 @@ data class DtcInfo(
 
 class ObdTelemetryService(
     private val scope: CoroutineScope,
-    private val usbHardwareService: UsbHardwareCommunicationService? = null
+    private val usbHardwareService: UsbHardwareCommunicationService? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     private val _telemetry = MutableStateFlow(ObdTelemetryData())
     val telemetry: StateFlow<ObdTelemetryData> = _telemetry.asStateFlow()
@@ -59,7 +61,7 @@ class ObdTelemetryService(
     fun startTelemetryLoop() {
         if (isRunning) return
         isRunning = true
-        scope.launch(Dispatchers.IO) {
+        scope.launch(ioDispatcher) {
             var tick = 0
             while (isRunning) {
                 tick++
