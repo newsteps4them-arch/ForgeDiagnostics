@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -21,12 +22,15 @@ import com.forge.app.data.TaskEntity
 import com.forge.app.data.VehicleEntity
 import com.forge.app.data.WorkOrderEntity
 import com.forge.app.services.ObdTelemetryService
+import com.forge.app.services.UpdateManager
+import com.forge.app.services.UpdateStatus
 import com.forge.app.services.UsbHardwareCommunicationService
 import com.forge.app.ui.components.BottomNavBar
 import com.forge.app.ui.components.GeminiChatSheet
 import com.forge.app.ui.components.NavigationDrawerContent
 import com.forge.app.ui.components.PersistentAiFab
 import com.forge.app.ui.components.TopStatusBar
+import com.forge.app.ui.components.UpdateDialog
 import com.forge.app.ui.screens.*
 import com.forge.app.ui.theme.TeamForgeTheme
 import kotlinx.coroutines.launch
@@ -42,6 +46,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var agentOrchestrator: com.forge.app.services.ForgeAgentOrchestrator
     private lateinit var cloudConnectorsManager: com.forge.app.services.CloudConnectorsManager
     private lateinit var autoTriageService: com.forge.app.services.AutoTriagePipelineService
+    val updateManager: UpdateManager by lazy { UpdateManager() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,6 +77,10 @@ class MainActivity : ComponentActivity() {
             openManusService = openManusService
         )
 
+        // Automatic update check on application startup
+        lifecycleScope.launch {
+            updateManager.checkForUpdates(BuildConfig.VERSION_NAME)
+        }
 
         // Seed initial sample vehicle, project, task, and inventory if database is fresh
         lifecycleScope.launch {
@@ -131,10 +140,12 @@ class MainActivity : ComponentActivity() {
             TeamForgeTheme {
                 val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
                 val coroutineScope = rememberCoroutineScope()
+                val context = LocalContext.current
                 var currentRoute by remember { mutableStateOf("dashboard") }
                 var showAiChatSheet by remember { mutableStateOf(false) }
                 var aiInitialPrompt by remember { mutableStateOf<String?>(null) }
 
+                val updateStatus by updateManager.updateStatus.collectAsStateWithLifecycle()
                 val telemetry by telemetryService.telemetry.collectAsStateWithLifecycle()
                 val projects by repository.projects.collectAsStateWithLifecycle(initialValue = emptyList())
                 val vehicles by repository.vehicles.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -372,6 +383,21 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.align(Alignment.BottomEnd)
                             )
                         }
+
+                        // OTA Software Update Dialog
+                        UpdateDialog(
+                            updateStatus = updateStatus,
+                            currentVersion = BuildConfig.VERSION_NAME,
+                            onUpdateClick = {
+                                if (updateStatus is UpdateStatus.UpdateAvailable) {
+                                    val asset = (updateStatus as UpdateStatus.UpdateAvailable).apkAsset
+                                    coroutineScope.launch {
+                                        updateManager.downloadAndInstall(context, asset)
+                                    }
+                                }
+                            },
+                            onDismiss = { updateManager.dismissUpdate() }
+                        )
 
                         if (showAiChatSheet) {
                             GeminiChatSheet(

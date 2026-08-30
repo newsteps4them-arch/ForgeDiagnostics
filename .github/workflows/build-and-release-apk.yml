@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g., 1.0.0)'
+        description: 'Release version override (e.g., 1.0.1)'
         required: false
         default: 'auto'
 
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,13 +30,21 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Get version
+      - name: Determine Release Version
         id: version
         run: |
-          VERSION=$(node -e "try { console.log(require('./package.json').version || '1.0.0'); } catch(e) { console.log('1.0.0'); }")
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+          BASE_VERSION=$(node -e "try { console.log(require('./package.json').version || '1.0.0'); } catch(e) { console.log('1.0.0'); }")
+          BUILD_NUM=${{ github.run_number }}
+          SHORT_SHA=$(git rev-parse --short HEAD)
+
+          if [ "${{ github.event.inputs.version }}" != "" ] && [ "${{ github.event.inputs.version }}" != "auto" ]; then
+            FINAL_VERSION="${{ github.event.inputs.version }}"
+          else
+            FINAL_VERSION="${BASE_VERSION}.${BUILD_NUM}"
+          fi
+
+          echo "version=$FINAL_VERSION" >> $GITHUB_OUTPUT
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
 
       - name: Build APK and App Bundle
         run: |
@@ -84,19 +92,20 @@ jobs:
           name: "Forge Diagnostics v${{ steps.version.outputs.version }}"
           make_latest: true
           body: |
-            # 🏎️ Forge Diagnostics Native Android Release (v${{ steps.version.outputs.version }})
+            # 🏎️ Forge Diagnostics Native Android OTA Release (v${{ steps.version.outputs.version }})
             
             **Version:** ${{ steps.version.outputs.version }}
+            **Commit:** ${{ steps.version.outputs.short_sha }}
+            **Build Number:** ${{ github.run_number }}
             
             ## 📦 Downloadable Assets
-            - 📲 **Pre-signed Debug APK (Install Directly):** `Forge-debug-${{ steps.version.outputs.version }}.apk`
+            - 📲 **Pre-signed Debug APK (Auto-Update Enabled):** `Forge-debug-${{ steps.version.outputs.version }}.apk`
             - 🔑 **Unsigned Production Release APK:** `Forge-release-unsigned-${{ steps.version.outputs.version }}.apk`
             - 🚀 **Google Play App Bundle (AAB):** `Forge-production-release-${{ steps.version.outputs.version }}.aab`
             
-            ## ⚡ Direct 1-Step Installation
-            1. Download `Forge-debug-${{ steps.version.outputs.version }}.apk` directly onto your Android device or diagnostic tool.
-            2. Tap the downloaded file and select **Install**.
-            *(If prompted, enable "Install from unknown sources" in device Settings).*
+            ## ⚡ Direct 1-Step Installation & In-App Auto-Update
+            - Devices with Forge Diagnostics installed will automatically prompt for update on startup when connected to network!
+            - Or download `Forge-debug-${{ steps.version.outputs.version }}.apk` directly onto your Android device.
           draft: false
           prerelease: false
         env:
@@ -108,4 +117,3 @@ jobs:
           name: app-production-ready-artifacts
           path: artifacts/*
           retention-days: 30
-
