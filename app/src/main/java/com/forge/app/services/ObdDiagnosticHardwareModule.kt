@@ -181,7 +181,7 @@ class ObdDiagnosticHardwareModule(
 
             val buffer = ByteArray(512)
             val bytes = inputStream.read(buffer)
-            val response = String(buffer, 0, bytes)
+            val response = decodeStream(buffer, bytes)
 
             _hardwareState.value = _hardwareState.value.copy(
                 isConnected = true,
@@ -319,7 +319,7 @@ class ObdDiagnosticHardwareModule(
                     out.flush()
                     val buf = ByteArray(512)
                     val read = input.read(buf)
-                    if (read > 0) String(buf, 0, read).trim() else ""
+                    decodeStream(buf, read, true)
                 }
                 else -> ""
             }
@@ -458,4 +458,13 @@ class ObdDiagnosticHardwareModule(
             connectedDeviceName = "Disconnected"
         )
     }
+    private fun decodeStream(buffer: ByteArray, bytesRead: Int, trim: Boolean = false): String {
+        return if (bytesRead > 0) {
+            val result = String(buffer, 0, bytesRead)
+            if (trim) result.trim() else result
+        } else {
+            ""
+        }
+    }
+
 }
