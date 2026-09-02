@@ -2,6 +2,9 @@ node_modules/
 dist/
 coverage/
 .env
+local.properties
+.idea/
+*.iml
 app/build/
 .gradle/
 .sync-lock
