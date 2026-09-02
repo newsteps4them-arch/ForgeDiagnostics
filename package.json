@@ -11,7 +11,9 @@
     "build": "echo 'Android Gradle Build'",
     "sync": "node scripts/auto_sync.js --once",
     "sync:watch": "node scripts/auto_sync.js",
+    "sync:silent": "wscript.exe ./scripts/start_sync_daemon.vbs",
     "sync:ps": "powershell -ExecutionPolicy Bypass -File ./scripts/auto_sync.ps1",
+    "sync:status": "git status && git log -n 3 --oneline",
     "connect": "powershell -ExecutionPolicy Bypass -File ./scripts/connect_workflows.ps1"
   },
   "description": "[![Direct APK Download](https://img.shields.io/badge/⚡_Direct_Download-Android_.APK-00E676?style=for-the-badge&logo=android&logoColor=black)](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases/latest/download/Forge-debug-1.0.0.apk) [![Releases Page](https://img.shields.io/github/v/release/newsteps4them-arch/ForgeDiagnostics?style=for-the-badge&color=2196F3)](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases)",
