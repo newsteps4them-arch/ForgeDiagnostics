@@ -63,6 +63,48 @@ This guide details the automated 4-way synchronization architecture powering **T
 
 ---
 
+## 🤖 Autonomous Merge Conflict Bot Collective
+
+Team Forge includes a two-tier automated GitHub bot collective designed to scan, detect, resolve, and merge Pull Requests encountering Git merge conflicts.
+
+```
+┌──────────────────────────────────────────────────────────┐
+│              Conflict Finder Bot (Bot 1)                 │
+│  - Scans open PRs on schedule / push / PR events          │
+│  - Detects merge conflicts against target base branch   │
+│  - Labels PR with `has-merge-conflict`                   │
+│  - Comments diagnostic list of conflicting files         │
+│  - Dispatches Bot 2 via workflow_dispatch                │
+└────────────────────────────┬─────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────┐
+│        Conflict Resolver & Auto-Merger Bot (Bot 2)       │
+│  - Fetches target PR head and base branches              │
+│  - Merges base branch into PR branch                     │
+│  - Identifies files with conflict markers (`<<<<<<<`)    │
+│  - Resolves conflicts using Gemini AI API / Smart Engine │
+│  - Verifies zero conflict markers remain                 │
+│  - Runs linting & test suite                             │
+│  - Commits & pushes clean resolution to PR branch       │
+│  - Automatically merges PR into base branch              │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 1. Conflict Finder Bot (Bot 1)
+- **Workflow**: `.github/workflows/conflict_finder_bot.yml`
+- **Script**: `scripts/conflict_finder.py`
+- **Schedule**: Scans open PRs every 15 minutes or on PR open/synchronize events.
+- **Actions**: Labels conflicting PRs, posts comments detailing affected files, and triggers Bot 2.
+
+### 2. Conflict Resolver & Auto-Merger Bot (Bot 2)
+- **Workflow**: `.github/workflows/conflict_resolver_bot.yml`
+- **Script**: `scripts/conflict_resolver_brain.py`
+- **Triggers**: `workflow_dispatch` or `repository_dispatch` with PR parameters (`pr_number`, `head_branch`, `base_branch`).
+- **Actions**: Merges branches, resolves conflict markers with Gemini 2.5 Flash AI, validates syntax and zero conflict markers, commits, pushes, and auto-merges the PR.
+
+---
+
 ## 📱 Opening in Android Studio
 1. Launch Android Studio.
 2. Select **Open** and choose:
