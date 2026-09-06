@@ -9,4 +9,5 @@ app/build/
 .gradle/
 .sync-lock
 .sync-log
-.vscode/
+.vscode/*
+!.vscode/mcp.json
