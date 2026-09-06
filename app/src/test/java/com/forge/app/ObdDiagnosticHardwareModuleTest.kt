@@ -1,18 +1,21 @@
 package com.forge.app
 
 import com.forge.app.services.*
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
-import org.junit.After
 import org.junit.Test
-import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.StandardTestDispatcher
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ObdDiagnosticHardwareModuleTest {
 
     private val testScope = CoroutineScope(Dispatchers.Unconfined)
@@ -32,7 +35,7 @@ class ObdDiagnosticHardwareModuleTest {
             scope = testScope,
             usbHardwareService = null,
             telemetryService = telemetryService,
-            openManusService = openManusService
+            openManusService = openManusService,
         )
     }
 
@@ -54,9 +57,9 @@ class ObdDiagnosticHardwareModuleTest {
     fun testFetchLiveDtcCodesAndOpenManusAutoTrigger() = runBlocking {
         hardwareModule.fetchLiveDiagnosticTroubleCodes(
             vehicleName = "2021 Audi S5 Sportback",
-            autoTriggerOpenManus = true
+            autoTriggerOpenManus = true,
         )
-        delay(600)
+        delay(600.milliseconds)
 
         val state = hardwareModule.hardwareState.value
         assertFalse(state.isFetchingDtcs)
@@ -79,7 +82,7 @@ class ObdDiagnosticHardwareModuleTest {
 
         // Clear codes
         hardwareModule.clearHardwareFaultCodes()
-        delay(300)
+        delay(300.milliseconds)
 
         assertEquals(0, telemetryService.telemetry.value.activeDtcCodes.size)
         assertEquals(0, hardwareModule.hardwareState.value.activeDtcs.size)
