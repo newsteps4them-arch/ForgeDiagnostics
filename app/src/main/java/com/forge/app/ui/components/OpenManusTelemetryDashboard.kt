@@ -183,7 +183,7 @@ fun OpenManusTelemetryDashboard(
                     ) {
                         Icon(
                             imageVector = if (isStreamPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                            contentDescription = "Freeze Stream",
+                            contentDescription = if (isStreamPaused) "Resume Stream" else "Freeze Stream",
                             tint = if (isStreamPaused) ForgeGreen else ForgeAmber,
                             modifier = Modifier.size(18.dp)
                         )
