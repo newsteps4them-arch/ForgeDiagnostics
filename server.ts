@@ -1,3 +1,4 @@
+import { validateRepoUrl, validateGithubToken, validateCommitMessage } from "./src/utils/security.js";
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
@@ -270,28 +271,22 @@ async function startServer() {
     try {
       const { repoUrl, githubToken } = req.body;
 
-      if (/[;&|$<>\`\\]/.test(repoUrl) || (githubToken && /[;&|$<>\`\\]/.test(githubToken))) {
-        return res.status(400).json({ error: "Invalid characters in input." });
+      const urlValidation = validateRepoUrl(repoUrl);
+      if (!urlValidation.isValid) {
+        return res.status(400).json({ error: urlValidation.error });
       }
 
-      if (!repoUrl) {
-        return res.status(400).json({ error: "Repository URL is required." });
+      const tokenValidation = validateGithubToken(githubToken);
+      if (!tokenValidation.isValid) {
+        return res.status(400).json({ error: tokenValidation.error });
       }
 
-      if (
-        !repoUrl.startsWith("https://") &&
-        !repoUrl.startsWith("http://") &&
-        !repoUrl.startsWith("git@")
-      ) {
-        return res
-          .status(400)
-          .json({ error: "Invalid repository URL format." });
-      }
+      const cleanUrl = urlValidation.cleanUrl!;
+      const cleanToken = tokenValidation.cleanToken || "";
 
-      let finalUrl = repoUrl.trim();
-      if (githubToken && githubToken.trim()) {
-        const cleanToken = githubToken.trim();
-        const withoutProto = repoUrl.replace(/^https?:\/\//, "");
+      let finalUrl = cleanUrl;
+      if (cleanToken) {
+        const withoutProto = cleanUrl.replace(/^https?:\/\//, "");
         const cleanUrlPart = withoutProto.includes("@")
           ? withoutProto.split("@")[1]
           : withoutProto;
@@ -318,12 +313,13 @@ async function startServer() {
     try {
       const { commitMessage } = req.body;
 
-      if (commitMessage && /[;&|$<>\`\\]/.test(commitMessage)) {
-         return res.status(400).json({ error: "Invalid characters in commit message." });
+      const msgValidation = validateCommitMessage(commitMessage);
+      if (!msgValidation.isValid) {
+        return res.status(400).json({ error: msgValidation.error });
       }
 
       const args = ["scripts/sync.sh", "sync"];
-      if (commitMessage) args.push(commitMessage);
+      if (msgValidation.cleanMessage) args.push(msgValidation.cleanMessage);
       const { stdout, stderr } = await execFileAsync("bash", args);
       res.json({
         success: true,
