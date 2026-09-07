@@ -188,7 +188,8 @@ class OpenManusAgentService(
         vehicleContext: String,
         activeDtcs: List<String> = emptyList(),
         telemetrySummary: String = ""
-    ) = withContext(Dispatchers.IO) {
+    ) = withContext(ioDispatcher) {
+
         if (_state.value.isRunning) return@withContext
 
         val startTime = System.currentTimeMillis()
