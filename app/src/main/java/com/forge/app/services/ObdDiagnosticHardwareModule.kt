@@ -215,8 +215,9 @@ class ObdDiagnosticHardwareModule(
         vehicleName: String = "Connected Vehicle",
         autoTriggerOpenManus: Boolean = true
     ) {
-        scope.launch(Dispatchers.IO) {
+        scope.launch(ioDispatcher) {
             _hardwareState.value = _hardwareState.value.copy(isFetchingDtcs = true)
+
 
             val parsedDtcs = mutableListOf<LiveDtcRecord>()
 
