@@ -46,13 +46,13 @@ class AcousticAndPhysicsMathTest {
 
     @Test
     fun testVolumetricEfficiencyAcrossRpmBands() {
-        // Idle condition: 750 RPM, 3.0L engine, 3.24 g/s MAF, 24°C IAT
+        // Throttled Idle condition: 750 RPM, 3.0L engine, 3.24 g/s MAF, 24°C IAT
         val idleVe = agentService.calculateVolumetricEfficiency(3.24, 750, 3.0, 24.0)
-        assertTrue("Idle VE should be within 70% to 95%", idleVe in 70.0..95.0)
+        assertTrue("Throttled Idle VE should be within 10% to 25%", idleVe in 10.0..25.0)
 
-        // Cruise condition: 2000 RPM, 2.0L engine, 18.5 g/s MAF, 30°C IAT
-        val cruiseVe = agentService.calculateVolumetricEfficiency(18.5, 2000, 2.0, 30.0)
-        assertTrue("Cruise VE should be within 80% to 105%", cruiseVe in 80.0..105.0)
+        // Naturally Aspirated WOT condition: 6000 RPM, 3.0L engine, 160.0 g/s MAF, 20°C IAT
+        val wotVe = agentService.calculateVolumetricEfficiency(160.0, 6000, 3.0, 20.0)
+        assertTrue("WOT VE should be within 80% to 100%", wotVe in 80.0..100.0)
 
         // Wide Open Throttle (WOT) Turbocharged condition: 5500 RPM, 2.0L engine, 195.0 g/s MAF (Boosted ~1.2 bar), 45°C IAT
         val boostedVe = agentService.calculateVolumetricEfficiency(195.0, 5500, 2.0, 45.0)
