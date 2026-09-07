@@ -58,10 +58,12 @@ class ObdTelemetryService(
         startTelemetryLoop()
     }
 
+    private var telemetryJob: kotlinx.coroutines.Job? = null
+
     fun startTelemetryLoop() {
         if (isRunning) return
         isRunning = true
-        scope.launch(ioDispatcher) {
+        telemetryJob = scope.launch(ioDispatcher) {
             var tick = 0
             while (isRunning) {
                 tick++
@@ -88,6 +90,12 @@ class ObdTelemetryService(
                 delay(300)
             }
         }
+    }
+
+    fun stopTelemetryLoop() {
+        isRunning = false
+        telemetryJob?.cancel()
+        telemetryJob = null
     }
 
     private suspend fun tryConnectAndReadUsbOtgObd(): Boolean {
