@@ -107,20 +107,20 @@ class ObdDiagnosticHardwareModule(
      * ATZ -> ATE0 -> ATL0 -> ATH1 -> ATSP0 -> 0100 -> 010C
      */
     fun connectHardwareDongle(onResult: ((Boolean, String) -> Unit)? = null) {
-        scope.launch(Dispatchers.IO) {
+        scope.launch(ioDispatcher) {
             _hardwareState.value = _hardwareState.value.copy(isScanning = true)
             when (_hardwareState.value.selectedInterface) {
                 ObdHardwareInterface.USB_OTG -> {
                     val usbSuccess = initUsbOtgDongle()
                     _hardwareState.value = _hardwareState.value.copy(isScanning = false)
-                    withContext(Dispatchers.Main) {
+                    withContext(mainDispatcher) {
                         onResult?.invoke(usbSuccess, if (usbSuccess) "USB OBD-II Interface Initialized" else "Failed to initialize USB OBD device")
                     }
                 }
                 ObdHardwareInterface.BLUETOOTH_SPP -> {
                     val btSuccess = initBluetoothDongle()
                     _hardwareState.value = _hardwareState.value.copy(isScanning = false)
-                    withContext(Dispatchers.Main) {
+                    withContext(mainDispatcher) {
                         onResult?.invoke(btSuccess, if (btSuccess) "Bluetooth OBD-II Interface Connected" else "Failed to pair/connect Bluetooth OBD dongle")
                     }
                 }
@@ -130,13 +130,14 @@ class ObdDiagnosticHardwareModule(
                         isConnected = true,
                         connectedDeviceName = "Virtual Diagnostic Bridge"
                     )
-                    withContext(Dispatchers.Main) {
+                    withContext(mainDispatcher) {
                         onResult?.invoke(true, "Virtual OBD Interface Connected")
                     }
                 }
             }
         }
     }
+
 
     private suspend fun initUsbOtgDongle(): Boolean {
         return try {
