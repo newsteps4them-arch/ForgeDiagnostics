@@ -37,7 +37,8 @@ class ObdDiagnosticHardwareModuleTest {
         Dispatchers.setMain(testDispatcher)
         telemetryService = ObdTelemetryService(testScope)
         geminiService = GeminiService()
-        openManusService = OpenManusAgentService(geminiService)
+        openManusService = OpenManusAgentService(geminiService, Dispatchers.Unconfined)
+
         hardwareModule = ObdDiagnosticHardwareModule(
             scope = testScope,
             usbHardwareService = null,
