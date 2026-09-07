@@ -79,14 +79,15 @@ class AutoTriagePipelineService(
     ) {
         if (_triageState.value.isRunning) return
 
+        _triageState.value = _triageState.value.copy(
+            isRunning = true,
+            progress = 0.05f,
+            activeVehicleVin = vin,
+            detectedDtcs = dtcCodes,
+            steps = getInitialSteps()
+        )
+
         scope.launch {
-            _triageState.value = _triageState.value.copy(
-                isRunning = true,
-                progress = 0.05f,
-                activeVehicleVin = vin,
-                detectedDtcs = dtcCodes,
-                steps = getInitialSteps()
-            )
 
             ForgeApplication.logEvent("AutoTriagePipeline: Started autonomous workflow for VIN $vin with ${dtcCodes.size} DTCs")
 
