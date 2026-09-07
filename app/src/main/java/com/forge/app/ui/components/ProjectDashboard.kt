@@ -690,7 +690,7 @@ private fun TaskCardItem(
                                 "In Progress" -> Icons.Default.Pending
                                 else -> Icons.Default.RadioButtonUnchecked
                             },
-                            contentDescription = "Toggle Status",
+                            contentDescription = "Toggle status for task: ${task.title}",
                             tint = iconTint,
                             modifier = Modifier.scale(iconScale)
                         )
@@ -790,7 +790,7 @@ private fun TaskCardItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.DeleteOutline,
-                    contentDescription = "Delete Task",
+                    contentDescription = "Delete task: ${task.title}",
                     tint = ForgeOnSurfaceVariant,
                     modifier = Modifier.size(16.dp)
                 )
