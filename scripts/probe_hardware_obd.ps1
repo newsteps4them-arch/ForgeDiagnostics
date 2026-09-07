@@ -36,9 +36,9 @@ foreach ($portName in $availablePorts) {
         Write-Host "  -> Probing Baud Rate: $baud..." -ForegroundColor Gray
         $port = $null
         try {
-            $port = New-Object System.IO.Ports.SerialPort $portName, $baud, [System.IO.Ports.Parity]::None, 8, [System.IO.Ports.StopBits]::One
-            $port.ReadTimeout = 1500
-            $port.WriteTimeout = 1500
+            $port = New-Object System.IO.Ports.SerialPort($portName, $baud, [System.IO.Ports.Parity]::None, 8, [System.IO.Ports.StopBits]::One)
+            $port.ReadTimeout = 1200
+            $port.WriteTimeout = 1200
             $port.DtrEnable = $true
             $port.RtsEnable = $true
             $port.Open()
@@ -47,7 +47,7 @@ foreach ($portName in $availablePorts) {
             $port.DiscardInBuffer()
             $port.DiscardOutBuffer()
             $port.Write("ATZ`r")
-            Start-Sleep -Milliseconds 500
+            Start-Sleep -Milliseconds 400
 
             $response = ""
             $readBytes = $port.BytesToRead
