@@ -63,13 +63,17 @@ class ObdDiagnosticHardwareModuleTest {
     @Test
     fun testFetchLiveDtcCodesAndOpenManusAutoTrigger() = runBlocking {
         hardwareModule.setHardwareInterface(ObdHardwareInterface.SIMULATED)
-        delay(200)
 
         hardwareModule.fetchLiveDiagnosticTroubleCodes(
             vehicleName = "2021 Audi S5 Sportback",
             autoTriggerOpenManus = true,
         )
-        delay(1200.milliseconds)
+
+        var attempts = 0
+        while (attempts < 50 && (hardwareModule.hardwareState.value.isFetchingDtcs || openManusService.state.value.finalReport == null)) {
+            delay(100)
+            attempts++
+        }
 
         val state = hardwareModule.hardwareState.value
         assertFalse(state.isFetchingDtcs)
@@ -82,6 +86,7 @@ class ObdDiagnosticHardwareModuleTest {
         assertNotNull(agentState.finalReport)
         assertTrue(agentState.finalReport?.primaryRootCause?.isNotBlank() == true)
     }
+
 
 
     @Test
