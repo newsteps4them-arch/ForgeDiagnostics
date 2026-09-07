@@ -440,7 +440,8 @@ class ObdDiagnosticHardwareModule(
     private fun startPeriodicSensorPolling() {
         if (isLoopActive) return
         isLoopActive = true
-        scope.launch(Dispatchers.IO) {
+        scope.launch(ioDispatcher) {
+
             while (isLoopActive && _hardwareState.value.isConnected) {
                 // Poll live RPM (010C)
                 val rpmRaw = sendObdCommand("010C")
