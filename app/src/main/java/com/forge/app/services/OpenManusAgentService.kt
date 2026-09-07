@@ -113,8 +113,10 @@ data class OpenManusState(
 )
 
 class OpenManusAgentService(
-    private val geminiService: GeminiService? = null
+    private val geminiService: GeminiService? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
+
     private val _state = MutableStateFlow(OpenManusState())
     val state: StateFlow<OpenManusState> = _state.asStateFlow()
 
