@@ -10,3 +10,5 @@ app/build/
 .sync-lock
 .sync-log
 .vscode/
+powershell.exe.config
+
