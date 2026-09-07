@@ -9,6 +9,7 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.util.Log
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,8 +69,11 @@ class ObdDiagnosticHardwareModule(
     private val scope: CoroutineScope,
     private val usbHardwareService: UsbHardwareCommunicationService? = null,
     private val telemetryService: ObdTelemetryService? = null,
-    private val openManusService: OpenManusAgentService? = null
+    private val openManusService: OpenManusAgentService? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) {
+
     private val _hardwareState = MutableStateFlow(ObdHardwareDiagnosticState())
     val hardwareState: StateFlow<ObdHardwareDiagnosticState> = _hardwareState.asStateFlow()
 
