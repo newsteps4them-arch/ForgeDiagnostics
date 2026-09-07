@@ -668,6 +668,20 @@ fun OpenManusTelemetryDashboard(
  * Individual Sensor Metric Card with animated linear bar and pulsing live stream indicator
  */
 @Composable
+fun LiveStreamIndicator(
+    color: Color,
+    pulseAlpha: Float,
+    size: androidx.compose.ui.unit.Dp = 6.dp,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(color.copy(alpha = pulseAlpha))
+    )
+}
+@Composable
 fun SensorGaugeCard(
     title: String,
     valueText: String,
@@ -733,12 +747,7 @@ fun SensorGaugeCard(
                 )
 
                 if (isLiveStreaming) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(accentColor.copy(alpha = pulseAlpha))
-                    )
+                    LiveStreamIndicator(color = accentColor, pulseAlpha = pulseAlpha)
                 }
             }
 
@@ -863,12 +872,7 @@ fun BiDirectionalTrimCard(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     if (isLiveStreaming) {
-                        Box(
-                            modifier = Modifier
-                                .size(5.dp)
-                                .clip(CircleShape)
-                                .background(trimColor.copy(alpha = pulseAlpha))
-                        )
+                        LiveStreamIndicator(color = trimColor, pulseAlpha = pulseAlpha, size = 5.dp)
                     }
                     Text(
                         text = pidCode,
