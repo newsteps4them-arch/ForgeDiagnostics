@@ -51,20 +51,20 @@ class OpenManusSwarmTest {
 
     @Test
     fun testVolumetricEfficiencyMath() {
-        // Test 3.0L engine at 750 RPM with 3.24 g/s MAF and 24C IAT
+        // Test 3.0L engine at 6000 RPM (WOT) with 160.0 g/s MAF and 20°C IAT
         val ve = agentService.calculateVolumetricEfficiency(
-            mafGps = 3.24,
-            rpm = 750,
+            mafGps = 160.0,
+            rpm = 6000,
             displacementLiters = 3.0,
-            iatCelsius = 24.0
+            iatCelsius = 20.0
         )
 
-        // Expected normal idle VE around 75% - 95%
-        assertTrue("Calculated VE ($ve%) should be in reasonable automotive range", ve in 70.0..95.0)
+        // Expected WOT VE around 85% - 95%
+        assertTrue("Calculated WOT VE ($ve%) should be in normal naturally aspirated range", ve in 80.0..98.0)
 
         // Test boundary conditions (0 RPM, negative displacement)
-        assertEquals(0.0, agentService.calculateVolumetricEfficiency(3.24, 0, 3.0, 24.0), 0.01)
-        assertEquals(0.0, agentService.calculateVolumetricEfficiency(3.24, 750, 0.0, 24.0), 0.01)
+        assertEquals(0.0, agentService.calculateVolumetricEfficiency(160.0, 0, 3.0, 20.0), 0.01)
+        assertEquals(0.0, agentService.calculateVolumetricEfficiency(160.0, 6000, 0.0, 20.0), 0.01)
     }
 
     @Test
