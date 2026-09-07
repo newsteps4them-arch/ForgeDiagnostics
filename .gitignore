@@ -12,3 +12,4 @@ app/build/
 .vscode/
 powershell.exe.config
 
+.kotlin/
