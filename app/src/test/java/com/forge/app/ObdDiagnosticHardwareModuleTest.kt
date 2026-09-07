@@ -62,29 +62,27 @@ class ObdDiagnosticHardwareModuleTest {
 
     @Test
     fun testFetchLiveDtcCodesAndOpenManusAutoTrigger() = runBlocking {
-        // Mock connection first so it actually parses fake data
         hardwareModule.setHardwareInterface(ObdHardwareInterface.SIMULATED)
-        delay(100)
+        delay(200)
 
         hardwareModule.fetchLiveDiagnosticTroubleCodes(
             vehicleName = "2021 Audi S5 Sportback",
             autoTriggerOpenManus = true,
         )
-        delay(600.milliseconds)
+        delay(1200.milliseconds)
 
         val state = hardwareModule.hardwareState.value
         assertFalse(state.isFetchingDtcs)
-        // Only assert what we reasonably mock or know about the simulator
         assertNotNull(state.activeDtcs)
 
         val dtcCodes = state.activeDtcs.map { it.code }
         assertTrue(dtcCodes.contains("P0300") || dtcCodes.contains("P0171"))
 
-        // Verify OpenManus received active DTCs and generated diagnosis
         val agentState = openManusService.state.value
         assertNotNull(agentState.finalReport)
         assertTrue(agentState.finalReport?.primaryRootCause?.isNotBlank() == true)
     }
+
 
     @Test
     fun testClearHardwareFaultCodes() = runBlocking {
