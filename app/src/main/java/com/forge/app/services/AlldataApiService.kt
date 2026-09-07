@@ -113,6 +113,11 @@ object AlldataClient {
         api = retrofit.create(AlldataApi::class.java)
     }
 
+    fun resetApi() {
+        setBaseUrl(BASE_URL)
+    }
+
+
 
     suspend fun fetchRepairProcedures(
         vin: String = "WAUZZZF58MA019284",
