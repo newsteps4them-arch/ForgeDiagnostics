@@ -279,10 +279,26 @@ class OpenManusAgentService(
                 toolInvocationsStep3.add(nhtsaResult)
             }
 
+            if (_state.value.activeTools.contains("acoustic_fft")) {
+                val acousticResult = executeAcousticFftTool(750, null)
+                toolInvocationsStep3.add(acousticResult)
+            }
+
+            if (_state.value.activeTools.contains("vision_wear")) {
+                val visionResult = executeVisionWearTool("Spark Plug & Direct Injector Tip Inspection")
+                toolInvocationsStep3.add(visionResult)
+            }
+
+            if (_state.value.activeTools.contains("supply_chain")) {
+                val supplyResult = executeSupplyChainEstimatorTool(vehicleContext, activeDtcs)
+                toolInvocationsStep3.add(supplyResult)
+            }
+
             stepList.add(
                 OpenManusStep(
                     stepNumber = 3,
-                    agentName = "Electrical & Math Simulation Agent",
+                    agentName = "Electrical, Acoustic & Vision Swarm",
+
                     phase = "Physics & Recall Cross-Ref",
                     thought = "Calculating circuit voltage drop tolerances and checking manufacturer TSB safety recall records.",
                     toolInvocations = toolInvocationsStep3,
