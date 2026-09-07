@@ -626,8 +626,8 @@ object GeminiClient {
     }
 }
 
-class GeminiService {
-    suspend fun generateDiagnosticAnalysis(prompt: String): String {
+open class GeminiService {
+    open suspend fun generateDiagnosticAnalysis(prompt: String): String {
         return GeminiClient.queryAssistant(
             prompt = prompt,
             skill = AssistantSkill.GENERAL,
@@ -636,4 +636,5 @@ class GeminiService {
         )
     }
 }
+
 
