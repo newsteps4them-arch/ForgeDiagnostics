@@ -307,15 +307,16 @@ class ObdDiagnosticHardwareModule(
      * Clears diagnostic fault codes using Mode 04 and resets MIL check engine light
      */
     fun clearHardwareFaultCodes(onCompleted: (() -> Unit)? = null) {
-        scope.launch(Dispatchers.IO) {
+        scope.launch(ioDispatcher) {
             sendObdCommand("04")
             telemetryService?.clearDtcs()
             _hardwareState.value = _hardwareState.value.copy(activeDtcs = emptyList())
-            withContext(Dispatchers.Main) {
+            withContext(mainDispatcher) {
                 onCompleted?.invoke()
             }
         }
     }
+
 
     private suspend fun sendObdCommand(command: String): String {
         return try {
