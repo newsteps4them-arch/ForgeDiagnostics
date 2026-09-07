@@ -43,7 +43,10 @@ class ObdDiagnosticHardwareModuleTest {
             usbHardwareService = null,
             telemetryService = telemetryService,
             openManusService = openManusService,
+            ioDispatcher = Dispatchers.Unconfined,
+            mainDispatcher = Dispatchers.Unconfined
         )
+
     }
 
     @After
