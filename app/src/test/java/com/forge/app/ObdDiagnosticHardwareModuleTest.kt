@@ -19,11 +19,7 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import org.junit.After
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ObdDiagnosticHardwareModuleTest {
