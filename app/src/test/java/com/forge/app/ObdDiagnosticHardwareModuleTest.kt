@@ -36,8 +36,13 @@ class ObdDiagnosticHardwareModuleTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         telemetryService = ObdTelemetryService(testScope)
-        geminiService = GeminiService()
+        geminiService = object : GeminiService() {
+            override suspend fun generateDiagnosticAnalysis(prompt: String): String {
+                return "Primary Root Cause: Verified Intake Vacuum Infiltration on Bank 1."
+            }
+        }
         openManusService = OpenManusAgentService(geminiService, Dispatchers.Unconfined)
+
 
         hardwareModule = ObdDiagnosticHardwareModule(
             scope = testScope,
