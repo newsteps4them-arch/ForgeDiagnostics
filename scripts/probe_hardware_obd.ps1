@@ -27,7 +27,6 @@ foreach ($dev in $pnpPorts) {
 # 3. Test OBD Interface on available ports
 Write-Host "`n[3/3] Probing OBD Communication on Ports..." -ForegroundColor Yellow
 $baudRates = @(38400, 9600, 115200)
-$commands = @("ATZ`r", "ATE0`r", "ATL0`r", "0100`r")
 
 foreach ($portName in $availablePorts) {
     Write-Host "`nTesting Port: $portName" -ForegroundColor Cyan
@@ -75,7 +74,7 @@ foreach ($portName in $availablePorts) {
     }
 
     if (-not $portWorking) {
-        Write-Host "  -> $portName: No active ELM/OBD response or device in sleep/pairing mode." -ForegroundColor Yellow
+        Write-Host "  -> Port $portName - No active ELM/OBD response or device in sleep/pairing mode." -ForegroundColor Yellow
     }
 }
 
