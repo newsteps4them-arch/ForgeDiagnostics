@@ -92,6 +92,9 @@ data class OpenManusDiagnosticReport(
     val recommendedParts: List<String> = emptyList(),
     val estimatedLaborHours: Double = 1.5,
     val safetyCautions: List<String> = emptyList(),
+    val deepSeekReasoning: String = "",
+    val volumetricEfficiencyPct: Double = 82.4,
+    val acousticHarmonicClassification: String = "Normal Baseline",
     val fullLogSummary: String = ""
 )
 
@@ -103,7 +106,7 @@ data class OpenManusState(
     val selectedProvider: AgentModelProvider = AgentModelProvider.GEMINI_FLASH,
     val customEndpointUrl: String = "http://localhost:11434",
     val customModelName: String = "deepseek-r1:8b",
-    val activeTools: Set<String> = setOf("obd_pid", "can_uds", "electrical_circuit", "nhtsa_tsb", "python_math"),
+    val activeTools: Set<String> = setOf("obd_pid", "can_uds", "electrical_circuit", "nhtsa_tsb", "python_math", "acoustic_fft", "vision_wear", "supply_chain"),
     val steps: List<OpenManusStep> = emptyList(),
     val currentThought: String = "Autonomous OpenManus background agent ready.",
     val finalReport: OpenManusDiagnosticReport? = null,
@@ -111,6 +114,7 @@ data class OpenManusState(
     val lastAutomatedTimestamp: String = "",
     val error: String? = null
 )
+
 
 class OpenManusAgentService(
     private val geminiService: GeminiService? = null,
