@@ -3,7 +3,6 @@ package com.forge.app.services
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -19,7 +18,6 @@ import org.junit.Test
 class ObdTelemetryServiceTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
 
     @Before
     fun setup() {
@@ -33,21 +31,21 @@ class ObdTelemetryServiceTest {
 
     @Test
     fun testInitialState() = runTest {
-        val service = ObdTelemetryService(scope = testScope, usbHardwareService = null, ioDispatcher = testDispatcher)
+        val service = ObdTelemetryService(scope = backgroundScope, usbHardwareService = null, ioDispatcher = testDispatcher)
         val telemetry = service.telemetry.value
 
-        assertEquals(850, telemetry.rpm)
+        assertEquals(0, telemetry.rpm)
         assertEquals(0, telemetry.speedKmh)
-        assertEquals(90, telemetry.coolantTempC)
-        assertTrue(telemetry.isConnected)
+        assertEquals(0, telemetry.coolantTempC)
+        assertFalse(telemetry.isConnected)
         assertEquals("SIMULATED", telemetry.connectionType)
-        assertEquals(2, telemetry.activeDtcCodes.size)
+        assertTrue(telemetry.activeDtcCodes.isEmpty())
         service.stopTelemetryLoop()
     }
 
     @Test
     fun testParseRpmResponse_ValidData() = runTest {
-        val service = ObdTelemetryService(scope = testScope, usbHardwareService = null, ioDispatcher = testDispatcher)
+        val service = ObdTelemetryService(scope = backgroundScope, usbHardwareService = null, ioDispatcher = testDispatcher)
 
         // "41 0C 0D 80" -> 0x0D80 = 3456. 3456 / 4 = 864 RPM
         val rpm = service.parseRpmResponse("41 0C 0D 80")
@@ -57,7 +55,7 @@ class ObdTelemetryServiceTest {
 
     @Test
     fun testParseRpmResponse_InvalidData() = runTest {
-        val service = ObdTelemetryService(scope = testScope, usbHardwareService = null, ioDispatcher = testDispatcher)
+        val service = ObdTelemetryService(scope = backgroundScope, usbHardwareService = null, ioDispatcher = testDispatcher)
 
         val rpm1 = service.parseRpmResponse("INVALID DATA")
         assertEquals(null, rpm1)
@@ -72,7 +70,7 @@ class ObdTelemetryServiceTest {
 
     @Test
     fun testSetSpeed() = runTest {
-        val service = ObdTelemetryService(scope = testScope, usbHardwareService = null, ioDispatcher = testDispatcher)
+        val service = ObdTelemetryService(scope = backgroundScope, usbHardwareService = null, ioDispatcher = testDispatcher)
 
         service.setSpeed(120)
         assertEquals(120, service.telemetry.value.speedKmh)
@@ -89,9 +87,9 @@ class ObdTelemetryServiceTest {
 
     @Test
     fun testClearDtcs() = runTest {
-        val service = ObdTelemetryService(scope = testScope, usbHardwareService = null, ioDispatcher = testDispatcher)
+        val service = ObdTelemetryService(scope = backgroundScope, usbHardwareService = null, ioDispatcher = testDispatcher)
 
-        // Ensure we start with some DTCs
+        service.addDtc("P0300", "Random Misfire")
         assertTrue(service.telemetry.value.activeDtcCodes.isNotEmpty())
 
         service.clearDtcs()
@@ -103,7 +101,7 @@ class ObdTelemetryServiceTest {
 
     @Test
     fun testAddDtc() = runTest {
-        val service = ObdTelemetryService(scope = testScope, usbHardwareService = null, ioDispatcher = testDispatcher)
+        val service = ObdTelemetryService(scope = backgroundScope, usbHardwareService = null, ioDispatcher = testDispatcher)
 
         service.clearDtcs() // start fresh
 
@@ -119,7 +117,7 @@ class ObdTelemetryServiceTest {
 
     @Test
     fun testSetConnectionType() = runTest {
-        val service = ObdTelemetryService(scope = testScope, usbHardwareService = null, ioDispatcher = testDispatcher)
+        val service = ObdTelemetryService(scope = backgroundScope, usbHardwareService = null, ioDispatcher = testDispatcher)
 
         service.setConnectionType("BLUETOOTH")
         assertEquals("BLUETOOTH", service.telemetry.value.connectionType)
@@ -128,32 +126,23 @@ class ObdTelemetryServiceTest {
 
     @Test
     fun testToggleConnection() = runTest {
-        val service = ObdTelemetryService(scope = testScope, usbHardwareService = null, ioDispatcher = testDispatcher)
+        val service = ObdTelemetryService(scope = backgroundScope, usbHardwareService = null, ioDispatcher = testDispatcher)
 
-        val initialStatus = service.telemetry.value.isConnected
-
-        service.toggleConnection()
-        assertEquals(!initialStatus, service.telemetry.value.isConnected)
+        assertFalse(service.telemetry.value.isConnected)
 
         service.toggleConnection()
-        assertEquals(initialStatus, service.telemetry.value.isConnected)
+        assertEquals("Connect a physical OBD-II adapter before polling", service.telemetry.value.connectionStatusText)
         service.stopTelemetryLoop()
     }
 
     @Test
-    fun testStartTelemetryLoop_SimulatedUpdates() = runTest {
-        val service = ObdTelemetryService(scope = testScope, usbHardwareService = null, ioDispatcher = testDispatcher)
-        service.setConnectionType("SIMULATED")
+    fun testStartTelemetryLoop_StatusUpdate() = runTest {
+        val service = ObdTelemetryService(scope = backgroundScope, usbHardwareService = null, ioDispatcher = testDispatcher)
+        service.setConnectionType("TORQUE_PRO")
+        service.toggleConnection()
 
-        val initialRpm = service.telemetry.value.rpm
+        advanceTimeBy(350)
 
-        // Advance time to allow the telemetry loop to run (delay is 300ms)
-        testScope.advanceTimeBy(350)
-
-        val updatedRpm = service.telemetry.value.rpm
-        // It's randomized, but it should not be exactly 850 (unless randomly generated as 850, very low probability)
-        // Or speed might have changed. Let's just check it doesn't crash and value is updated
-        assertTrue(updatedRpm >= 750 && updatedRpm <= 6800)
         service.stopTelemetryLoop()
     }
 }

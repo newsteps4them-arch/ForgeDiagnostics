@@ -79,7 +79,7 @@ describe('SAE J1979 Protocol Decoder', () => {
   });
 
   it('should decode supported PID bitmasks into PID numbers', () => {
-    expect(decodeSupportedPidMask('0000001F')).toEqual(['01', '02', '03', '04', '05']);
-    expect(decodeSupportedPidMask('00000020')).toEqual(['06']);
+    expect(decodeSupportedPidMask('F8000000')).toEqual(['01', '02', '03', '04', '05']);
+    expect(decodeSupportedPidMask('04000000')).toEqual(['06']);
   });
 });
