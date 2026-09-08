@@ -171,6 +171,26 @@ class OpenManusAgentService(
     }
 
     /**
+     * Configure Groq free-tier credentials.
+     * Get a free key at https://console.groq.com — no credit card, commercial-OK.
+     * Default model: llama-3.3-70b-versatile (fastest free inference, ~500 tok/s).
+     * Alternate: deepseek-r1-distill-llama-70b for chain-of-thought <think> reasoning.
+     */
+    fun setGroqCredentials(apiKey: String, model: String = "llama-3.3-70b-versatile") {
+        _state.value = _state.value.copy(groqApiKey = apiKey, groqModel = model)
+    }
+
+    /**
+     * Configure OpenRouter user-key credentials (user-pays model — no developer billing).
+     * Get a key at https://openrouter.ai — commercial-OK, 500+ models.
+     * Default model: deepseek/deepseek-r1:free (zero-cost, chain-of-thought reasoning).
+     */
+    fun setOpenRouterCredentials(apiKey: String, model: String = "deepseek/deepseek-r1:free") {
+        _state.value = _state.value.copy(openRouterApiKey = apiKey, openRouterModel = model)
+    }
+
+
+    /**
      * Automatically triggers diagnosis in background if idle or if no final output is generated yet
      */
     suspend fun autoDiagnoseIfIdle(
