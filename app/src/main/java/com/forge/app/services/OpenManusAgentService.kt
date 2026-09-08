@@ -128,16 +128,15 @@ data class OpenManusState(
 
 class OpenManusAgentService(
     private val geminiService: GeminiService? = null,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    internal val httpClient: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(45, TimeUnit.SECONDS)
+        .build()
 ) {
 
     private val _state = MutableStateFlow(OpenManusState())
     val state: StateFlow<OpenManusState> = _state.asStateFlow()
-
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(45, TimeUnit.SECONDS)
-        .build()
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -907,6 +906,102 @@ class OpenManusAgentService(
         }
     }
 
+    /**
+     * Shared OpenAI-compatible HTTP POST helper.
+     * Works with Groq (api.groq.com), OpenRouter (openrouter.ai), and any OpenAI-spec endpoint.
+     * Returns the first assistant message content string.
+     */
+    internal fun callOpenAiCompatibleEndpoint(
+        url: String,
+        apiKey: String,
+        model: String,
+        systemPrompt: String,
+        userPrompt: String,
+        extraHeaders: Map<String, String> = emptyMap()
+    ): String {
+        if (apiKey.isBlank() || apiKey.length < 8) return ""
+
+        val messagesArray = JSONArray().apply {
+            put(JSONObject().apply {
+                put("role", "system")
+                put("content", systemPrompt)
+            })
+            put(JSONObject().apply {
+                put("role", "user")
+                put("content", userPrompt)
+            })
+        }
+
+        val body = JSONObject().apply {
+            put("model", model)
+            put("messages", messagesArray)
+            put("max_tokens", 2048)
+            put("temperature", 0.3)
+        }
+
+        var reqBuilder = Request.Builder()
+            .url(url)
+            .addHeader("Authorization", "Bearer $apiKey")
+            .addHeader("Content-Type", "application/json")
+            .post(body.toString().toRequestBody("application/json".toMediaType()))
+
+        extraHeaders.forEach { (k, v) -> reqBuilder = reqBuilder.addHeader(k, v) }
+
+        val response = httpClient.newCall(reqBuilder.build()).execute()
+        val responseBody = response.body?.string() ?: ""
+        if (!response.isSuccessful || responseBody.isBlank()) return ""
+
+        return try {
+            val root = JSONObject(responseBody)
+            root.getJSONArray("choices")
+                .getJSONObject(0)
+                .getJSONObject("message")
+                .getString("content")
+        } catch (e: Exception) {
+            Log.w("OpenManus", "Failed to parse OpenAI-compatible response: ${e.message}")
+            ""
+        }
+    }
+
+    private fun buildDiagnosticSystemPrompt(): String = buildString {
+        appendLine("You are the OpenManus Master Automotive Diagnostic AI Agent.")
+        appendLine("You are an expert automotive engineer with deep knowledge of:")
+        appendLine("- SAE J1979 OBD-II PID decoding and freeze-frame analysis")
+        appendLine("- ISO 14229 UDS diagnostic protocol and CAN bus signal analysis")
+        appendLine("- Volumetric efficiency, fuel trim, and engine management physics")
+        appendLine("- NHTSA safety recalls, OEM TSBs, and factory diagnostic procedures")
+        appendLine("Always give precise, actionable, professional-grade diagnostic answers.")
+        appendLine("Format your response clearly with numbered steps a mechanic can follow.")
+    }
+
+    private fun buildDiagnosticUserPrompt(
+        goal: String,
+        vehicleContext: String,
+        activeDtcs: List<String>,
+        telemetrySummary: String,
+        stepHistory: List<OpenManusStep>
+    ): String = buildString {
+        appendLine("DIAGNOSTIC TARGET: $goal")
+        appendLine("VEHICLE: $vehicleContext")
+        appendLine("ACTIVE DTCs: ${activeDtcs.joinToString(", ").ifEmpty { "None" }}")
+        appendLine("LIVE TELEMETRY: $telemetrySummary")
+        appendLine()
+        appendLine("AGENT TOOL RESULTS:")
+        stepHistory.forEach { step ->
+            step.toolInvocations.forEach { tool ->
+                appendLine("[${tool.toolName}]: ${tool.outputData.take(400)}")
+            }
+        }
+        appendLine()
+        appendLine("Provide:")
+        appendLine("1. Primary Root Cause")
+        appendLine("2. Secondary Possibilities")
+        appendLine("3. Step-by-Step Inspection Procedure")
+        appendLine("4. Recommended Parts (OEM part numbers if known)")
+        appendLine("5. Estimated Labor Hours")
+        appendLine("6. Safety Warnings")
+    }
+
     private fun parseAiReportToStructured(aiText: String, goal: String, vehicleContext: String): OpenManusDiagnosticReport {
         return OpenManusDiagnosticReport(
             issueTitle = goal,
@@ -926,3 +1021,4 @@ class OpenManusAgentService(
         )
     }
 }
+
