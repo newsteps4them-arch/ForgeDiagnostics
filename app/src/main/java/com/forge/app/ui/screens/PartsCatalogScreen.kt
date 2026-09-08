@@ -481,7 +481,7 @@ fun PartsCatalogScreen(
                                         onClick = { onUpdateStock(item, (item.stockQuantity - 1).coerceAtLeast(0)) },
                                         modifier = Modifier.size(24.dp)
                                     ) {
-                                        Icon(imageVector = Icons.Default.Remove, contentDescription = "Deduct", tint = ForgeRed, modifier = Modifier.size(16.dp))
+                                        Icon(imageVector = Icons.Default.Remove, contentDescription = "Deduct ${item.name}", tint = ForgeRed, modifier = Modifier.size(16.dp))
                                     }
 
                                     Box(
@@ -502,7 +502,7 @@ fun PartsCatalogScreen(
                                         onClick = { onUpdateStock(item, item.stockQuantity + 1) },
                                         modifier = Modifier.size(24.dp)
                                     ) {
-                                        Icon(imageVector = Icons.Default.Add, contentDescription = "Receive", tint = ForgeGreen, modifier = Modifier.size(16.dp))
+                                        Icon(imageVector = Icons.Default.Add, contentDescription = "Receive ${item.name}", tint = ForgeGreen, modifier = Modifier.size(16.dp))
                                     }
                                 }
                             }
