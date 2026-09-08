@@ -1,3 +1,8 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app.services
 
 import com.forge.app.ForgeApplication
@@ -74,14 +79,15 @@ class AutoTriagePipelineService(
     ) {
         if (_triageState.value.isRunning) return
 
+        _triageState.value = _triageState.value.copy(
+            isRunning = true,
+            progress = 0.05f,
+            activeVehicleVin = vin,
+            detectedDtcs = dtcCodes,
+            steps = getInitialSteps()
+        )
+
         scope.launch {
-            _triageState.value = _triageState.value.copy(
-                isRunning = true,
-                progress = 0.05f,
-                activeVehicleVin = vin,
-                detectedDtcs = dtcCodes,
-                steps = getInitialSteps()
-            )
 
             ForgeApplication.logEvent("AutoTriagePipeline: Started autonomous workflow for VIN $vin with ${dtcCodes.size} DTCs")
 

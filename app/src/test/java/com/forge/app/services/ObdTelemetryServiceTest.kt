@@ -42,6 +42,7 @@ class ObdTelemetryServiceTest {
         assertTrue(telemetry.isConnected)
         assertEquals("SIMULATED", telemetry.connectionType)
         assertEquals(2, telemetry.activeDtcCodes.size)
+        service.stopTelemetryLoop()
     }
 
     @Test
@@ -51,6 +52,7 @@ class ObdTelemetryServiceTest {
         // "41 0C 0D 80" -> 0x0D80 = 3456. 3456 / 4 = 864 RPM
         val rpm = service.parseRpmResponse("41 0C 0D 80")
         assertEquals(864, rpm)
+        service.stopTelemetryLoop()
     }
 
     @Test
@@ -65,6 +67,7 @@ class ObdTelemetryServiceTest {
 
         val rpm3 = service.parseRpmResponse("41 0C XY ZZ") // Malformed hex
         assertEquals(null, rpm3)
+        service.stopTelemetryLoop()
     }
 
     @Test
@@ -81,6 +84,7 @@ class ObdTelemetryServiceTest {
         // Test coercion max
         service.setSpeed(300)
         assertEquals(240, service.telemetry.value.speedKmh)
+        service.stopTelemetryLoop()
     }
 
     @Test
@@ -94,6 +98,7 @@ class ObdTelemetryServiceTest {
 
         // Assert they are cleared
         assertTrue(service.telemetry.value.activeDtcCodes.isEmpty())
+        service.stopTelemetryLoop()
     }
 
     @Test
@@ -109,6 +114,7 @@ class ObdTelemetryServiceTest {
         assertEquals("P1234", dtcs[0].code)
         assertEquals("Test Error", dtcs[0].description)
         assertEquals("Stored", dtcs[0].status)
+        service.stopTelemetryLoop()
     }
 
     @Test
@@ -117,6 +123,7 @@ class ObdTelemetryServiceTest {
 
         service.setConnectionType("BLUETOOTH")
         assertEquals("BLUETOOTH", service.telemetry.value.connectionType)
+        service.stopTelemetryLoop()
     }
 
     @Test
@@ -130,6 +137,7 @@ class ObdTelemetryServiceTest {
 
         service.toggleConnection()
         assertEquals(initialStatus, service.telemetry.value.isConnected)
+        service.stopTelemetryLoop()
     }
 
     @Test
@@ -146,5 +154,6 @@ class ObdTelemetryServiceTest {
         // It's randomized, but it should not be exactly 850 (unless randomly generated as 850, very low probability)
         // Or speed might have changed. Let's just check it doesn't crash and value is updated
         assertTrue(updatedRpm >= 750 && updatedRpm <= 6800)
+        service.stopTelemetryLoop()
     }
 }

@@ -1,3 +1,8 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app
 
 import com.forge.app.services.*
@@ -69,9 +74,12 @@ class OpenManusAgentTest {
         assertTrue(state.steps[1].toolInvocations.any { it.toolName == "CAN_UDS_Protocol_Analyzer" })
 
         // Check Step 3 Physics & Simulation Invocations
-        assertEquals("Electrical & Math Simulation Agent", state.steps[2].agentName)
+        assertEquals("Electrical, Acoustic & Vision Swarm", state.steps[2].agentName)
         assertTrue(state.steps[2].toolInvocations.any { it.toolName == "Electrical_Circuit_Solver" })
         assertTrue(state.steps[2].toolInvocations.any { it.toolName == "Python_Physics_Simulation_Sandbox" })
+        assertTrue(state.steps[2].toolInvocations.any { it.toolName == "Acoustic_FFT_Harmonic_Analyzer" })
+        assertTrue(state.steps[2].toolInvocations.any { it.toolName == "Multimodal_Vision_Wear_Classifier" })
+        assertTrue(state.steps[2].toolInvocations.any { it.toolName == "Supply_Chain_Part_Estimator" })
 
         // Check Final Report Synthesis
         val report = state.finalReport

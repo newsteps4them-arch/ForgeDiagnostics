@@ -1,3 +1,8 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app.ui.screens
 
 import androidx.compose.animation.*
@@ -685,9 +690,10 @@ fun OpenManusScreen(
                                             text = when (provider) {
                                                 AgentModelProvider.GEMINI_FLASH -> "Gemini 2.5"
                                                 AgentModelProvider.GEMINI_PRO -> "Gemini Pro"
+                                                AgentModelProvider.GROQ -> "Groq"
+                                                AgentModelProvider.OPEN_ROUTER -> "OpenRouter"
                                                 AgentModelProvider.LOCAL_OLLAMA -> "Ollama"
                                                 AgentModelProvider.HUGGING_FACE -> "HuggingFace"
-                                                AgentModelProvider.OPEN_ROUTER -> "OpenRouter"
                                             },
                                             fontSize = 9.sp,
                                             fontFamily = FontFamily.Monospace,

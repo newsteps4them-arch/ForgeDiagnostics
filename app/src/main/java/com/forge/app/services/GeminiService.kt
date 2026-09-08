@@ -1,3 +1,8 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app.services
 
 import com.forge.app.BuildConfig
@@ -216,9 +221,9 @@ object GeminiClient {
     private const val BASE_URL = "https://generativelanguage.googleapis.com/"
 
     private val okHttpClient = OkHttpClient.Builder()
-        .connectTimeout(60, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
-        .writeTimeout(60, TimeUnit.SECONDS)
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
     val apiService: GeminiApiService by lazy {
@@ -267,9 +272,10 @@ object GeminiClient {
                   Translate the technical diagnosis into clear, everyday language so any car owner or beginner can easily understand what is happening, why it matters, and what steps to take.
         """.trimIndent()
 
-        if (apiKey.isBlank() || apiKey.startsWith("AIzaSy_MOCK")) {
+        if (apiKey.isBlank() || apiKey.startsWith("AIzaSy_MOCK") || apiKey.contains("PLACEHOLDER") || apiKey.contains("YOUR_") || apiKey.length < 20) {
             return@withContext generateLocalDiagnosticAnalysis(prompt, skill, vehicleContext, telemetryContext, projectContext)
         }
+
 
         val parts = mutableListOf<Part>()
         parts.add(Part(text = prompt))
@@ -620,8 +626,8 @@ object GeminiClient {
     }
 }
 
-class GeminiService {
-    suspend fun generateDiagnosticAnalysis(prompt: String): String {
+open class GeminiService {
+    open suspend fun generateDiagnosticAnalysis(prompt: String): String {
         return GeminiClient.queryAssistant(
             prompt = prompt,
             skill = AssistantSkill.GENERAL,
@@ -630,4 +636,5 @@ class GeminiService {
         )
     }
 }
+
 
