@@ -159,7 +159,8 @@ class ObdTelemetryService(
         }
     }
 
-    internal fun parseRpmResponse(response: String): Int? = try {
+    internal fun parseRpmResponse(response: String): Int? {
+try {
         val clean = response.replace(" ", "").replace("\r", "").replace("\n", "").uppercase()
         if (clean.contains("410C")) {
             val hexStr = clean.substringAfter("410C").take(4)
@@ -169,8 +170,10 @@ class ObdTelemetryService(
                 return ((a * 256) + b) / 4
             }
         }
-        null
-    } catch (_: Exception) { null }
+        return null
+    } catch (_: Exception) { return null }
+    return null
+}
 
     fun setSpeed(speed: Int) { _telemetry.value = _telemetry.value.copy(speedKmh = speed.coerceIn(0, 240)) }
     fun clearDtcs() { _telemetry.value = _telemetry.value.copy(activeDtcCodes = emptyList()) }
