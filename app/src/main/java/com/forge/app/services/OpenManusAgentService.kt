@@ -39,15 +39,17 @@ import kotlin.math.roundToInt
  * 4. NHTSA Safety Recalls & TSB Cross-Referencer
  * 5. Python Math & Volumetric Efficiency Simulation Engine
  * 
- * Backends: Gemini API, Local Ollama (http://localhost:11434), OpenRouter, or Hugging Face.
+ * Backends: Gemini API, Groq (fastest free inference), OpenRouter (user-key multi-model),
+ * Local Ollama (http://localhost:11434), or Hugging Face.
  */
 
 enum class AgentModelProvider(val displayName: String, val endpointDescription: String) {
     GEMINI_FLASH("Gemini 2.5 Flash", "Cloud-native Google AI Studio API"),
     GEMINI_PRO("Gemini Pro Deep Reasoner", "High-tier multi-step reasoning"),
+    GROQ("Groq Ultrafast Inference", "https://api.groq.com/openai/v1/chat/completions — Llama 3.3 / DeepSeek-R1 at 500+ tok/s"),
+    OPEN_ROUTER("OpenRouter Free Tier", "https://openrouter.ai/api/v1/chat/completions — 500+ models, user-pays"),
     LOCAL_OLLAMA("Local Ollama (DeepSeek / Llama 3)", "http://localhost:11434/api/generate"),
-    HUGGING_FACE("Hugging Face Inference", "Free-tier open models (Qwen / Mistral)"),
-    OPEN_ROUTER("OpenRouter Free Tier", "Multi-model open access hub")
+    HUGGING_FACE("Hugging Face Inference", "Free-tier open models (Qwen / Mistral)")
 }
 
 enum class AgentExecutionPhase {
