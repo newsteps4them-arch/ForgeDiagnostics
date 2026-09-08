@@ -108,6 +108,14 @@ data class OpenManusState(
     val selectedProvider: AgentModelProvider = AgentModelProvider.GEMINI_FLASH,
     val customEndpointUrl: String = "http://localhost:11434",
     val customModelName: String = "deepseek-r1:8b",
+    // Groq free-tier API key — no copyleft, commercial OK
+    val groqApiKey: String = "",
+    // Groq model: llama-3.3-70b-versatile (fastest free) or deepseek-r1-distill-llama-70b
+    val groqModel: String = "llama-3.3-70b-versatile",
+    // OpenRouter API key — user supplies their own key (user-pays, no AGPL)
+    val openRouterApiKey: String = "",
+    // OpenRouter model: supports 500+ including deepseek/deepseek-r1:free for zero-cost
+    val openRouterModel: String = "deepseek/deepseek-r1:free",
     val activeTools: Set<String> = setOf("obd_pid", "can_uds", "electrical_circuit", "nhtsa_tsb", "python_math", "acoustic_fft", "vision_wear", "supply_chain"),
     val steps: List<OpenManusStep> = emptyList(),
     val currentThought: String = "Autonomous OpenManus background agent ready.",
