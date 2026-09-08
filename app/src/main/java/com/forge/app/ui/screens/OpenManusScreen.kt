@@ -690,9 +690,10 @@ fun OpenManusScreen(
                                             text = when (provider) {
                                                 AgentModelProvider.GEMINI_FLASH -> "Gemini 2.5"
                                                 AgentModelProvider.GEMINI_PRO -> "Gemini Pro"
+                                                AgentModelProvider.GROQ -> "Groq"
+                                                AgentModelProvider.OPEN_ROUTER -> "OpenRouter"
                                                 AgentModelProvider.LOCAL_OLLAMA -> "Ollama"
                                                 AgentModelProvider.HUGGING_FACE -> "HuggingFace"
-                                                AgentModelProvider.OPEN_ROUTER -> "OpenRouter"
                                             },
                                             fontSize = 9.sp,
                                             fontFamily = FontFamily.Monospace,
