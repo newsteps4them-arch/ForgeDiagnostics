@@ -673,6 +673,58 @@ class OpenManusAgentService(
             if (aiResponse.isNotBlank() && !aiResponse.contains("Unavailable", ignoreCase = true)) {
                 return parseAiReportToStructured(aiResponse, goal, vehicleContext)
             }
+        } else if (provider == AgentModelProvider.GROQ) {
+            // Groq ultrafast inference — OpenAI-compatible REST, commercial OK, no copyleft
+            val key = _state.value.groqApiKey
+            if (key.isNotBlank()) {
+                try {
+                    val text = callOpenAiCompatibleEndpoint(
+                        url = "https://api.groq.com/openai/v1/chat/completions",
+                        apiKey = key,
+                        model = _state.value.groqModel,
+                        systemPrompt = buildDiagnosticSystemPrompt(),
+                        userPrompt = buildDiagnosticUserPrompt(goal, vehicleContext, activeDtcs, telemetrySummary, stepHistory)
+                    )
+                    if (text.isNotBlank()) {
+                        val (thinking, answer) = extractDeepSeekThinking(text)
+                        val finalText = if (answer.isNotBlank()) answer else text
+                        return parseAiReportToStructured(finalText, goal, vehicleContext)
+                            .copy(deepSeekReasoning = thinking)
+                    }
+                } catch (e: Exception) {
+                    Log.w("OpenManus", "Groq provider failed, falling back: ${e.message}")
+                }
+            } else {
+                Log.w("OpenManus", "Groq API key not set — falling through to deterministic engine")
+            }
+        } else if (provider == AgentModelProvider.OPEN_ROUTER) {
+            // OpenRouter user-pays model — user supplies their own key, no developer billing
+            val key = _state.value.openRouterApiKey
+            if (key.isNotBlank()) {
+                try {
+                    val text = callOpenAiCompatibleEndpoint(
+                        url = "https://openrouter.ai/api/v1/chat/completions",
+                        apiKey = key,
+                        model = _state.value.openRouterModel,
+                        systemPrompt = buildDiagnosticSystemPrompt(),
+                        userPrompt = buildDiagnosticUserPrompt(goal, vehicleContext, activeDtcs, telemetrySummary, stepHistory),
+                        extraHeaders = mapOf(
+                            "HTTP-Referer" to "https://github.com/newsteps4them-arch/ForgeDiagnostics",
+                            "X-Title" to "Forge Agentic Diagnostics"
+                        )
+                    )
+                    if (text.isNotBlank()) {
+                        val (thinking, answer) = extractDeepSeekThinking(text)
+                        val finalText = if (answer.isNotBlank()) answer else text
+                        return parseAiReportToStructured(finalText, goal, vehicleContext)
+                            .copy(deepSeekReasoning = thinking)
+                    }
+                } catch (e: Exception) {
+                    Log.w("OpenManus", "OpenRouter provider failed, falling back: ${e.message}")
+                }
+            } else {
+                Log.w("OpenManus", "OpenRouter API key not set — falling through to deterministic engine")
+            }
         } else if (provider == AgentModelProvider.LOCAL_OLLAMA) {
             // Attempt Local Ollama Endpoint (http://localhost:11434/api/generate)
             try {
@@ -701,6 +753,7 @@ class OpenManusAgentService(
                 Log.w("OpenManus", "Local Ollama fallback to deterministic engine: ${e.message}")
             }
         }
+
 
         // Deterministic High-Precision Fallback Synthesis tailored to DTCs and Symptoms
         val hasMisfire = activeDtcs.any { it.startsWith("P03") } || goal.contains("misfire", ignoreCase = true)
