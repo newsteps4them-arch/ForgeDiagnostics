@@ -57,6 +57,7 @@ class ObdDiagnosticHardwareModuleTest {
 
     @After
     fun tearDown() {
+        telemetryService.stopTelemetryLoop()
         Dispatchers.resetMain()
     }
 

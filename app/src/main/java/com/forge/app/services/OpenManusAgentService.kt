@@ -17,6 +17,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -911,6 +914,16 @@ class OpenManusAgentService(
      * Works with Groq (api.groq.com), OpenRouter (openrouter.ai), and any OpenAI-spec endpoint.
      * Returns the first assistant message content string.
      */
+    private fun escapeJsonString(str: String): String {
+        return str.replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\b", "\\b")
+            .replace("\u000C", "\\f")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")
+    }
+
     internal fun callOpenAiCompatibleEndpoint(
         url: String,
         apiKey: String,
@@ -921,44 +934,31 @@ class OpenManusAgentService(
     ): String {
         if (apiKey.isBlank() || apiKey.length < 8) return ""
 
-        val messagesArray = JSONArray().apply {
-            put(JSONObject().apply {
-                put("role", "system")
-                put("content", systemPrompt)
-            })
-            put(JSONObject().apply {
-                put("role", "user")
-                put("content", userPrompt)
-            })
-        }
-
-        val body = JSONObject().apply {
-            put("model", model)
-            put("messages", messagesArray)
-            put("max_tokens", 2048)
-            put("temperature", 0.3)
-        }
-
-        var reqBuilder = Request.Builder()
-            .url(url)
-            .addHeader("Authorization", "Bearer $apiKey")
-            .addHeader("Content-Type", "application/json")
-            .post(body.toString().toRequestBody("application/json".toMediaType()))
-
-        extraHeaders.forEach { (k, v) -> reqBuilder = reqBuilder.addHeader(k, v) }
-
-        val response = httpClient.newCall(reqBuilder.build()).execute()
-        val responseBody = response.body?.string() ?: ""
-        if (!response.isSuccessful || responseBody.isBlank()) return ""
-
         return try {
-            val root = JSONObject(responseBody)
-            root.getJSONArray("choices")
-                .getJSONObject(0)
-                .getJSONObject("message")
-                .getString("content")
+            val bodyJson = """{"model":"${escapeJsonString(model)}","messages":[{"role":"system","content":"${escapeJsonString(systemPrompt)}"},{"role":"user","content":"${escapeJsonString(userPrompt)}"}],"max_tokens":2048,"temperature":0.3}"""
+
+            var reqBuilder = Request.Builder()
+                .url(url)
+                .addHeader("Authorization", "Bearer $apiKey")
+                .addHeader("Content-Type", "application/json")
+                .post(bodyJson.toRequestBody("application/json".toMediaType()))
+
+            extraHeaders.forEach { (k, v) -> reqBuilder = reqBuilder.addHeader(k, v) }
+
+            val response = httpClient.newCall(reqBuilder.build()).execute()
+            val responseBody = response.body?.string() ?: ""
+            if (!response.isSuccessful || responseBody.isBlank()) return ""
+
+            val element = json.parseToJsonElement(responseBody)
+            val choices = element.jsonObject["choices"]?.jsonArray
+            val firstChoice = choices?.firstOrNull()?.jsonObject
+            val message = firstChoice?.get("message")?.jsonObject
+            val content = message?.get("content")?.jsonPrimitive?.content
+            content ?: ""
         } catch (e: Exception) {
-            Log.w("OpenManus", "Failed to parse OpenAI-compatible response: ${e.message}")
+            try {
+                Log.w("OpenManus", "Failed to parse OpenAI-compatible response: ${e.message}")
+            } catch (_: Throwable) {}
             ""
         }
     }
