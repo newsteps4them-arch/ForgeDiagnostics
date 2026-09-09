@@ -14,10 +14,7 @@ def main() -> int:
     sys.path.insert(0, str(SIMULATOR_ROOT))
 
     loader = unittest.TestLoader()
-    suite = unittest.TestSuite()
-    suite.addTests(loader.discover(str(TEST_ROOT), pattern="test*.py", top_level_dir=str(SIMULATOR_ROOT)))
-    suite.addTests(loader.discover(str(TEST_ROOT / "test_obd"), pattern="test*.py", top_level_dir=str(SIMULATOR_ROOT)))
-    suite.addTests(loader.discover(str(TEST_ROOT / "test_uds"), pattern="test*.py", top_level_dir=str(SIMULATOR_ROOT)))
+    suite = loader.discover(str(TEST_ROOT), pattern="test*.py", top_level_dir=str(SIMULATOR_ROOT))
 
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     return 0 if result.wasSuccessful() else 1

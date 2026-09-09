@@ -10,6 +10,9 @@ ENGINE_TEMP_MAX = 150
 
 class TestServiceResponses(unittest.TestCase):
 
+    def setUp(self):
+        responses.vehicle_speed = 0
+
     def test_get_vehicle_speed_is_one_byte(self):
         self.assertEqual(1, len(responses.get_vehicle_speed()))
 
@@ -57,7 +60,6 @@ class TestServiceResponses(unittest.TestCase):
         self.assertEqual(1, len(responses.get_fuel_type()))
 
     def test_get_fuel_type_is_smaller_equal_than_23(self):
-        # see https://en.wikipedia.org/wiki/OBD-II_PIDs#Fuel_Type_Coding
         self.assertTrue(23 >= int(responses.get_fuel_type().hex(), 16) > 0)
 
 
