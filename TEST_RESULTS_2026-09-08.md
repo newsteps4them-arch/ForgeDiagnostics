@@ -7,47 +7,48 @@
 - Simulated Android telemetry polling.
 - Simulated OBD responses for DTC fetch, DTC clear, and RPM polling.
 - Android tests aligned with the production initial telemetry state.
+- Complete ECU simulator discovery and virtual ELM327 smoke coverage.
 
 ## Static validation
 
 - Workspace diagnostics: passed with no errors for all changed TypeScript and Kotlin files.
 - `npm run lint`: passed in the accessible checkout.
+- `python tools/ecu-simulator/run_tests.py`: 46 passed, 0 failed.
+- `python -m unittest discover -s test/hil_emulator -p "test*.py"`: 2 passed, 0 failed.
 
-## Runtime commands attempted
+## Runtime results
 
-The following commands were previously blocked by the WSL2 installer and were rerun after Ubuntu became available:
+The portable suites were rerun from a clean clone of the latest GitHub revision:
 
 ```text
-Python simulator tests: 15 passed, 0 failed with `python -m unittest discover -s tools/ecu-simulator/tests -p "test*.py"`.
-TypeScript full suite: 24 passed, 1 failed.
-TypeScript focused J1979 suite: 9 passed, 1 failed.
+Python simulator tests: 46 passed, 0 failed with `python tools/ecu-simulator/run_tests.py`.
+Virtual ELM327 smoke tests: 2 passed, 0 failed.
+TypeScript full suite: previously 24 passed, 1 failed on the stale published checkout.
+The corrected workspace expectations were not rerun from the Windows virtual filesystem.
 TypeScript lint: passed.
 ```
 
-The TypeScript failure is the published test still expecting the old supported-PID values (`01`-`05` and `06`). The decoder returned the corrected SAE values (`1C`-`20` and `1B`). The workspace copy contains the corrected expectations; the accessible checkout was cloned from the published revision and does not include the later unpushed test edit.
+The portable simulator and ELM327 results are current for commit `54337f0`. The TypeScript result above is historical because the terminal checkout did not execute the later workspace test correction.
 
-The accessible checkout used for these results was `35d6eed` from the published `main` branch. The VS Code workspace itself is mounted through a virtual filesystem, so its unpushed edits could not be executed directly by the terminal.
-
-Android toolchain status:
+## Android and physical hardware status
 
 - Java 21: available.
 - Gradle wrapper: available.
 - Android SDK: installed at `C:\Users\michael\AppData\Local\Android\Sdk`.
 - Android API 35 platform: installed.
-- ADB: installed, but no device was listed at test time.
+- ADB: installed, but no device was listed while the phone was charging.
 - Focused Gradle task: SDK discovery succeeded and the daemon started, but no task completion result was returned.
-- ADB device list: empty; no physical Android device was connected to the host during validation.
+- Physical OTG/ELM validation: pending phone reconnection.
 
-## Required rerun commands
-
-After the terminal is available, run from the repository root:
+## Reproducible commands
 
 ```powershell
 npm ci
 npm test
 npm run lint
 .\gradlew.bat :app:testDebugUnitTest
-python -m unittest discover tools/ecu-simulator/tests
+python tools/ecu-simulator/run_tests.py
+python -m unittest discover -s test/hil_emulator -p "test*.py"
 ```
 
-This is not a fully passing runtime report yet. Python tests and TypeScript lint passed; the workspace TypeScript expectations are corrected, but the published checkout still contains one stale assertion; Android unit tests remain pending a completed Gradle run; physical testing remains pending an authorized ADB device.
+This is not a fully passing complete-project report yet. The portable Python/ELM327 coverage passes; TypeScript lint passes; Android unit tests remain pending a completed Gradle run; physical testing remains pending an authorized ADB device.
