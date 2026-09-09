@@ -7,7 +7,9 @@
   },
   "scripts": {
     "test": "vitest run",
-    "test:simulator": "python -m unittest discover -s tools/ecu-simulator/tests -p \"test*.py\"",
+    "test:simulator": "python tools/ecu-simulator/run_tests.py",
+    "test:elm327": "python -m unittest discover -s test/hil_emulator -p \"test*.py\"",
+    "test:all:portable": "npm run lint && npm test && npm run test:simulator && npm run test:elm327",
     "lint": "tsc --noEmit",
     "build": "npm run lint && npm test",
     "build:android": "gradlew.bat :app:assembleDebug",
