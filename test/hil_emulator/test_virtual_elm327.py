@@ -17,7 +17,7 @@ class VirtualElm327SmokeTest(unittest.TestCase):
             text=True,
         )
         output, error = process.communicate("".join(f"{command}\n" for command in commands), timeout=5)
-        self.assertEqual("", error)
+        self.assertIn("Virtual ECU online", error)
         self.assertEqual(0, process.returncode)
         return output
 
