@@ -57,7 +57,7 @@ function parseHexBytes(hexString: string): number[] | null {
 function decodeAsciiPayload(bytes: number[]): string {
   let result = '';
   for (let i = 0; i < bytes.length; i++) {
-    const val = bytes[i];
+    const val = bytes[i]!;
     if (val !== 0) {
       result += String.fromCharCode(val);
     }
@@ -69,7 +69,7 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
   const bytes = parseHexBytes(hexString);
   if (!bytes || bytes.length < 2 || bytes[0] !== 0x41) return null;
 
-  const pidByte = bytes[1];
+  const pidByte = bytes[1]!;
   let pid: string;
   switch (pidByte) {
     case 0x0C: pid = '0C'; break;
@@ -119,7 +119,7 @@ export function decodeMode09Response(hexString: string): DecodedPid | null {
   const bytes = parseHexBytes(hexString);
   if (!bytes || bytes.length < 2 || bytes[0] !== 0x49) return null;
 
-  const pidByte = bytes[1];
+  const pidByte = bytes[1]!;
   const pid = pidByte < 16 ? '0' + pidByte.toString(16).toUpperCase() : pidByte.toString(16).toUpperCase();
 
   const rawPayload = bytes.slice(2);
@@ -149,7 +149,7 @@ export function decodeSupportedPidMask(hexMask: string): string[] {
   const numBytes = bytes.length;
 
   for (let byteIndex = 0; byteIndex < numBytes; byteIndex++) {
-    const byte = bytes[byteIndex];
+    const byte = bytes[byteIndex]!;
     if (byte === 0) continue;
 
     for (let bitIndex = 7; bitIndex >= 0; bitIndex--) {
@@ -172,8 +172,8 @@ export function decodeMode03Response(hexString: string): string[] {
 
   const dtcs: string[] = [];
   for (let i = 1; i < bytes.length; i += 2) {
-    const b1 = bytes[i];
-    const b2 = bytes[i + 1];
+    const b1 = bytes[i]!;
+    const b2 = bytes[i + 1]!;
     if (b1 === 0 && b2 === 0) continue;
 
     const firstByteGroup = b1 >> 6;
