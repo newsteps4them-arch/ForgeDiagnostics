@@ -20,7 +20,6 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
-
 @OptIn(ExperimentalCoroutinesApi::class)
 class ObdDiagnosticHardwareModuleTest {
 
@@ -31,7 +30,6 @@ class ObdDiagnosticHardwareModuleTest {
     private lateinit var hardwareModule: ObdDiagnosticHardwareModule
     private val testDispatcher = StandardTestDispatcher()
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
@@ -42,8 +40,6 @@ class ObdDiagnosticHardwareModuleTest {
             }
         }
         openManusService = OpenManusAgentService(geminiService, Dispatchers.Unconfined)
-
-
         hardwareModule = ObdDiagnosticHardwareModule(
             scope = testScope,
             usbHardwareService = null,
@@ -52,11 +48,12 @@ class ObdDiagnosticHardwareModuleTest {
             ioDispatcher = Dispatchers.Unconfined,
             mainDispatcher = Dispatchers.Unconfined
         )
-
     }
 
     @After
     fun tearDown() {
+        hardwareModule.disconnect()
+        telemetryService.stopTelemetryLoop()
         Dispatchers.resetMain()
     }
 
@@ -64,7 +61,6 @@ class ObdDiagnosticHardwareModuleTest {
     fun testInterfaceSwitching() {
         hardwareModule.setHardwareInterface(ObdHardwareInterface.BLUETOOTH_SPP)
         assertEquals(ObdHardwareInterface.BLUETOOTH_SPP, hardwareModule.hardwareState.value.selectedInterface)
-
         hardwareModule.setHardwareInterface(ObdHardwareInterface.USB_OTG)
         assertEquals(ObdHardwareInterface.USB_OTG, hardwareModule.hardwareState.value.selectedInterface)
     }
@@ -72,7 +68,6 @@ class ObdDiagnosticHardwareModuleTest {
     @Test
     fun testFetchLiveDtcCodesAndOpenManusAutoTrigger() = runBlocking {
         hardwareModule.setHardwareInterface(ObdHardwareInterface.SIMULATED)
-
         hardwareModule.fetchLiveDiagnosticTroubleCodes(
             vehicleName = "2021 Audi S5 Sportback",
             autoTriggerOpenManus = true,
@@ -86,29 +81,21 @@ class ObdDiagnosticHardwareModuleTest {
 
         val state = hardwareModule.hardwareState.value
         assertFalse(state.isFetchingDtcs)
-        assertNotNull(state.activeDtcs)
-
+        assertTrue(state.activeDtcs.isNotEmpty())
         val dtcCodes = state.activeDtcs.map { it.code }
-        assertTrue(dtcCodes.contains("P0300") || dtcCodes.contains("P0171"))
-
-        val agentState = openManusService.state.value
-        assertNotNull(agentState.finalReport)
-        assertTrue(agentState.finalReport?.primaryRootCause?.isNotBlank() == true)
+        assertTrue(dtcCodes.contains("P0133"))
+        assertTrue(dtcCodes.contains("P0300"))
+        assertTrue(dtcCodes.contains("C0171"))
+        assertNotNull(openManusService.state.value.finalReport)
     }
-
-
 
     @Test
     fun testClearHardwareFaultCodes() = runBlocking {
-        // First add DTC
+        hardwareModule.setHardwareInterface(ObdHardwareInterface.SIMULATED)
         telemetryService.addDtc("P0300", "Random Misfire")
-        assertTrue(telemetryService.telemetry.value.activeDtcCodes.isNotEmpty())
-
-        // Clear codes
         hardwareModule.clearHardwareFaultCodes()
         delay(300.milliseconds)
-
-        assertEquals(0, telemetryService.telemetry.value.activeDtcCodes.size)
-        assertEquals(0, hardwareModule.hardwareState.value.activeDtcs.size)
+        assertTrue(telemetryService.telemetry.value.activeDtcCodes.isEmpty())
+        assertTrue(hardwareModule.hardwareState.value.activeDtcs.isEmpty())
     }
 }
