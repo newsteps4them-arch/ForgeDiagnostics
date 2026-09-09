@@ -7,3 +7,6 @@
 ## 2026-09-08 - Context-aware ARIA equivalents in lists
 **Learning:** In Jetpack Compose, when rendering a list of items, interactive elements (like IconButtons for adjusting quantity) often use generic labels like 'Deduct' or 'Receive'. This creates a poor experience for screen reader users who hear the same label repeated without knowing which item it applies to.
 **Action:** Always append the item's unique title or name to the `contentDescription` (e.g., 'Deduct ${item.name}') for actions inside lists to ensure contextual clarity.
+## 2026-09-08 - [Empty States] Actionable Empty States
+**Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
+**Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
