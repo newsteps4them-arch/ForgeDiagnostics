@@ -4,11 +4,15 @@
 // Unauthorized copying of this file, via any medium is strictly prohibited.
 
 import { describe, it, expect } from 'vitest';
-import { decodeMode01Response, decodeMode09Response, decodeSupportedPidMask } from '../../src/protocols/j1979_decoder';
+import {
+  decodeMode01Response,
+  decodeMode03Response,
+  decodeMode09Response,
+  decodeSupportedPidMask,
+} from '../../src/protocols/j1979_decoder';
 
 describe('SAE J1979 Protocol Decoder', () => {
   it('should decode Engine RPM correctly (PID 0C)', () => {
-    // 41 0C 0F A0 -> 41 (Mode), 0C (PID), 0F A0 (Bytes) -> (39936 + 160) / 4 = 10024 / 4 = 2506? Wait. 0x0F = 15, 0xA0 = 160. (15*256)+160 = 3840 + 160 = 4000. 4000 / 4 = 1000 RPM
     const result = decodeMode01Response('41 0C 0F A0');
     expect(result).not.toBeNull();
     expect(result?.pid).toBe('0C');
@@ -18,7 +22,6 @@ describe('SAE J1979 Protocol Decoder', () => {
   });
 
   it('should decode Vehicle Speed correctly (PID 0D)', () => {
-    // 41 0D 37 -> 0x37 = 55 km/h
     const result = decodeMode01Response('41 0D 37');
     expect(result).not.toBeNull();
     expect(result?.pid).toBe('0D');
@@ -28,7 +31,6 @@ describe('SAE J1979 Protocol Decoder', () => {
   });
 
   it('should decode Coolant Temperature correctly (PID 05)', () => {
-    // 41 05 7B -> 0x7B = 123. 123 - 40 = 83 deg C
     const result = decodeMode01Response('41 05 7B');
     expect(result).not.toBeNull();
     expect(result?.pid).toBe('05');
@@ -37,8 +39,18 @@ describe('SAE J1979 Protocol Decoder', () => {
     expect(result?.unit).toBe('°C');
   });
 
+  it.each([
+    ['41 04 00', '04', 0],
+    ['41 0F FF', '0F', 215],
+    ['41 11 FF', '11', 100],
+    ['41 2F FF', '2F', 100],
+  ])('should decode single-byte PID boundaries: %s', (response, pid, value) => {
+    const result = decodeMode01Response(response);
+    expect(result?.pid).toBe(pid);
+    expect(result?.value).toBeCloseTo(value, 5);
+  });
+
   it('should return raw data for unknown PID', () => {
-    // 41 99 10
     const result = decodeMode01Response('41 99 10');
     expect(result).not.toBeNull();
     expect(result?.pid).toBe('99');
@@ -48,8 +60,12 @@ describe('SAE J1979 Protocol Decoder', () => {
   });
 
   it('should return null for invalid format', () => {
-    const result = decodeMode01Response('INVALID');
-    expect(result).toBeNull();
+    expect(decodeMode01Response('INVALID')).toBeNull();
+  });
+
+  it('should reject diagnostic noise that contains a response-looking substring', () => {
+    expect(decodeMode01Response('NO DATA 410D37')).toBeNull();
+    expect(decodeMode01Response('41 0D GG')).toBeNull();
   });
 
   it('should return null for a truncated multi-byte PID response', () => {
@@ -78,8 +94,26 @@ describe('SAE J1979 Protocol Decoder', () => {
     expect(result?.unit).toBe('ascii');
   });
 
-  it('should decode supported PID bitmasks into PID numbers', () => {
-    expect(decodeSupportedPidMask('0000001F')).toEqual(['01', '02', '03', '04', '05']);
-    expect(decodeSupportedPidMask('00000020')).toEqual(['06']);
+  it('should decode supported PID bitmasks into PID numbers in J1979 order', () => {
+    expect(decodeSupportedPidMask('0000001F')).toEqual(['1C', '1D', '1E', '1F', '20']);
+    expect(decodeSupportedPidMask('00000020')).toEqual(['1B']);
+  });
+
+  it('should decode stored DTCs from a Mode 03 response', () => {
+    expect(decodeMode03Response('43 01 33 03 00 00 00')).toEqual(['P0133', 'P0300']);
+  });
+
+  it('should ignore empty DTC entries in a Mode 03 response', () => {
+    expect(decodeMode03Response('43 00 00 00 00')).toEqual([]);
+  });
+
+  it('should reject malformed Mode 03 payloads', () => {
+    expect(decodeMode03Response('43 GG00')).toEqual([]);
+    expect(decodeMode03Response('43 01 3')).toEqual([]);
+    expect(decodeMode03Response('NO DATA 43 01 33')).toEqual([]);
+  });
+
+  it('should reject non-response Mode 09 noise', () => {
+    expect(decodeMode09Response('NO DATA 49020054455354')).toBeNull();
   });
 });

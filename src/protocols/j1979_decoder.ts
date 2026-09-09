@@ -35,11 +35,10 @@ function decodeAsciiPayload(bytes: number[]): string {
 
 export function decodeMode01Response(hexString: string): DecodedPid | null {
   const clean = hexString.replace(/[\s\r\n>]/g, '').toUpperCase();
-  const match = clean.match(/(?:41)([0-9A-F]{2})([0-9A-F]*)/);
-  if (!match) return null;
+  if (!clean.startsWith('41') || clean.length < 6) return null;
 
-  const pid = match[1] || '';
-  const rawBytes = match[2] || '';
+  const pid = clean.slice(2, 4);
+  const rawBytes = clean.slice(4);
   const bytes = parseHexBytes(rawBytes);
   if (!pid || !bytes || bytes.length === 0) return null;
 
@@ -76,11 +75,10 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
 
 export function decodeMode09Response(hexString: string): DecodedPid | null {
   const clean = hexString.replace(/[\s\r\n>]/g, '').toUpperCase();
-  const match = clean.match(/(?:49)([0-9A-F]{2})([0-9A-F]*)/);
-  if (!match) return null;
+  if (!clean.startsWith('49') || clean.length < 6) return null;
 
-  const pid = match[1] || '';
-  const rawBytes = match[2] || '';
+  const pid = clean.slice(2, 4);
+  const rawBytes = clean.slice(4);
   const bytes = parseHexBytes(rawBytes);
   if (!pid || !bytes || bytes.length === 0) return null;
 
@@ -105,19 +103,56 @@ export function decodeSupportedPidMask(hexMask: string): string[] {
   if (!bytes || bytes.length === 0) return [];
 
   const pids: string[] = [];
-  for (let i = 0; i < bytes.length * 8; i += 1) {
-    const bitIndex = i;
-    const byteIndex = Math.floor(bitIndex / 8);
-    const bitOffset = bitIndex % 8;
+
+  for (let bit = 0; bit < bytes.length * 8; bit += 1) {
+    const byteIndex = Math.floor(bit / 8);
+    const bitIndex = 7 - (bit % 8);
     const byte = bytes[byteIndex];
     if (byte === undefined) continue;
 
-    const mask = 1 << (7 - bitOffset);
+    const mask = 1 << bitIndex;
     if ((byte & mask) !== 0) {
-      const pidNumber = i + 1;
+      const pidNumber = bit + 1;
       pids.push(pidNumber.toString(16).padStart(2, '0').toUpperCase());
     }
   }
 
   return pids;
+}
+
+export function decodeMode03Response(hexString: string): string[] {
+  const clean = hexString.replace(/[\s\r\n>]/g, '').toUpperCase();
+  if (!clean || !clean.startsWith('43') || !/^[0-9A-F]+$/.test(clean)) return [];
+
+  const payload = clean.slice(2);
+  if (!payload || payload.length % 4 !== 0) return [];
+
+  const dtcs: string[] = [];
+  for (let index = 0; index + 4 <= payload.length; index += 4) {
+    const codeHex = payload.slice(index, index + 4);
+    if (codeHex === '0000') continue;
+
+    const firstNibble = Number.parseInt(codeHex[0], 16);
+    const group = (() => {
+      const firstByte = firstNibble >> 2;
+      switch (firstByte) {
+        case 0:
+          return 'P';
+        case 1:
+          return 'C';
+        case 2:
+          return 'B';
+        case 3:
+          return 'U';
+        default:
+          return 'P';
+      }
+    })();
+
+    const digit = (firstNibble & 0x03).toString();
+    const tail = codeHex.slice(1);
+    dtcs.push(`${group}${digit}${tail}`);
+  }
+
+  return dtcs;
 }

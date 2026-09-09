@@ -7,6 +7,7 @@
   },
   "scripts": {
     "test": "vitest run",
+    "test:simulator": "python -m unittest discover -s tools/ecu-simulator/tests -p \"test*.py\"",
     "lint": "tsc --noEmit",
     "build": "npm run lint && npm test",
     "build:android": "gradlew.bat :app:assembleDebug",
@@ -21,15 +22,22 @@
     "bridge:termux": "powershell -ExecutionPolicy Bypass -File ./scripts/start_termux_bridge.ps1",
     "connect": "powershell -ExecutionPolicy Bypass -File ./scripts/connect_workflows.ps1"
   },
-  "description": "Team Forge Android diagnostics tooling",
+  "description": "[![Direct APK Download](https://img.shields.io/badge/⚡_Direct_Download-Android_.APK-00E676?style=for-the-badge&logo=android&logoColor=black)](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases/latest/download/Forge-debug-1.0.0.apk) [![Releases Page](https://img.shields.io/github/v/release/newsteps4them-arch/ForgeDiagnostics?style=for-the-badge&color=2196F3)](https://github.com/newsteps4them-arch/ForgeDiagnostics/releases)",
   "main": "index.js",
-  "directories": { "test": "test" },
-  "repository": { "type": "git", "url": "git+https://github.com/newsteps4them-arch/ForgeDiagnostics.git" },
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/newsteps4them-arch/ForgeDiagnostics.git"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
-  "bugs": { "url": "https://github.com/newsteps4them-arch/ForgeDiagnostics/issues" },
+  "bugs": {
+    "url": "https://github.com/newsteps4them-arch/ForgeDiagnostics/issues"
+  },
   "homepage": "https://github.com/newsteps4them-arch/ForgeDiagnostics#readme",
   "devDependencies": {
     "@google/genai": "^2.19.0",

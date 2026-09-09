@@ -13,6 +13,11 @@ You can run these tests via the terminal:
 ./gradlew :app:testDebugUnitTest --tests "*MockSimulatorConnectionTest*"
 ```
 
+The Python simulator unit tests use an explicit discovery directory:
+```bash
+python -m unittest discover -s tools/ecu-simulator/tests -p "test*.py"
+```
+
 ## 2. Real-World Testing (USB-OTG / Innova Scanner)
 
 Since you have an Innova 5610rs and a USB-OTG cable, you can perform live hardware testing.
@@ -36,7 +41,7 @@ Once connected, you can use the buttons at the bottom of the screen to send stan
 * **Test RPM (01 0C):** Requests current engine RPM.
 * **Test VIN (09 02):** Requests the vehicle's VIN.
 
-The terminal window on the screen will print out exactly what bytes were sent out the USB port and what bytes the vehicle returned.
+The terminal window on the screen will print out exactly what bytes were sent out the USB port and what the vehicle returned.
 
 ## 3. Extending for Bidirectional Controls
 Because standard OBD-II (Service 01) doesn't cover bidirectional controls (like turning on a fan), you will need to reverse-engineer manufacturer-specific commands using your Innova scanner.
