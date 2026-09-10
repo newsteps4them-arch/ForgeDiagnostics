@@ -14,8 +14,40 @@ export interface DecodedPid {
   unit: string;
 }
 
+// Pre-computed lookup tables for hex string formatting ("00".."FF" and "0".."F")
+const HEX_BYTE_TABLE: string[] = new Array(256);
+const HEX_NIBBLE_TABLE: string[] = new Array(16);
+
+// Fast ASCII lookup array for character parsing:
+// -2: whitespace (\s, \r, \n, \t) or prompt delimiter (>)
+// -1: invalid non-hex character
+// 0..15: hex nibble value
+const HEX_CHAR_VAL = new Int8Array(128);
+HEX_CHAR_VAL.fill(-1);
+
+// Configure whitespace and delimiter character markers
+HEX_CHAR_VAL[32] = -2; // ' '
+HEX_CHAR_VAL[13] = -2; // '\r'
+HEX_CHAR_VAL[10] = -2; // '\n'
+HEX_CHAR_VAL[9] = -2;  // '\t'
+HEX_CHAR_VAL[62] = -2; // '>'
+
+for (let i = 0; i < 16; i++) {
+  HEX_NIBBLE_TABLE[i] = i.toString(16).toUpperCase();
+}
+
+for (let i = 0; i < 256; i++) {
+  HEX_BYTE_TABLE[i] = i < 16 ? '0' + i.toString(16).toUpperCase() : i.toString(16).toUpperCase();
+}
+
+for (let i = 0; i <= 9; i++) HEX_CHAR_VAL[48 + i] = i; // '0'-'9'
+for (let i = 0; i < 6; i++) {
+  HEX_CHAR_VAL[65 + i] = 10 + i; // 'A'-'F'
+  HEX_CHAR_VAL[97 + i] = 10 + i; // 'a'-'f'
+}
+
 /**
- * Fast zero-regex parser helper to extract raw hex bytes from OBD-II responses.
+ * Fast zero-regex lookup table helper to extract raw hex bytes from OBD-II responses.
  * Ignores whitespace (\s, \r, \n, \t) and prompt character (>).
  * Returns null if non-hex characters are present or if digit count is odd.
  */
@@ -26,21 +58,11 @@ function parseHexBytes(hexString: string): number[] | null {
 
   for (let i = 0; i < len; i++) {
     const code = hexString.charCodeAt(i);
-    // Fast skip whitespace and prompt delimiter
-    if (code === 32 || code === 13 || code === 10 || code === 9 || code === 62) {
-      continue;
-    }
+    if (code >= 128) return null;
+    const val = HEX_CHAR_VAL[code]!;
 
-    let val = -1;
-    if (code >= 48 && code <= 57) {
-      val = code - 48; // '0'-'9'
-    } else if (code >= 65 && code <= 70) {
-      val = code - 55; // 'A'-'F'
-    } else if (code >= 97 && code <= 102) {
-      val = code - 87; // 'a'-'f'
-    } else {
-      return null;
-    }
+    if (val === -2) continue; // Fast skip whitespace & delimiter
+    if (val === -1) return null; // Invalid character
 
     if (highNibble === -1) {
       highNibble = val;
@@ -66,14 +88,14 @@ function decodeAsciiPayload(bytes: number[]): string {
 }
 
 /**
- * High-performance SAE J1979 Mode 01 response decoder.
+ * High-performance SAE J1979 Mode 01 response decoder using lookup table optimization.
  */
 export function decodeMode01Response(hexString: string): DecodedPid | null {
   const bytes = parseHexBytes(hexString);
   if (!bytes || bytes.length < 3 || bytes[0] !== 0x41) return null;
 
   const pidByte = bytes[1]!;
-  const pid = pidByte < 16 ? '0' + pidByte.toString(16).toUpperCase() : pidByte.toString(16).toUpperCase();
+  const pid = HEX_BYTE_TABLE[pidByte]!;
 
   const byteA = bytes[2]!;
   const byteB = bytes[3] ?? 0;
@@ -104,7 +126,7 @@ export function decodeMode09Response(hexString: string): DecodedPid | null {
   if (!bytes || bytes.length < 2 || bytes[0] !== 0x49) return null;
 
   const pidByte = bytes[1]!;
-  const pid = pidByte < 16 ? '0' + pidByte.toString(16).toUpperCase() : pidByte.toString(16).toUpperCase();
+  const pid = HEX_BYTE_TABLE[pidByte]!;
 
   const rawPayload = bytes.slice(2);
   if (rawPayload.length === 0) return null;
@@ -139,7 +161,7 @@ export function decodeSupportedPidMask(hexMask: string): string[] {
     for (let bitIndex = 7; bitIndex >= 0; bitIndex--) {
       if ((byte & (1 << bitIndex)) !== 0) {
         const pidNumber = (byteIndex * 8) + (7 - bitIndex) + 1;
-        pids.push(pidNumber < 16 ? '0' + pidNumber.toString(16).toUpperCase() : pidNumber.toString(16).toUpperCase());
+        pids.push(HEX_BYTE_TABLE[pidNumber]!);
       }
     }
   }
@@ -171,8 +193,8 @@ export function decodeMode03Response(hexString: string): string[] {
     }
 
     const digit = (b1 >> 4) & 0x03;
-    const hex1 = (b1 & 0x0f).toString(16).toUpperCase();
-    const hex2 = b2 < 16 ? '0' + b2.toString(16).toUpperCase() : b2.toString(16).toUpperCase();
+    const hex1 = HEX_NIBBLE_TABLE[b1 & 0x0f]!;
+    const hex2 = HEX_BYTE_TABLE[b2]!;
 
     dtcs.push(`${group}${digit}${hex1}${hex2}`);
   }
