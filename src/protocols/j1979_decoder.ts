@@ -132,7 +132,7 @@ export function decodeMode03Response(hexString: string): string[] {
     const codeHex = payload.slice(index, index + 4);
     if (codeHex === '0000') continue;
 
-    const firstNibble = Number.parseInt(codeHex[0], 16);
+    const firstNibble = Number.parseInt(codeHex[0]!, 16);
     const group = (() => {
       const firstByte = firstNibble >> 2;
       switch (firstByte) {
