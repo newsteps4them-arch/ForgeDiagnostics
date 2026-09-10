@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -390,17 +391,47 @@ fun ProjectDashboard(
                     border = androidx.compose.foundation.BorderStroke(1.dp, ForgeBorder),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(vertical = 32.dp, horizontal = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(
-                            text = "No tasks found matching current filter for this project.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Icon(
+                            imageVector = Icons.Default.Assignment,
+                            contentDescription = null,
+                            tint = ForgeCyan,
+                            modifier = Modifier.size(48.dp)
                         )
+                        Text(
+                            text = if (filterStatus == "All") "No tasks in this project yet." else "No tasks match the filter.",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ForgeOnSurface,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = "Tap 'Add Task' to create a new task for this project.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        if (filterStatus == "All") {
+                            Button(
+                                onClick = { showAddTaskDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = ForgeCyan, contentColor = Color.Black),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Create First Task", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        } else {
+                            TextButton(onClick = { filterStatus = "All" }) {
+                                Text("Clear Filter", color = ForgeCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
             }
