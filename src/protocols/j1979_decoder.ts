@@ -18,6 +18,10 @@ export interface DecodedPid {
 const HEX_BYTE_TABLE: string[] = new Array(256);
 const HEX_NIBBLE_TABLE: string[] = new Array(16);
 
+// Pre-computed PID lookup matrix for fast bitmask decoding [byteIndex][bitOffset]
+// Eliminates runtime index calculations and string formatting in high-frequency PID bitmask scanning
+const PID_LOOKUP_TABLE: string[][] = new Array(32);
+
 // Fast ASCII lookup array for character parsing:
 // -2: whitespace (\s, \r, \n, \t) or prompt delimiter (>)
 // -1: invalid non-hex character
@@ -38,6 +42,14 @@ for (let i = 0; i < 16; i++) {
 
 for (let i = 0; i < 256; i++) {
   HEX_BYTE_TABLE[i] = i < 16 ? '0' + i.toString(16).toUpperCase() : i.toString(16).toUpperCase();
+}
+
+for (let b = 0; b < 32; b++) {
+  PID_LOOKUP_TABLE[b] = new Array(8);
+  for (let bit = 7; bit >= 0; bit--) {
+    const pidNumber = (b * 8) + (7 - bit) + 1;
+    PID_LOOKUP_TABLE[b]![7 - bit] = HEX_BYTE_TABLE[pidNumber]!;
+  }
 }
 
 for (let i = 0; i <= 9; i++) HEX_CHAR_VAL[48 + i] = i; // '0'-'9'
@@ -76,9 +88,12 @@ function parseHexBytes(hexString: string): number[] | null {
   return bytes;
 }
 
-function decodeAsciiPayload(bytes: number[]): string {
+/**
+ * Decodes ASCII character payload from byte array without requiring intermediate array slices.
+ */
+function decodeAsciiPayload(bytes: number[], startOffset: number = 0): string {
   let result = '';
-  for (let i = 0; i < bytes.length; i++) {
+  for (let i = startOffset; i < bytes.length; i++) {
     const val = bytes[i]!;
     if (val !== 0) {
       result += String.fromCharCode(val);
@@ -128,13 +143,13 @@ export function decodeMode09Response(hexString: string): DecodedPid | null {
   const pidByte = bytes[1]!;
   const pid = HEX_BYTE_TABLE[pidByte]!;
 
-  const rawPayload = bytes.slice(2);
-  if (rawPayload.length === 0) return null;
+  // Zero-copy allocation optimization: check offsets directly instead of slicing array
+  let startOffset = 2;
+  if (startOffset >= bytes.length) return null;
+  if (bytes[startOffset] === 0x00) startOffset++;
+  if (startOffset >= bytes.length) return null;
 
-  const payload = rawPayload[0] === 0x00 ? rawPayload.slice(1) : rawPayload;
-  if (payload.length === 0) return null;
-
-  const ascii = decodeAsciiPayload(payload);
+  const ascii = decodeAsciiPayload(bytes, startOffset);
   if (!ascii) return null;
 
   switch (pid) {
@@ -147,6 +162,9 @@ export function decodeMode09Response(hexString: string): DecodedPid | null {
   }
 }
 
+/**
+ * High-performance SAE J1979 PID bitmask decoder using unrolled bit checks and precomputed PID lookup matrix.
+ */
 export function decodeSupportedPidMask(hexMask: string): string[] {
   const bytes = parseHexBytes(hexMask);
   if (!bytes || bytes.length === 0) return [];
@@ -158,12 +176,18 @@ export function decodeSupportedPidMask(hexMask: string): string[] {
     const byte = bytes[byteIndex]!;
     if (byte === 0) continue;
 
-    for (let bitIndex = 7; bitIndex >= 0; bitIndex--) {
-      if ((byte & (1 << bitIndex)) !== 0) {
-        const pidNumber = (byteIndex * 8) + (7 - bitIndex) + 1;
-        pids.push(HEX_BYTE_TABLE[pidNumber]!);
-      }
-    }
+    // Use pre-computed PID lookup array or calculate fallback if byte index > 31
+    const lookup = PID_LOOKUP_TABLE[byteIndex] || new Array(8);
+
+    // Unrolled bitwise checks for maximum decoding throughput
+    if (byte & 0x80) pids.push(lookup[0] || HEX_BYTE_TABLE[(byteIndex * 8) + 1]!);
+    if (byte & 0x40) pids.push(lookup[1] || HEX_BYTE_TABLE[(byteIndex * 8) + 2]!);
+    if (byte & 0x20) pids.push(lookup[2] || HEX_BYTE_TABLE[(byteIndex * 8) + 3]!);
+    if (byte & 0x10) pids.push(lookup[3] || HEX_BYTE_TABLE[(byteIndex * 8) + 4]!);
+    if (byte & 0x08) pids.push(lookup[4] || HEX_BYTE_TABLE[(byteIndex * 8) + 5]!);
+    if (byte & 0x04) pids.push(lookup[5] || HEX_BYTE_TABLE[(byteIndex * 8) + 6]!);
+    if (byte & 0x02) pids.push(lookup[6] || HEX_BYTE_TABLE[(byteIndex * 8) + 7]!);
+    if (byte & 0x01) pids.push(lookup[7] || HEX_BYTE_TABLE[(byteIndex * 8) + 8]!);
   }
 
   return pids;
