@@ -46,40 +46,46 @@ for (let i = 0; i < 6; i++) {
   HEX_CHAR_VAL[97 + i] = 10 + i; // 'a'-'f'
 }
 
+// Static reusable Uint8Array buffer to eliminate GC pressure and array allocation overhead
+// during continuous high-frequency OBD-II telematics decoding (~500k ops/sec).
+const PARSE_BUFFER = new Uint8Array(256);
+
 /**
- * Fast zero-regex lookup table helper to extract raw hex bytes from OBD-II responses.
+ * Fast zero-allocation hex parser populating static Uint8Array buffer.
  * Ignores whitespace (\s, \r, \n, \t) and prompt character (>).
- * Returns null if non-hex characters are present or if digit count is odd.
+ * Returns byte count populated, or -1 if non-hex characters present, odd hex nibble count, or buffer overflow.
  */
-function parseHexBytes(hexString: string): number[] | null {
+function parseHexBytesToBuffer(hexString: string): number {
   const len = hexString.length;
-  const bytes: number[] = [];
+  let count = 0;
   let highNibble = -1;
 
   for (let i = 0; i < len; i++) {
     const code = hexString.charCodeAt(i);
-    if (code >= 128) return null;
+    if (code >= 128) return -1;
     const val = HEX_CHAR_VAL[code]!;
 
     if (val === -2) continue; // Fast skip whitespace & delimiter
-    if (val === -1) return null; // Invalid character
+    if (val === -1) return -1; // Invalid character
 
     if (highNibble === -1) {
       highNibble = val;
     } else {
-      bytes.push((highNibble << 4) | val);
+      if (count >= 256) return -1; // Overflow protection
+      PARSE_BUFFER[count++] = (highNibble << 4) | val;
       highNibble = -1;
     }
   }
 
-  if (highNibble !== -1) return null;
-  return bytes;
+  if (highNibble !== -1) return -1;
+  return count;
 }
 
-function decodeAsciiPayload(bytes: number[]): string {
+function decodeAsciiPayloadFromBuffer(offset: number, length: number): string {
   let result = '';
-  for (let i = 0; i < bytes.length; i++) {
-    const val = bytes[i]!;
+  const end = offset + length;
+  for (let i = offset; i < end; i++) {
+    const val = PARSE_BUFFER[i]!;
     if (val !== 0) {
       result += String.fromCharCode(val);
     }
@@ -88,21 +94,21 @@ function decodeAsciiPayload(bytes: number[]): string {
 }
 
 /**
- * High-performance SAE J1979 Mode 01 response decoder using lookup table optimization.
+ * High-performance SAE J1979 Mode 01 response decoder using zero-allocation buffer parsing.
  */
 export function decodeMode01Response(hexString: string): DecodedPid | null {
-  const bytes = parseHexBytes(hexString);
-  if (!bytes || bytes.length < 3 || bytes[0] !== 0x41) return null;
+  const len = parseHexBytesToBuffer(hexString);
+  if (len < 3 || PARSE_BUFFER[0] !== 0x41) return null;
 
-  const pidByte = bytes[1]!;
+  const pidByte = PARSE_BUFFER[1]!;
   const pid = HEX_BYTE_TABLE[pidByte]!;
 
-  const byteA = bytes[2]!;
-  const byteB = bytes[3] ?? 0;
+  const byteA = PARSE_BUFFER[2]!;
+  const byteB = len > 3 ? PARSE_BUFFER[3]! : 0;
 
   switch (pid) {
     case '0C': // Engine RPM
-      if (bytes.length < 4) return null;
+      if (len < 4) return null;
       return { pid: '0C', name: 'Engine RPM', value: ((byteA * 256) + byteB) / 4, unit: 'RPM' };
     case '0D': // Vehicle Speed
       return { pid: '0D', name: 'Vehicle Speed', value: byteA, unit: 'km/h' };
@@ -122,19 +128,24 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
 }
 
 export function decodeMode09Response(hexString: string): DecodedPid | null {
-  const bytes = parseHexBytes(hexString);
-  if (!bytes || bytes.length < 2 || bytes[0] !== 0x49) return null;
+  const len = parseHexBytesToBuffer(hexString);
+  if (len < 2 || PARSE_BUFFER[0] !== 0x49) return null;
 
-  const pidByte = bytes[1]!;
+  const pidByte = PARSE_BUFFER[1]!;
   const pid = HEX_BYTE_TABLE[pidByte]!;
 
-  const rawPayload = bytes.slice(2);
-  if (rawPayload.length === 0) return null;
+  const rawPayloadLen = len - 2;
+  if (rawPayloadLen <= 0) return null;
 
-  const payload = rawPayload[0] === 0x00 ? rawPayload.slice(1) : rawPayload;
-  if (payload.length === 0) return null;
+  let payloadOffset = 2;
+  let payloadLen = rawPayloadLen;
+  if (PARSE_BUFFER[payloadOffset] === 0x00) {
+    payloadOffset += 1;
+    payloadLen -= 1;
+  }
+  if (payloadLen <= 0) return null;
 
-  const ascii = decodeAsciiPayload(payload);
+  const ascii = decodeAsciiPayloadFromBuffer(payloadOffset, payloadLen);
   if (!ascii) return null;
 
   switch (pid) {
@@ -148,14 +159,13 @@ export function decodeMode09Response(hexString: string): DecodedPid | null {
 }
 
 export function decodeSupportedPidMask(hexMask: string): string[] {
-  const bytes = parseHexBytes(hexMask);
-  if (!bytes || bytes.length === 0) return [];
+  const numBytes = parseHexBytesToBuffer(hexMask);
+  if (numBytes <= 0) return [];
 
   const pids: string[] = [];
-  const numBytes = bytes.length;
 
   for (let byteIndex = 0; byteIndex < numBytes; byteIndex++) {
-    const byte = bytes[byteIndex]!;
+    const byte = PARSE_BUFFER[byteIndex]!;
     if (byte === 0) continue;
 
     for (let bitIndex = 7; bitIndex >= 0; bitIndex--) {
@@ -170,16 +180,16 @@ export function decodeSupportedPidMask(hexMask: string): string[] {
 }
 
 export function decodeMode03Response(hexString: string): string[] {
-  const bytes = parseHexBytes(hexString);
-  if (!bytes || bytes.length === 0 || bytes[0] !== 0x43) return [];
+  const len = parseHexBytesToBuffer(hexString);
+  if (len <= 0 || PARSE_BUFFER[0] !== 0x43) return [];
 
-  const payloadLen = bytes.length - 1;
+  const payloadLen = len - 1;
   if (payloadLen <= 0 || payloadLen % 2 !== 0) return [];
 
   const dtcs: string[] = [];
-  for (let i = 1; i < bytes.length; i += 2) {
-    const b1 = bytes[i]!;
-    const b2 = bytes[i + 1]!;
+  for (let i = 1; i < len; i += 2) {
+    const b1 = PARSE_BUFFER[i]!;
+    const b2 = PARSE_BUFFER[i + 1]!;
     if (b1 === 0 && b2 === 0) continue;
 
     const firstByteGroup = b1 >> 6;
