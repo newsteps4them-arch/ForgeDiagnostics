@@ -243,21 +243,71 @@ class ObdTelemetryService(
         }
     }
 
+    /**
+     * High-performance single-pass zero-allocation parser for Mode 01 PID 0C (Engine RPM) OBD responses.
+     * Avoids regexes and string allocations (.replace, .substring) to eliminate GC churn during live telemetry streaming.
+     */
     internal fun parseRpmResponse(response: String): Int? {
-        return try {
-            val clean = response.replace(" ", "").replace("\r", "").replace("\n", "")
-            if (clean.startsWith("410C", ignoreCase = true)) {
-                val hexStr = clean.substring(4).take(4)
-                if (hexStr.length == 4) {
-                    val a = hexStr.substring(0, 2).toInt(16)
-                    val b = hexStr.substring(2, 4).toInt(16)
-                    return ((a * 256) + b) / 4
-                }
+        if (response.isEmpty()) return null
+
+        val len = response.length
+        var headerIdx = 0
+        var i = 0
+        var headerFound = false
+
+        // Scan character sequence matching '4', '1', '0', 'C' (or 'c'), skipping framing characters
+        while (i < len) {
+            val c = response[i++]
+            if (c == ' ' || c == '\r' || c == '\n' || c == '\t' || c == '>') continue
+
+            val matchesCurrent = when (headerIdx) {
+                0 -> c == '4'
+                1 -> c == '1'
+                2 -> c == '0'
+                3 -> c == 'C' || c == 'c'
+                else -> false
             }
-            null
-        } catch (e: Exception) {
-            null
+
+            if (matchesCurrent) {
+                headerIdx++
+                if (headerIdx == 4) {
+                    headerFound = true
+                    break
+                }
+            } else {
+                headerIdx = if (c == '4') 1 else 0
+            }
         }
+
+        if (!headerFound) return null
+
+        var byteA = 0
+        var byteB = 0
+        var count = 0
+
+        // Parse exactly 4 hex nibbles (2 bytes) for RPM data
+        while (i < len && count < 4) {
+            val c = response[i++]
+            if (c == ' ' || c == '\r' || c == '\n' || c == '\t' || c == '>') continue
+
+            val valNibble = when (c) {
+                in '0'..'9' -> c - '0'
+                in 'A'..'F' -> c - 'A' + 10
+                in 'a'..'f' -> c - 'a' + 10
+                else -> return null
+            }
+
+            if (count < 2) {
+                byteA = (byteA shl 4) or valNibble
+            } else {
+                byteB = (byteB shl 4) or valNibble
+            }
+            count++
+        }
+
+        if (count < 4) return null
+
+        return ((byteA * 256) + byteB) / 4
     }
 
     fun setSpeed(speed: Int) {
