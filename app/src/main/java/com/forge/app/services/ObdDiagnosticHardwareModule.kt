@@ -443,15 +443,12 @@ class ObdDiagnosticHardwareModule(
         scope.launch(ioDispatcher) {
 
             while (isLoopActive && _hardwareState.value.isConnected) {
-                // Poll live RPM (010C)
+                // Poll live RPM (010C) using zero-allocation RPM parser
                 val rpmRaw = sendObdCommand("010C")
-                if (rpmRaw.contains("410C") || rpmRaw.contains("41 0C")) {
-                    val clean = rpmRaw.replace(" ", "").substringAfter("410C")
-                    if (clean.length >= 4) {
-                        val a = clean.substring(0, 2).toIntOrNull(16) ?: 0
-                        val b = clean.substring(2, 4).toIntOrNull(16) ?: 0
-                        val liveRpm = ((a * 256) + b) / 4
-                        telemetryService?.setSpeed((liveRpm / 35).coerceIn(0, 200))
+                if (rpmRaw.isNotEmpty()) {
+                    val liveRpm = telemetryService?.parseRpmResponse(rpmRaw)
+                    if (liveRpm != null) {
+                        telemetryService.setSpeed((liveRpm / 35).coerceIn(0, 200))
                     }
                 }
                 kotlinx.coroutines.delay(250)
