@@ -35,6 +35,12 @@ import com.forge.app.services.ObdTelemetryData
 import com.forge.app.ui.theme.*
 import kotlin.math.*
 
+private data class GaugeTickSpec(
+    val cosAngle: Float,
+    val sinAngle: Float,
+    val isMajor: Boolean
+)
+
 /**
  * High-performance, hardware-styled Automotive Radial Gauge Composable
  * with physical spring needle damping, smooth numerical roll transitions, and warning aura pulsing.
@@ -69,6 +75,22 @@ fun RadialGauge(
     val currentFraction = (animatedValue - minValue) / (maxValue - minValue)
     val isCritical = criticalThreshold != null && animatedValue >= criticalThreshold
     val isWarning = warningThreshold != null && animatedValue >= warningThreshold
+
+    // Precomputed tick mark angles and trig functions cached across animation frames
+    val tickSpecs = remember(minValue, maxValue, majorTickStep, minorTickDivisions, startAngle, sweepAngle) {
+        val totalTicks = ((maxValue - minValue) / majorTickStep).toInt()
+        val totalSubTicks = totalTicks * minorTickDivisions
+        List(totalSubTicks + 1) { i ->
+            val tickFraction = i.toFloat() / totalSubTicks
+            val angleDeg = startAngle + (tickFraction * sweepAngle)
+            val angleRad = Math.toRadians(angleDeg.toDouble())
+            GaugeTickSpec(
+                cosAngle = cos(angleRad).toFloat(),
+                sinAngle = sin(angleRad).toFloat(),
+                isMajor = (i % minorTickDivisions) == 0
+            )
+        }
+    }
 
     // Smooth animated color morphing
     val targetActiveColor = when {
@@ -205,27 +227,25 @@ fun RadialGauge(
                         )
                     }
 
-                    // Tick Marks
-                    val totalTicks = ((maxValue - minValue) / majorTickStep).toInt()
-                    val totalSubTicks = totalTicks * minorTickDivisions
+                    // Tick Marks rendered using precomputed trig specs
+                    val outerRadius = radius - 8.dp.toPx()
+                    val majorLength = 10.dp.toPx()
+                    val minorLength = 5.dp.toPx()
+                    val majorWidth = 2.dp.toPx()
+                    val minorWidth = 1.dp.toPx()
+                    val majorColor = Color(0xFF8C93A8)
+                    val minorColor = Color(0xFF4A5168)
 
-                    for (i in 0..totalSubTicks) {
-                        val tickFraction = i.toFloat() / totalSubTicks
-                        val angleDeg = startAngle + (tickFraction * sweepAngle)
-                        val angleRad = Math.toRadians(angleDeg.toDouble())
-
-                        val isMajor = (i % minorTickDivisions) == 0
-                        val tickLength = if (isMajor) 10.dp.toPx() else 5.dp.toPx()
-                        val tickColor = if (isMajor) Color(0xFF8C93A8) else Color(0xFF4A5168)
-                        val strokeWidth = if (isMajor) 2.dp.toPx() else 1.dp.toPx()
-
-                        val outerRadius = radius - 8.dp.toPx()
+                    for (spec in tickSpecs) {
+                        val tickLength = if (spec.isMajor) majorLength else minorLength
+                        val tickColor = if (spec.isMajor) majorColor else minorColor
+                        val strokeWidth = if (spec.isMajor) majorWidth else minorWidth
                         val innerRadius = outerRadius - tickLength
 
-                        val startX = (center.x + outerRadius * cos(angleRad)).toFloat()
-                        val startY = (center.y + outerRadius * sin(angleRad)).toFloat()
-                        val endX = (center.x + innerRadius * cos(angleRad)).toFloat()
-                        val endY = (center.y + innerRadius * sin(angleRad)).toFloat()
+                        val startX = center.x + outerRadius * spec.cosAngle
+                        val startY = center.y + outerRadius * spec.sinAngle
+                        val endX = center.x + innerRadius * spec.cosAngle
+                        val endY = center.y + innerRadius * spec.sinAngle
 
                         drawLine(
                             color = tickColor,
