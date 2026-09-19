@@ -17,3 +17,6 @@
 ## 2026-09-08 - [Empty States] Actionable Empty States
 **Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
 **Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+## 2026-10-25 - Jetpack Compose Empty States UX & Accessibility
+**Learning:** Empty states with only text and a decorative icon cause high user friction, and screen readers fail to convey context if the primary visual element has a null contentDescription.
+**Action:** Always provide a semantic `contentDescription` for primary empty state icons, and ensure a clear, actionable Call-To-Action (CTA) button is included directly inside the empty state component to encourage immediate user interaction.
