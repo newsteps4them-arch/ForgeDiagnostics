@@ -246,11 +246,13 @@ class ObdTelemetryService(
     internal fun parseRpmResponse(response: String): Int? {
         return try {
             val clean = response.replace(" ", "").replace("\r", "").replace("\n", "")
-            if (clean.startsWith("410C", ignoreCase = true)) {
-                val hexStr = clean.substring(4).take(4)
-                if (hexStr.length == 4) {
-                    val a = hexStr.substring(0, 2).toInt(16)
-                    val b = hexStr.substring(2, 4).toInt(16)
+            val idx = clean.indexOf("410C", ignoreCase = true)
+            if (idx != -1) {
+                val payload = clean.substring(idx + 4)
+                if (payload.length >= 4) {
+                    val hexStr = payload.substring(0, 4)
+                    val a = hexStr.substring(0, 2).toIntOrNull(16) ?: return null
+                    val b = hexStr.substring(2, 4).toIntOrNull(16) ?: return null
                     return ((a * 256) + b) / 4
                 }
             }
@@ -280,14 +282,16 @@ class ObdTelemetryService(
 
     fun toggleConnection() {
         val cur = _telemetry.value.isConnected
-        _telemetry.value = if (cur) {
-            _telemetry.value.copy(
+        if (cur) {
+            _telemetry.value = _telemetry.value.copy(
                 isConnected = false,
                 connectionStatusText = "Disconnected"
             )
         } else {
-            _telemetry.value.copy(
-                connectionStatusText = "Connect a physical OBD-II adapter before polling"
+            val isSimulated = _telemetry.value.connectionType == "SIMULATED"
+            _telemetry.value = _telemetry.value.copy(
+                isConnected = isSimulated,
+                connectionStatusText = if (isSimulated) "Simulated Stream Active" else "Connect a physical OBD-II adapter before polling"
             )
         }
     }
