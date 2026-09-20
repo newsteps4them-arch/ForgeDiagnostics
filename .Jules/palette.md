@@ -17,3 +17,6 @@
 ## 2026-09-08 - [Empty States] Actionable Empty States
 **Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
 **Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+## 2024-05-14 - Empty State Accessibility Context
+**Learning:** Empty states in Jetpack Compose that rely heavily on a primary central visual element (like an illustration or large Icon) need a semantic `contentDescription` (e.g., 'No tasks found' or 'No items found') rather than `null`. Using `null` deprives screen reader users of the primary context of the empty block before they encounter the secondary text details.
+**Action:** Always verify that empty state primary icons/illustrations have descriptive accessibility labels instead of being marked as decorative.
