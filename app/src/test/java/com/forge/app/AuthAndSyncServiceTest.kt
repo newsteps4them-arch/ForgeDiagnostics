@@ -1,45 +1,20 @@
-// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
-// Proprietary and Confidential.
-// This file is part of Forge Agentic Diagnostics.
-// Unauthorized copying of this file, via any medium is strictly prohibited.
-
 package com.forge.app
 
 import com.forge.app.services.AuthAndSyncService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class AuthAndSyncServiceTest {
 
-    private val testDispatcher = StandardTestDispatcher()
-
-    @Before
-    fun setUp() {
-        Dispatchers.setMain(testDispatcher)
-    }
-
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
-
     @Test
-    fun testSignOutResetsUserAndSyncStatus() = runTest {
-        val service = AuthAndSyncService(scope = CoroutineScope(testDispatcher))
+    fun testSignOutResetsUserAndSyncStatus() {
+        val service = AuthAndSyncService(scope = CoroutineScope(Dispatchers.Unconfined))
 
-        // Initial state should be authenticated (based on the class's default initialization)
+        // Initial state should be authenticated
         assertTrue(service.currentUser.value.isAuthenticated)
         assertTrue(service.syncStatus.value.isConnectedToFirestore)
 
@@ -63,28 +38,28 @@ class AuthAndSyncServiceTest {
     }
 
     @Test
-    fun testSignInWithGoogle() = runTest {
-        val authService = AuthAndSyncService(scope = CoroutineScope(testDispatcher))
-
-        val testEmail = "testuser@example.com"
-        val testName = "Test User"
+    fun testSignInWithGoogleUpdatesUserAndSyncStatus() {
+        val service = AuthAndSyncService(scope = CoroutineScope(Dispatchers.Unconfined))
 
         // Sign out first to ensure state change
-        authService.signOut()
-        assertFalse(authService.currentUser.value.isAuthenticated)
+        service.signOut()
+        assertFalse(service.currentUser.value.isAuthenticated)
 
-        authService.signInWithGoogle(testEmail, testName)
+        // Action
+        service.signInWithGoogle(email = "test@example.com", name = "Test User")
 
-        val currentUser = authService.currentUser.value
-
+        // Verification - User
+        val currentUser = service.currentUser.value
         assertTrue(currentUser.uid.startsWith("usr_tf_google_"))
-        assertEquals(testName, currentUser.displayName)
-        assertEquals(testEmail, currentUser.email)
-        assertTrue(currentUser.isAuthenticated)
+        assertEquals("Test User", currentUser.displayName)
+        assertEquals("test@example.com", currentUser.email)
+        assertEquals("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150", currentUser.photoUrl)
         assertEquals("Master Workshop Tech & ECU Tuner", currentUser.role)
+        assertTrue(currentUser.isAuthenticated)
+        assertEquals("ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9", currentUser.firestoreDbId)
 
-        val syncStatus = authService.syncStatus.value
-
+        // Verification - Sync
+        val syncStatus = service.syncStatus.value
         assertTrue(syncStatus.isConnectedToFirestore)
         assertTrue(
             syncStatus.statusText.contains("Syncing with Firestore") ||
