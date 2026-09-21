@@ -92,6 +92,16 @@ fun GarageScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text("No vehicles saved in garage yet.", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ForgeOnSurface)
                     Text("Tap ADD VEHICLE to store a profile.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { showAddModal = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForgeAmber, contentColor = Color.Black),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("ADD FIRST VEHICLE", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         } else {
