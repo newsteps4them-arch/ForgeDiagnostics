@@ -62,6 +62,9 @@ fun OpenManusTelemetryDashboard(
     val fuelTrimHistory = remember { mutableStateListOf<Float>() }
     val coolantHistory = remember { mutableStateListOf<Float>() }
 
+    // Reusable Path instance for sparkline waveform drawing
+    val waveformPath = remember { Path() }
+
     // Capture rolling data points when unpaused
     LaunchedEffect(telemetry.rpm, isStreamPaused) {
         if (!isStreamPaused) {
@@ -446,18 +449,18 @@ fun OpenManusTelemetryDashboard(
                             if (currentHistory.size >= 2) {
                                 val minVal = currentHistory.minOrNull() ?: 0f
                                 val maxVal = (currentHistory.maxOrNull() ?: 1f).coerceAtLeast(minVal + 1f)
-                                val path = Path()
+                                waveformPath.reset()
                                 val stepX = width / (currentHistory.size - 1)
 
                                 currentHistory.forEachIndexed { index, value ->
                                     val norm = (value - minVal) / (maxVal - minVal)
                                     val x = index * stepX
                                     val y = height - (norm * (height - 8f) + 4f)
-                                    if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                                    if (index == 0) waveformPath.moveTo(x, y) else waveformPath.lineTo(x, y)
                                 }
 
                                 drawPath(
-                                    path = path,
+                                    path = waveformPath,
                                     color = graphColor,
                                     style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
                                 )
