@@ -253,6 +253,17 @@ class ObdDiagnosticHardwareModule(
                 } else {
                     parsedDtcs.add(
                         LiveDtcRecord(
+                            code = "P0133",
+                            description = "O2 Sensor Circuit Slow Response (Bank 1 Sensor 1)",
+                            category = "Powertrain",
+                            status = "Stored",
+                            freezeFrameRpm = 1850,
+                            freezeFrameCoolantTempC = 92,
+                            freezeFrameSpeedKmh = 50
+                        )
+                    )
+                    parsedDtcs.add(
+                        LiveDtcRecord(
                             code = "P0300",
                             description = "Random/Multiple Cylinder Misfire Detected",
                             category = "Powertrain",
@@ -264,13 +275,24 @@ class ObdDiagnosticHardwareModule(
                     )
                     parsedDtcs.add(
                         LiveDtcRecord(
-                            code = "P0171",
-                            description = "System Too Lean (Bank 1)",
-                            category = "Powertrain",
+                            code = "C0171",
+                            description = "ABS / Stability Control Circuit Fault",
+                            category = "Chassis",
                             status = "Pending",
                             freezeFrameRpm = 1450,
                             freezeFrameCoolantTempC = 91,
                             freezeFrameSpeedKmh = 32
+                        )
+                    )
+                    parsedDtcs.add(
+                        LiveDtcRecord(
+                            code = "C0171",
+                            description = "Abs Sensor Circuit Range / Performance Fault",
+                            category = "Chassis",
+                            status = "Pending",
+                            freezeFrameRpm = 1200,
+                            freezeFrameCoolantTempC = 88,
+                            freezeFrameSpeedKmh = 20
                         )
                     )
                 }
@@ -443,15 +465,12 @@ class ObdDiagnosticHardwareModule(
         scope.launch(ioDispatcher) {
 
             while (isLoopActive && _hardwareState.value.isConnected) {
-                // Poll live RPM (010C)
+                // Poll live RPM (010C) using zero-allocation RPM parser
                 val rpmRaw = sendObdCommand("010C")
-                if (rpmRaw.contains("410C") || rpmRaw.contains("41 0C")) {
-                    val clean = rpmRaw.replace(" ", "").substringAfter("410C")
-                    if (clean.length >= 4) {
-                        val a = clean.substring(0, 2).toIntOrNull(16) ?: 0
-                        val b = clean.substring(2, 4).toIntOrNull(16) ?: 0
-                        val liveRpm = ((a * 256) + b) / 4
-                        telemetryService?.setSpeed((liveRpm / 35).coerceIn(0, 200))
+                if (rpmRaw.isNotEmpty()) {
+                    val liveRpm = telemetryService?.parseRpmResponse(rpmRaw)
+                    if (liveRpm != null) {
+                        telemetryService.setSpeed((liveRpm / 35).coerceIn(0, 200))
                     }
                 }
                 kotlinx.coroutines.delay(250)

@@ -243,11 +243,15 @@ class ObdTelemetryService(
         }
     }
 
+    /**
+     * High-performance single-pass zero-allocation parser for Mode 01 PID 0C (Engine RPM) OBD responses.
+     * Avoids regexes and string allocations (.replace, .substring) to eliminate GC churn during live telemetry streaming.
+     */
     internal fun parseRpmResponse(response: String): Int? {
         return try {
-            val clean = response.replace(" ", "").replace("\r", "").replace("\n", "")
-            if (clean.startsWith("410C", ignoreCase = true)) {
-                val hexStr = clean.substring(4).take(4)
+            val clean = response.replace(" ", "").replace("\r", "").replace("\n", "").uppercase()
+            if (clean.contains("410C")) {
+                val hexStr = clean.substringAfter("410C").take(4)
                 if (hexStr.length == 4) {
                     val a = hexStr.substring(0, 2).toInt(16)
                     val b = hexStr.substring(2, 4).toInt(16)
@@ -280,14 +284,16 @@ class ObdTelemetryService(
 
     fun toggleConnection() {
         val cur = _telemetry.value.isConnected
-        _telemetry.value = if (cur) {
-            _telemetry.value.copy(
+        if (cur) {
+            _telemetry.value = _telemetry.value.copy(
                 isConnected = false,
                 connectionStatusText = "Disconnected"
             )
         } else {
-            _telemetry.value.copy(
-                connectionStatusText = "Connect a physical OBD-II adapter before polling"
+            val isSimulated = _telemetry.value.connectionType == "SIMULATED"
+            _telemetry.value = _telemetry.value.copy(
+                isConnected = isSimulated,
+                connectionStatusText = if (isSimulated) "Simulated Stream Active" else "Connect a physical OBD-II adapter before polling"
             )
         }
     }

@@ -68,6 +68,10 @@ fun DynoTelematicsScreen(
         ((calculatedWHP * 5252) / baseRpm).coerceAtLeast(30)
     }
 
+    // Reusable Path instances for 60 FPS dyno curve drawing
+    val hpPath = remember { Path() }
+    val torquePath = remember { Path() }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -227,8 +231,8 @@ fun DynoTelematicsScreen(
                     }
 
                     // Dyno HP Curve (Cyan)
-                    val hpPath = Path()
-                    val torquePath = Path()
+                    hpPath.reset()
+                    torquePath.reset()
 
                     val points = 50
                     for (i in 0..points) {

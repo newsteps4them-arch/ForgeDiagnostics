@@ -35,6 +35,13 @@ import com.forge.app.services.ObdTelemetryData
 import com.forge.app.ui.theme.*
 import kotlin.math.*
 
+private data class TickMarkGeometry(
+    val cosAngle: Float,
+    val sinAngle: Float,
+    val isMajor: Boolean,
+    val tickColor: Color
+)
+
 /**
  * High-performance, hardware-styled Automotive Radial Gauge Composable
  * with physical spring needle damping, smooth numerical roll transitions, and warning aura pulsing.
@@ -54,6 +61,9 @@ fun RadialGauge(
     multiplierDisplay: String? = "x1000",
     modifier: Modifier = Modifier
 ) {
+    val startAngle = 135f
+    val sweepAngle = 270f
+
     // Physical Spring-damped needle animation for realistic automotive inertia
     val animatedValue by animateFloatAsState(
         targetValue = value.coerceIn(minValue, maxValue),
@@ -64,8 +74,6 @@ fun RadialGauge(
         label = "gauge_needle_spring"
     )
 
-    val startAngle = 135f
-    val sweepAngle = 270f
     val currentFraction = (animatedValue - minValue) / (maxValue - minValue)
     val isCritical = criticalThreshold != null && animatedValue >= criticalThreshold
     val isWarning = warningThreshold != null && animatedValue >= warningThreshold
@@ -94,6 +102,29 @@ fun RadialGauge(
         ),
         label = "pulse_alpha"
     )
+
+    // Pre-calculate tick mark trigonometry (cos, sin) and metadata outside Canvas DrawScope
+    // to prevent trigonometric calculation overhead and heap allocations on every 60/120 FPS frame draw.
+    val tickMarks = remember(startAngle, sweepAngle, maxValue, minValue, majorTickStep, minorTickDivisions) {
+        val totalTicks = ((maxValue - minValue) / majorTickStep).toInt()
+        val totalSubTicks = totalTicks * minorTickDivisions
+        if (totalSubTicks <= 0) emptyList()
+        else {
+            List(totalSubTicks + 1) { i ->
+                val tickFraction = i.toFloat() / totalSubTicks
+                val angleDeg = startAngle + (tickFraction * sweepAngle)
+                val angleRad = Math.toRadians(angleDeg.toDouble())
+                val isMajor = (i % minorTickDivisions) == 0
+                val tickColor = if (isMajor) Color(0xFF8C93A8) else Color(0xFF4A5168)
+                TickMarkGeometry(
+                    cosAngle = cos(angleRad).toFloat(),
+                    sinAngle = sin(angleRad).toFloat(),
+                    isMajor = isMajor,
+                    tickColor = tickColor
+                )
+            }
+        }
+    }
 
     Surface(
         color = ForgeSurface,
@@ -205,30 +236,25 @@ fun RadialGauge(
                         )
                     }
 
-                    // Tick Marks
-                    val totalTicks = ((maxValue - minValue) / majorTickStep).toInt()
-                    val totalSubTicks = totalTicks * minorTickDivisions
+                    // Tick Marks rendering using pre-calculated trigonometric unit vectors
+                    val majorTickLength = 10.dp.toPx()
+                    val minorTickLength = 5.dp.toPx()
+                    val majorStrokeWidth = 2.dp.toPx()
+                    val minorStrokeWidth = 1.dp.toPx()
+                    val outerRadius = radius - 8.dp.toPx()
 
-                    for (i in 0..totalSubTicks) {
-                        val tickFraction = i.toFloat() / totalSubTicks
-                        val angleDeg = startAngle + (tickFraction * sweepAngle)
-                        val angleRad = Math.toRadians(angleDeg.toDouble())
-
-                        val isMajor = (i % minorTickDivisions) == 0
-                        val tickLength = if (isMajor) 10.dp.toPx() else 5.dp.toPx()
-                        val tickColor = if (isMajor) Color(0xFF8C93A8) else Color(0xFF4A5168)
-                        val strokeWidth = if (isMajor) 2.dp.toPx() else 1.dp.toPx()
-
-                        val outerRadius = radius - 8.dp.toPx()
+                    for (tick in tickMarks) {
+                        val tickLength = if (tick.isMajor) majorTickLength else minorTickLength
                         val innerRadius = outerRadius - tickLength
+                        val strokeWidth = if (tick.isMajor) majorStrokeWidth else minorStrokeWidth
 
-                        val startX = (center.x + outerRadius * cos(angleRad)).toFloat()
-                        val startY = (center.y + outerRadius * sin(angleRad)).toFloat()
-                        val endX = (center.x + innerRadius * cos(angleRad)).toFloat()
-                        val endY = (center.y + innerRadius * sin(angleRad)).toFloat()
+                        val startX = center.x + outerRadius * tick.cosAngle
+                        val startY = center.y + outerRadius * tick.sinAngle
+                        val endX = center.x + innerRadius * tick.cosAngle
+                        val endY = center.y + innerRadius * tick.sinAngle
 
                         drawLine(
-                            color = tickColor,
+                            color = tick.tickColor,
                             start = Offset(startX, startY),
                             end = Offset(endX, endY),
                             strokeWidth = strokeWidth,
