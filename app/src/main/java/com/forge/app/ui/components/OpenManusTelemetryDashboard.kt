@@ -56,6 +56,9 @@ fun OpenManusTelemetryDashboard(
     var showDtcExplainerDialog by remember { mutableStateOf(false) }
     var selectedDtcCodeForExplainer by remember { mutableStateOf<String?>(null) }
 
+    // Pre-allocated Path object for telemetry waveform drawing to prevent heap allocations on 60 FPS Canvas draw scope
+    val waveformPath = remember { Path() }
+
     // Rolling telemetry history for sparkline waveform
     val rpmHistory = remember { mutableStateListOf<Float>() }
     val boostHistory = remember { mutableStateListOf<Float>() }
@@ -446,18 +449,18 @@ fun OpenManusTelemetryDashboard(
                             if (currentHistory.size >= 2) {
                                 val minVal = currentHistory.minOrNull() ?: 0f
                                 val maxVal = (currentHistory.maxOrNull() ?: 1f).coerceAtLeast(minVal + 1f)
-                                val path = Path()
+                                waveformPath.reset()
                                 val stepX = width / (currentHistory.size - 1)
 
                                 currentHistory.forEachIndexed { index, value ->
                                     val norm = (value - minVal) / (maxVal - minVal)
                                     val x = index * stepX
                                     val y = height - (norm * (height - 8f) + 4f)
-                                    if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                                    if (index == 0) waveformPath.moveTo(x, y) else waveformPath.lineTo(x, y)
                                 }
 
                                 drawPath(
-                                    path = path,
+                                    path = waveformPath,
                                     color = graphColor,
                                     style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
                                 )
