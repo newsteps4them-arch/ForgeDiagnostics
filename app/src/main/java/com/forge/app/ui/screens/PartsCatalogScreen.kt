@@ -442,6 +442,14 @@ fun PartsCatalogScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text("No parts logged in inventory yet.", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ForgeOnSurface)
                     Text("Tap BARCODE SCAN to scan workshop tags or register parts.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { showBarcodeScannerSheet = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForgeCyan, contentColor = Color.Black),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("BARCODE SCAN", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
                 }
             }
         } else {
