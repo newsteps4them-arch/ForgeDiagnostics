@@ -50,6 +50,10 @@ class ObdTelemetryServiceTest {
         val service = ObdTelemetryService(scope = testScope, usbHardwareService = null, ioDispatcher = testDispatcher)
         val rpm = service.parseRpmResponse("41 0C 0D 80")
         assertEquals(864, rpm)
+
+        val rpmWithEcho = service.parseRpmResponse("SEARCHING...\r\n41 0C 0D 80 \r\r>")
+        assertEquals(864, rpmWithEcho)
+
         service.stopTelemetryLoop()
     }
 

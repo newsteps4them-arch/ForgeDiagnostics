@@ -333,6 +333,13 @@ class ObdDiagnosticHardwareModule(
                     val read = input.read(buf)
                     decodeStream(buf, read, true)
                 }
+                ObdHardwareInterface.SIMULATED -> {
+                    when (command) {
+                        "03" -> "43 01 33 03 00 41 71"
+                        "07" -> "47 00"
+                        else -> ""
+                    }
+                }
                 else -> ""
             }
         } catch (e: Exception) {
