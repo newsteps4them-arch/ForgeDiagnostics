@@ -116,6 +116,17 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
       return { pid: '11', name: 'Throttle Position', value: (byteA * 100) / 255, unit: '%' };
     case '2F': // Fuel Tank Level
       return { pid: '2F', name: 'Fuel Tank Level', value: (byteA * 100) / 255, unit: '%' };
+    case '10': // MAF Air Flow Rate
+      if (bytes.length < 4) return null;
+      return { pid: '10', name: 'MAF Air Flow Rate', value: ((byteA * 256) + byteB) / 100, unit: 'g/s' };
+    case '0E': // Timing Advance
+      return { pid: '0E', name: 'Timing Advance', value: (byteA / 2) - 64, unit: '°' };
+    case '1F': // Run Time Since Engine Start
+      if (bytes.length < 4) return null;
+      return { pid: '1F', name: 'Run Time Since Engine Start', value: (byteA * 256) + byteB, unit: 's' };
+    case '42': // Control Module Voltage
+      if (bytes.length < 4) return null;
+      return { pid: '42', name: 'Control Module Voltage', value: ((byteA * 256) + byteB) / 1000, unit: 'V' };
     default:
       return { pid, name: `PID_${pid}`, value: byteA, unit: 'raw' };
   }

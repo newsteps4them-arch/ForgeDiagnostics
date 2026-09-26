@@ -377,7 +377,7 @@ fun CoolantTempGauge(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Thermostat,
-                        contentDescription = "Coolant Temp",
+                        contentDescription = null, // Decorative icon adjacent to descriptive text
                         tint = statusColor,
                         modifier = Modifier.size(18.dp)
                     )
@@ -633,7 +633,7 @@ fun ObdInstrumentCluster(
                         }
                         Icon(
                             imageVector = Icons.Default.ElectricBolt,
-                            contentDescription = "Battery",
+                            contentDescription = null, // Decorative icon adjacent to descriptive label
                             tint = if (telemetry.batteryVoltage < 12.0f) ForgeRed else ForgeGreen,
                             modifier = Modifier.size(20.dp)
                         )
@@ -668,7 +668,7 @@ fun ObdInstrumentCluster(
                         }
                         Icon(
                             imageVector = Icons.Default.Speed,
-                            contentDescription = "Throttle",
+                            contentDescription = null, // Decorative icon adjacent to descriptive label
                             tint = ForgeAmber,
                             modifier = Modifier.size(20.dp)
                         )
