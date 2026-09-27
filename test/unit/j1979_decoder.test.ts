@@ -39,6 +39,42 @@ describe('SAE J1979 Protocol Decoder', () => {
     expect(result?.unit).toBe('°C');
   });
 
+  it('should decode MAF Air Flow Rate correctly (PID 10)', () => {
+    const result = decodeMode01Response('41 10 02 AA'); // (2*256 + 170)/100 = 6.82 g/s
+    expect(result).not.toBeNull();
+    expect(result?.pid).toBe('10');
+    expect(result?.name).toBe('MAF Air Flow Rate');
+    expect(result?.value).toBeCloseTo(6.82, 2);
+    expect(result?.unit).toBe('g/s');
+  });
+
+  it('should decode Timing Advance correctly (PID 0E)', () => {
+    const result = decodeMode01Response('41 0E 80'); // (128 / 2) - 64 = 0°
+    expect(result).not.toBeNull();
+    expect(result?.pid).toBe('0E');
+    expect(result?.name).toBe('Timing Advance');
+    expect(result?.value).toBe(0);
+    expect(result?.unit).toBe('°');
+  });
+
+  it('should decode Run Time Since Engine Start correctly (PID 1F)', () => {
+    const result = decodeMode01Response('41 1F 0E 10'); // 14 * 256 + 16 = 3600 seconds
+    expect(result).not.toBeNull();
+    expect(result?.pid).toBe('1F');
+    expect(result?.name).toBe('Run Time Since Engine Start');
+    expect(result?.value).toBe(3600);
+    expect(result?.unit).toBe('s');
+  });
+
+  it('should decode Control Module Voltage correctly (PID 42)', () => {
+    const result = decodeMode01Response('41 42 36 B0'); // (54 * 256 + 176)/1000 = 14.000 V
+    expect(result).not.toBeNull();
+    expect(result?.pid).toBe('42');
+    expect(result?.name).toBe('Control Module Voltage');
+    expect(result?.value).toBeCloseTo(14.0, 3);
+    expect(result?.unit).toBe('V');
+  });
+
   it.each([
     ['41 04 00', '04', 0],
     ['41 0F FF', '0F', 215],
@@ -95,8 +131,8 @@ describe('SAE J1979 Protocol Decoder', () => {
   });
 
   it('should decode supported PID bitmasks into PID numbers in J1979 order', () => {
-    expect(decodeSupportedPidMask('0000001F')).toEqual(['1C', '1D', '1E', '1F', '20']);
-    expect(decodeSupportedPidMask('00000020')).toEqual(['1B']);
+    expect(decodeSupportedPidMask('F8000000')).toEqual(['01', '02', '03', '04', '05']);
+    expect(decodeSupportedPidMask('04000000')).toEqual(['06']);
   });
 
   it('should decode stored DTCs from a Mode 03 response', () => {
