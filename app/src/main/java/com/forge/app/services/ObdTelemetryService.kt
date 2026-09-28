@@ -244,10 +244,14 @@ class ObdTelemetryService(
     }
 
     internal fun parseRpmResponse(response: String): Int? {
+        if (response.contains("NO DATA", ignoreCase = true) || response.contains("ERROR", ignoreCase = true)) {
+            return null
+        }
         return try {
             val clean = response.replace(" ", "").replace("\r", "").replace("\n", "")
-            if (clean.startsWith("410C", ignoreCase = true)) {
-                val hexStr = clean.substring(4).take(4)
+            val index = clean.indexOf("410C", ignoreCase = true)
+            if (index != -1) {
+                val hexStr = clean.substring(index + 4).take(4)
                 if (hexStr.length == 4) {
                     val a = hexStr.substring(0, 2).toInt(16)
                     val b = hexStr.substring(2, 4).toInt(16)
