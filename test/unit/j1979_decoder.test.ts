@@ -39,6 +39,33 @@ describe('SAE J1979 Protocol Decoder', () => {
     expect(result?.unit).toBe('°C');
   });
 
+  it('should decode MAP Intake Pressure correctly (PID 0B)', () => {
+    const result = decodeMode01Response('41 0B 64');
+    expect(result).not.toBeNull();
+    expect(result?.pid).toBe('0B');
+    expect(result?.name).toBe('Intake Manifold Pressure');
+    expect(result?.value).toBe(100);
+    expect(result?.unit).toBe('kPa');
+  });
+
+  it('should decode Timing Advance correctly (PID 0E)', () => {
+    const result = decodeMode01Response('41 0E A0');
+    expect(result).not.toBeNull();
+    expect(result?.pid).toBe('0E');
+    expect(result?.name).toBe('Timing Advance');
+    expect(result?.value).toBe(16);
+    expect(result?.unit).toBe('°');
+  });
+
+  it('should decode MAF Air Flow Rate correctly (PID 10)', () => {
+    const result = decodeMode01Response('41 10 09 C4');
+    expect(result).not.toBeNull();
+    expect(result?.pid).toBe('10');
+    expect(result?.name).toBe('MAF Air Flow Rate');
+    expect(result?.value).toBe(25);
+    expect(result?.unit).toBe('g/s');
+  });
+
   it.each([
     ['41 04 00', '04', 0],
     ['41 0F FF', '0F', 215],

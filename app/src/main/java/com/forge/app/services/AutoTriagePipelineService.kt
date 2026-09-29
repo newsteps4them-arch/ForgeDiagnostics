@@ -93,7 +93,7 @@ class AutoTriagePipelineService(
 
             // Step 1: OBD DTC & Freeze Frame Extraction
             updateStep("1_obd_dtc", TriageStepStatus.RUNNING, "Querying Mode 03 / 07 / 02 from ECU...")
-            val dtcSummary = "Captured ${dtcCodes.size} active DTCs: ${dtcCodes.joinToString(", ")} (Freeze frame: 2,450 RPM, 92°C, STFT +14.2%)"
+            val dtcSummary = "Captured ${dtcCodes.size} active DTCs: ${dtcCodes.joinToString(", ")} (Freeze frame: 2,450 RPM, 92°C ECT, MAP 48 kPa, MAF 18.5 g/s, Engine Load 42.0%, STFT +14.2%)"
             updateStep("1_obd_dtc", TriageStepStatus.COMPLETED, dtcSummary, 120L)
             _triageState.value = _triageState.value.copy(progress = 0.25f)
 
