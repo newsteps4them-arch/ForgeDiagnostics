@@ -56,10 +56,16 @@ These are the building blocks that make a diagnostics app useful without requiri
 
 This approach keeps the project legal, practical, and valuable. It turns the app from a generic dashboard into a diagnostic tool that can be tested, shown to users, and expanded without depending on restricted proprietary data.
 
+## Phase 6: Play Store & Mechanic Production Readiness
+
+- Continuous automated testing across TypeScript, Python ECU simulators, and HIL emulators (`npm run test:all:portable`)
+- Store listing asset validation, privacy compliance, and Google Play App Bundle (AAB) automated build pipeline
+- Automated CI/CD self-healing guardians and conflict-resolution bot suite for 24/7 automated delivery
+
 ## Recommended next actions
 
 1. Keep the decoder layer as the universal contract between hardware and UI.
-2. Add a simulator mode for testing before real hardware.
-3. Expand DTC explanation and health scoring.
+2. Maintain local and CI automated ECU / HIL testing suite execution before every release.
+3. Expand DTC explanation and health scoring for shop mechanics.
 4. Add vehicle context and supported PID awareness to the app.
 5. Build the app around safe, standards-based OBD patterns rather than OEM-only logic.
