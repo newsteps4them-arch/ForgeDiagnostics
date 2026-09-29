@@ -112,6 +112,13 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
       return { pid: '0F', name: 'Intake Air Temp', value: byteA - 40, unit: '°C' };
     case '04': // Calculated Load
       return { pid: '04', name: 'Engine Load', value: (byteA * 100) / 255, unit: '%' };
+    case '0B': // Intake Manifold Absolute Pressure (MAP)
+      return { pid: '0B', name: 'Intake Manifold Pressure', value: byteA, unit: 'kPa' };
+    case '0E': // Timing Advance
+      return { pid: '0E', name: 'Timing Advance', value: (byteA / 2) - 64, unit: '°' };
+    case '10': // MAF Air Flow Rate
+      if (bytes.length < 4) return null;
+      return { pid: '10', name: 'MAF Air Flow Rate', value: ((byteA * 256) + byteB) / 100, unit: 'g/s' };
     case '11': // Throttle Position
       return { pid: '11', name: 'Throttle Position', value: (byteA * 100) / 255, unit: '%' };
     case '2F': // Fuel Tank Level
