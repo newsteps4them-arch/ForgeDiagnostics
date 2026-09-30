@@ -1,0 +1,46 @@
+name: Conflict Finder Bot (Bot 1)
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, develop, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  actions: write
+
+jobs:
+  find-conflicts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Run Conflict Finder Bot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 scripts/conflict_finder.py
+
+      - name: Upload Diagnostic Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conflict-finder-log
+          path: CONFLICT_FINDER_LOG.md
+          retention-days: 14
