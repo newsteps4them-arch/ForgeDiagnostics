@@ -14,6 +14,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.cancelChildren
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ObdTelemetryServiceTest {
@@ -28,6 +30,7 @@ class ObdTelemetryServiceTest {
 
     @After
     fun tearDown() {
+        testScope.coroutineContext.cancelChildren()
         Dispatchers.resetMain()
     }
 
@@ -113,8 +116,10 @@ class ObdTelemetryServiceTest {
         val service = ObdTelemetryService(scope = testScope, usbHardwareService = null, ioDispatcher = testDispatcher)
         val initialStatus = service.telemetry.value.isConnected
         service.toggleConnection()
+        testScope.testScheduler.runCurrent()
         assertEquals(!initialStatus, service.telemetry.value.isConnected)
         service.toggleConnection()
+        testScope.testScheduler.runCurrent()
         assertEquals(initialStatus, service.telemetry.value.isConnected)
         service.stopTelemetryLoop()
     }
@@ -124,11 +129,17 @@ class ObdTelemetryServiceTest {
         val service = ObdTelemetryService(scope = testScope, usbHardwareService = null, ioDispatcher = testDispatcher)
         service.setConnectionType("SIMULATED")
         service.toggleConnection()
+        testScope.testScheduler.runCurrent()
         val initialRpm = service.telemetry.value.rpm
+
+        // Let the loop run
         testScope.advanceTimeBy(350)
+        // Ensure coroutines have finished processing
+        testScope.testScheduler.runCurrent()
+
         val updatedRpm = service.telemetry.value.rpm
-        assertTrue(updatedRpm >= 750 && updatedRpm <= 6800)
-        assertTrue(updatedRpm != initialRpm)
+        assertTrue("updatedRpm is $updatedRpm", updatedRpm >= 750 && updatedRpm <= 6800)
+        assertTrue("updatedRpm == initialRpm", updatedRpm != initialRpm)
         service.stopTelemetryLoop()
     }
 }

@@ -37,16 +37,23 @@ android {
             keyAlias = localProperties.getProperty("DEBUG_KEY_ALIAS") ?: System.getenv("DEBUG_KEY_ALIAS") ?: "androiddebugkey"
             keyPassword = localProperties.getProperty("DEBUG_KEY_PASSWORD") ?: System.getenv("DEBUG_KEY_PASSWORD") ?: "android"
         }
+        create("release") {
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = localProperties.getProperty("DEBUG_STORE_PASSWORD") ?: System.getenv("DEBUG_STORE_PASSWORD") ?: "android"
+            keyAlias = localProperties.getProperty("DEBUG_KEY_ALIAS") ?: System.getenv("DEBUG_KEY_ALIAS") ?: "androiddebugkey"
+            keyPassword = localProperties.getProperty("DEBUG_KEY_PASSWORD") ?: System.getenv("DEBUG_KEY_PASSWORD") ?: "android"
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
         debug {
             signingConfig = signingConfigs.getByName("debug")
