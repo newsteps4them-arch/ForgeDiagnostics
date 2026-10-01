@@ -71,6 +71,45 @@ class HonestHardwareModeTest {
     }
 
     @Test
+    fun parseDtcPayload_consumesDtcCountByte() {
+        val module = newModule()
+        // Real ECU reply "43 02 04 20 03 00": count byte 0x02, then two DTCs.
+        // The old decoder ignored the count byte and fabricated P0204/P2003
+        // while dropping the real faults — it must decode [P0420, P0300].
+        val dtcs = module.parseDtcPayload("43 02 04 20 03 00", "Confirmed")
+        assertEquals(listOf("P0420", "P0300"), dtcs.map { it.code })
+        assertFalse(dtcs.any { it.code == "P0204" || it.code == "P2003" })
+        assertTrue(dtcs.all { it.dataSource == DiagnosticDataSource.LIVE_HARDWARE })
+    }
+
+    @Test
+    fun parseDtcPayload_zeroCountMeansZeroDtcs() {
+        val module = newModule()
+        // "43 00": ECU reachable, reporting zero stored faults — not an error,
+        // and certainly not an excuse to invent codes from the count byte.
+        assertTrue(module.parseDtcPayload("43 00", "Confirmed").isEmpty())
+        assertTrue(module.parseDtcPayload("47 00", "Pending").isEmpty())
+    }
+
+    @Test
+    fun parseDtcPayload_countCappedAtAvailableBytes() {
+        val module = newModule()
+        // Declared count exceeds the bytes actually present: decode what is
+        // there (one real code) without fabricating the missing remainder.
+        val dtcs = module.parseDtcPayload("43 05 03 00", "Confirmed")
+        assertEquals(listOf("P0300"), dtcs.map { it.code })
+    }
+
+    @Test
+    fun parseDtcPayload_mode07ConsumesCountByte() {
+        val module = newModule()
+        // Mode 07 (pending) uses the same count-byte framing as Mode 03.
+        val dtcs = module.parseDtcPayload("47 01 04 20", "Pending")
+        assertEquals(listOf("P0420"), dtcs.map { it.code })
+        assertEquals("Pending", dtcs[0].status)
+    }
+
+    @Test
     fun isNoDataResponse_distinguishesEmptyEcuFromTransportFailure() {
         val module = newModule()
         // ECU reachable but nothing to report:

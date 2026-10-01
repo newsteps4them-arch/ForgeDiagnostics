@@ -397,34 +397,59 @@ class ObdDiagnosticHardwareModule(
                 return emptyList()
             }
             val clean = rawHex.replace(" ", "").replace("\r", "").replace("\n", "").replace(">", "")
-            // Mode 03 response starts with 43, Mode 07 starts with 47
-            val payload = when {
-                clean.contains("43") -> clean.substringAfter("43")
-                clean.contains("47") -> clean.substringAfter("47")
-                else -> clean
+            if (clean.isEmpty()) return emptyList()
+            // Mode 03 responses lead with 43, Mode 07 with 47 — strip the mode
+            // byte only when it leads the frame. Never substring-search for it:
+            // a DTC payload can legitimately contain "43" (e.g. C0343).
+            var payload = clean
+            var hasModeByte = false
+            if (payload.length >= 2 &&
+                (payload.startsWith("43", ignoreCase = true) || payload.startsWith("47", ignoreCase = true))
+            ) {
+                payload = payload.substring(2)
+                hasModeByte = true
+            }
+
+            // SAE J1979: the byte after 43/47 is the DTC count. A real ECU
+            // reply "43 02 04 20 03 00" carries 2 DTCs: 0420 -> P0420 and
+            // 0300 -> P0300. Skipping the count byte shifts the whole frame
+            // and fabricates phantom codes (P0204/P2003) while dropping the
+            // real faults — the exact dishonesty this module exists to prevent.
+            var index = 0
+            var maxDtcs = Int.MAX_VALUE
+            if (hasModeByte && payload.length >= 2) {
+                val declared = payload.substring(0, 2).toIntOrNull(16)
+                if (declared != null && declared >= 0) {
+                    // Sanity-cap: the frame must actually hold that many DTCs.
+                    val available = (payload.length - 2) / 4
+                    maxDtcs = minOf(declared, available)
+                    index = 2
+                }
+                // If the count byte isn't hex, fall through and best-effort
+                // decode 2-byte pairs from the start rather than staying silent.
             }
 
             // Each DTC is 2 bytes (4 hex characters)
-            var index = 0
-            while (index + 4 <= payload.length) {
+            var decoded = 0
+            while (index + 4 <= payload.length && decoded < maxDtcs) {
                 val dtcHex = payload.substring(index, index + 4)
-                // Skip padding and non-hex garbage — never invent a code from it.
-                val isHex = dtcHex.all { it in '0'..'9' || it in 'A'..'F' || it in 'a'..'f' }
-                if (dtcHex != "0000" && isHex) {
-                    val code = decodeSingleDtcHex(dtcHex)
-                    if (code.isNotBlank()) {
-                        dtcs.add(
-                            LiveDtcRecord(
-                                code = code,
-                                description = getStandardDtcDescription(code),
-                                category = getCategoryForDtc(code),
-                                status = status,
-                                dataSource = DiagnosticDataSource.LIVE_HARDWARE
-                            )
-                        )
-                    }
-                }
                 index += 4
+                // Skip padding and non-hex garbage — never invent a code from it.
+                // Padding does not consume the declared count.
+                val isHex = dtcHex.all { it in '0'..'9' || it in 'A'..'F' || it in 'a'..'f' }
+                if (dtcHex == "0000" || !isHex) continue
+                val code = decodeSingleDtcHex(dtcHex)
+                if (code.isBlank()) continue
+                dtcs.add(
+                    LiveDtcRecord(
+                        code = code,
+                        description = getStandardDtcDescription(code),
+                        category = getCategoryForDtc(code),
+                        status = status,
+                        dataSource = DiagnosticDataSource.LIVE_HARDWARE
+                    )
+                )
+                decoded++
             }
         } catch (_: Exception) {}
         return dtcs
