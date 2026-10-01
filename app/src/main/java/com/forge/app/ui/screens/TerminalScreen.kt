@@ -141,7 +141,7 @@ fun TerminalScreen(
                             usbHardwareService.sendRawCommand("010C")
                         } else {
                             localLogs.add(TerminalLine("TX", "01 0C"))
-                            localLogs.add(TerminalLine("RX", "41 0C 0D 80 (864 RPM)"))
+                            localLogs.add(TerminalLine("RX", "NO ADAPTER — connect a USB OBD-II adapter to send commands."))
                         }
                     }
                 },
@@ -155,7 +155,7 @@ fun TerminalScreen(
                             usbHardwareService.sendRawCommand("03")
                         } else {
                             localLogs.add(TerminalLine("TX", "03"))
-                            localLogs.add(TerminalLine("RX", "43 02 03 00 01 71"))
+                            localLogs.add(TerminalLine("RX", "NO ADAPTER — connect a USB OBD-II adapter to send commands."))
                         }
                     }
                 },
@@ -169,7 +169,7 @@ fun TerminalScreen(
                             usbHardwareService.sendRawCommand("AT RV")
                         } else {
                             localLogs.add(TerminalLine("TX", "AT RV"))
-                            localLogs.add(TerminalLine("RX", "14.2V"))
+                            localLogs.add(TerminalLine("RX", "NO ADAPTER — connect a USB OBD-II adapter to send commands."))
                         }
                     }
                 },
@@ -205,7 +205,7 @@ fun TerminalScreen(
                                 usbHardwareService.sendRawCommand(input)
                             } else {
                                 localLogs.add(TerminalLine("TX", input))
-                                localLogs.add(TerminalLine("RX", "41 ${input.take(2)} OK"))
+                                localLogs.add(TerminalLine("RX", "NO ADAPTER — connect a USB OBD-II adapter to send commands."))
                             }
                             cmdInput = ""
                         }

@@ -23,7 +23,7 @@ sealed class ForgeAgentType(val id: String, val displayName: String, val role: S
     object FrontendUiAgent : ForgeAgentType("agent_frontend_ui", "UI & Microfrontend Agent", "Manages Compose Micro-views, topology layouts & responsive UI state")
     object ClientHardwareAgent : ForgeAgentType("agent_client_hw", "Client Hardware Agent", "Parses raw USB/OBD-II CAN frames and manages local sensor polling")
     object MiddlewareTelemetryAgent : ForgeAgentType("agent_middleware_telemetry", "Middleware Telemetry Bridge", "Routes real-time PID streams to diagnostic screens & AI context buffers")
-    object BackendSyncAgent : ForgeAgentType("agent_backend_sync", "Backend & Persistence Agent", "Handles Room SQLite transactions, Firestore cloud sync & offline queues")
+    object BackendSyncAgent : ForgeAgentType("agent_backend_sync", "Backend & Persistence Agent", "Handles Room SQLite transactions & local offline queues (cloud sync not configured)")
     object ServerAiAgent : ForgeAgentType("agent_server_ai", "Server AI Specialist", "Executes Gemini Multimodal diagnostics, DTC root-cause analysis & parts identification")
     object OpenManusAgent : ForgeAgentType("agent_openmanus_auto", "OpenManus Autonomous Agent", "Orchestrates multi-step reasoning, tool invocations & physics simulations")
     object CanBusUdsAgent : ForgeAgentType("agent_can_uds", "CAN-Bus & UDS Decoder Agent", "Reverse engineers ISO 15765-4 & ISO 14229 UDS frames & DIDs")
@@ -45,7 +45,7 @@ data class AgentOrchestratorState(
         AgentActivityStatus(ForgeAgentType.FrontendUiAgent, true, "Rendering Compose Microfrontends"),
         AgentActivityStatus(ForgeAgentType.ClientHardwareAgent, true, "Monitoring USB Serial / CAN Bus"),
         AgentActivityStatus(ForgeAgentType.MiddlewareTelemetryAgent, true, "Routing OBD-II Telemetry Stream"),
-        AgentActivityStatus(ForgeAgentType.BackendSyncAgent, true, "Syncing Room DB & Firestore"),
+        AgentActivityStatus(ForgeAgentType.BackendSyncAgent, true, "Persisting to local Room DB"),
         AgentActivityStatus(ForgeAgentType.ServerAiAgent, true, "Gemini Pro / Flash Ready"),
         AgentActivityStatus(ForgeAgentType.OpenManusAgent, true, "Autonomous Diagnostic Loop Ready"),
         AgentActivityStatus(ForgeAgentType.CanBusUdsAgent, true, "ISO 14229 / CAN DBC Ready"),

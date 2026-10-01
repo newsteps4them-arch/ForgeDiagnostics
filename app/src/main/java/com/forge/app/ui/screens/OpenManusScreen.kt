@@ -308,6 +308,25 @@ fun OpenManusScreen(
             }
         }
 
+        // Honest DTC fetch status: failures are surfaced, never hidden or papered over.
+        hardwareState?.dtcFetchError?.let { fetchError ->
+            Surface(
+                color = ForgeRed.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, ForgeRed.copy(alpha = 0.4f)),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = "DTC SCAN: $fetchError",
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    color = ForgeRed,
+                    modifier = Modifier.padding(10.dp)
+                )
+            }
+        }
+
         // Main Scrollable Area: FINAL OUTPUTS FIRST
         LazyColumn(
             modifier = Modifier.weight(1f),

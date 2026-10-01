@@ -42,6 +42,18 @@ class ObdTelemetryServiceTest {
         assertFalse(telemetry.isConnected)
         assertEquals("SIMULATED", telemetry.connectionType)
         assertTrue(telemetry.activeDtcCodes.isEmpty())
+        // Fresh telemetry has unknown provenance — it must never default to "live".
+        assertEquals(com.forge.app.services.DiagnosticDataSource.UNKNOWN, telemetry.dataSource)
+        service.stopTelemetryLoop()
+    }
+
+    @Test
+    fun testSetRpmMarksLiveHardware() = runTest {
+        val service = ObdTelemetryService(scope = testScope, usbHardwareService = null, ioDispatcher = testDispatcher)
+        service.setRpm(864)
+        val telemetry = service.telemetry.value
+        assertEquals(864, telemetry.rpm)
+        assertEquals(com.forge.app.services.DiagnosticDataSource.LIVE_HARDWARE, telemetry.dataSource)
         service.stopTelemetryLoop()
     }
 
