@@ -400,7 +400,7 @@ fun ProjectDashboard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Assignment,
-                            contentDescription = null,
+                            contentDescription = "No tasks found",
                             tint = ForgeCyan,
                             modifier = Modifier.size(48.dp)
                         )
