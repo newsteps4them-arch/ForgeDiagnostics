@@ -17,3 +17,7 @@
 ## 2026-09-08 - [Empty States] Actionable Empty States
 **Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
 **Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+
+## 2026-09-12 - [Empty States] Actionable Empty States in Garage
+**Learning:** Found an empty state in `GarageScreen.kt` that displayed a static message ("Tap ADD VEHICLE to store a profile.") without offering a way forward directly within the empty state container. This leaves users at a dead end when starting out in the garage.
+**Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
