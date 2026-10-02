@@ -17,3 +17,7 @@
 ## 2026-09-08 - [Empty States] Actionable Empty States
 **Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
 **Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+
+## 2026-09-08 - [UX] Confirmation Dialog for Destructive Actions
+**Learning:** Destructive actions like deleting tasks in lists lacked a confirmation step, which could lead to accidental data loss, especially on touch interfaces where mis-taps are common.
+**Action:** Always wrap destructive list actions (like delete) in a confirmation `AlertDialog` or provide an undo mechanism (e.g., Snackbar) to prevent accidental data loss.
