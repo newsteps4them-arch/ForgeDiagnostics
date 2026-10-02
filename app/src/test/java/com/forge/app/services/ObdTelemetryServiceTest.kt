@@ -2,6 +2,7 @@ package com.forge.app.services
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -28,6 +29,7 @@ class ObdTelemetryServiceTest {
 
     @After
     fun tearDown() {
+        testDispatcher.cancelChildren()
         Dispatchers.resetMain()
     }
 
