@@ -61,7 +61,7 @@ class AlldataApiServiceTest {
             apiKeyOverride = "real-api-key"
         )
 
-        val request = mockWebServer.takeRequest()
+        val request = mockWebServer.takeRequest(5, java.util.concurrent.TimeUnit.SECONDS)!!
         assertEquals("/v1/oem/procedures?vin=WAUZZZF58MA019284&category=Engine%20Misfire%20%26%20Ignition", request.path)
 
         assertNotNull(result)
@@ -104,7 +104,7 @@ class AlldataApiServiceTest {
             apiKeyOverride = "real-api-key"
         )
 
-        val request = mockWebServer.takeRequest()
+        val request = mockWebServer.takeRequest(5, java.util.concurrent.TimeUnit.SECONDS)!!
         assertEquals("/v1/oem/diagrams?vin=WAUZZZF58MA019284&system=Engine%20Control%20Module%20%28ECM%2FPCM%29", request.path)
 
         assertNotNull(result)
@@ -142,7 +142,7 @@ class AlldataApiServiceTest {
             apiKeyOverride = "real-api-key"
         )
 
-        val request = mockWebServer.takeRequest()
+        val request = mockWebServer.takeRequest(5, java.util.concurrent.TimeUnit.SECONDS)!!
         assertEquals("/v1/oem/tsbs?vin=WAUZZZF58MA019284", request.path)
 
         assertNotNull(result)
