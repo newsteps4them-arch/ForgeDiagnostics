@@ -36,7 +36,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: forge-portable-test-report
-          path: artifacts/portable-test-results.md
+          path: |
+            artifacts/portable-test-results.md
+            test-run-20261005/probabilistic-quantum-report.json
           retention-days: 30
 
   android:
