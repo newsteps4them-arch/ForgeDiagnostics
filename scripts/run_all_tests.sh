@@ -52,6 +52,7 @@ run_case "TypeScript lint" "npm run lint" "Automated" "Type-check only; no vehic
 run_case "TypeScript unit tests" "npm test" "Automated" "Decoder and security utility tests."
 run_case "Python ECU simulator" "npm run test:simulator" "Simulator" "Virtual ECU/OBD/UDS behavior only."
 run_case "Virtual ELM327 harness" "npm run test:elm327" "Simulator" "Dependency-free protocol harness; no physical adapter."
+run_case "Probabilistic diagnostic experiment" "npm run test:probabilistic" "Probabilistic / quantum simulator" "Local state-vector model and Monte Carlo only; no real QPU."
 
 if [ -n "${ANDROID_HOME:-}" ] && [ -d "${ANDROID_HOME}" ]; then
   run_case "Android JVM unit tests" "./gradlew :app:testDebugUnitTest --no-daemon" "Automated" "SDK detected at $ANDROID_HOME."
