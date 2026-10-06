@@ -13,3 +13,5 @@ app/build/
 powershell.exe.config
 
 .kotlin/
+__pycache__/
+*.pyc

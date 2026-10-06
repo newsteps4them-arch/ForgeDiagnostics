@@ -290,9 +290,17 @@ class ObdTelemetryService(
                 connectionStatusText = "Disconnected"
             )
         } else {
-            _telemetry.value.copy(
-                connectionStatusText = "Connect a physical OBD-II adapter before polling"
-            )
+            if (_telemetry.value.connectionType == "SIMULATED") {
+                _telemetry.value.copy(
+                    isConnected = true,
+                    connectionStatusText = "Simulated Live Telemetry Stream Active"
+                )
+            } else {
+                _telemetry.value.copy(
+                    isConnected = false,
+                    connectionStatusText = "Connect a physical OBD-II adapter before polling"
+                )
+            }
         }
     }
 }
