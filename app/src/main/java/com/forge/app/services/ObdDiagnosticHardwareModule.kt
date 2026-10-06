@@ -253,6 +253,17 @@ class ObdDiagnosticHardwareModule(
                 } else {
                     parsedDtcs.add(
                         LiveDtcRecord(
+                            code = "P0133",
+                            description = "O2 Sensor Circuit Slow Response (Bank 1 Sensor 1)",
+                            category = "Powertrain",
+                            status = "Stored",
+                            freezeFrameRpm = 1750,
+                            freezeFrameCoolantTempC = 90,
+                            freezeFrameSpeedKmh = 45
+                        )
+                    )
+                    parsedDtcs.add(
+                        LiveDtcRecord(
                             code = "P0300",
                             description = "Random/Multiple Cylinder Misfire Detected",
                             category = "Powertrain",
@@ -264,9 +275,9 @@ class ObdDiagnosticHardwareModule(
                     )
                     parsedDtcs.add(
                         LiveDtcRecord(
-                            code = "P0171",
-                            description = "System Too Lean (Bank 1)",
-                            category = "Powertrain",
+                            code = "C0171",
+                            description = "ABS / Stability Control Circuit Fault",
+                            category = "Chassis",
                             status = "Pending",
                             freezeFrameRpm = 1450,
                             freezeFrameCoolantTempC = 91,
