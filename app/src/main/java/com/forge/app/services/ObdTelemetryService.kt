@@ -248,6 +248,9 @@ class ObdTelemetryService(
             return null
         }
         return try {
+            if (response.contains("NO DATA", ignoreCase = true) || response.contains("ERROR", ignoreCase = true)) {
+                return null
+            }
             val clean = response.replace(" ", "").replace("\r", "").replace("\n", "")
             val index = clean.indexOf("410C", ignoreCase = true)
             if (index != -1) {
