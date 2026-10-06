@@ -1,0 +1,72 @@
+name: Conflict Resolver Bot (Bot 2)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull Request Number'
+        required: true
+        type: string
+      head_branch:
+        description: 'Head Branch Name (PR source)'
+        required: true
+        type: string
+      base_branch:
+        description: 'Base Branch Name (PR target)'
+        required: true
+        type: string
+  repository_dispatch:
+    types: [resolve_conflict]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+
+jobs:
+  resolve-and-merge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python Dependencies
+        run: pip install google-generativeai requests --quiet
+
+      - name: Run Conflict Resolver Brain
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.client_payload.pr_number }}
+          HEAD_BRANCH: ${{ github.event.inputs.head_branch || github.event.client_payload.head_branch }}
+          BASE_BRANCH: ${{ github.event.inputs.base_branch || github.event.client_payload.base_branch }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 scripts/conflict_resolver_brain.py \
+            --pr "$PR_NUMBER" \
+            --head "$HEAD_BRANCH" \
+            --base "$BASE_BRANCH"
+
+      - name: Upload Resolution Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conflict-resolver-log
+          path: CONFLICT_RESOLVER_LOG.md
+          retention-days: 14
