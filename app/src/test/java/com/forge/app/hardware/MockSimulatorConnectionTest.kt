@@ -69,6 +69,8 @@ class MockSimulatorConnectionTest {
             }
         } catch (e: Exception) {
             // Ignore
+        } finally {
+            try { socket.close() } catch (_: Exception) {}
         }
     }
 
