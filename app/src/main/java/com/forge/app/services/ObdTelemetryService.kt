@@ -267,65 +267,19 @@ class ObdTelemetryService(
             return null
         }
         return try {
-            if (response.contains("NO DATA", ignoreCase = true) || response.contains("ERROR", ignoreCase = true)) {
-                return null
-            }
-            val clean = response.replace(" ", "").replace("\r", "").replace("\n", "")
+            val clean = response.replace(" ", "").replace("\r", "").replace("\n", "").replace(">", "")
             val index = clean.indexOf("410C", ignoreCase = true)
-            if (index != -1) {
-                val hexStr = clean.substring(index + 4).take(4)
-                if (hexStr.length == 4) {
-                    val a = hexStr.substring(0, 2).toInt(16)
-                    val b = hexStr.substring(2, 4).toInt(16)
-                    return ((a * 256) + b) / 4
-                }
+            if (index != -1 && clean.length >= index + 8) {
+                val hexStr = clean.substring(index + 4, index + 8)
+                val a = hexStr.substring(0, 2).toInt(16)
+                val b = hexStr.substring(2, 4).toInt(16)
+                ((a * 256) + b) / 4
+            } else {
+                null
             }
-        }
-        val clean = sb.toString()
-
-        val idx = clean.indexOf("410C", ignoreCase = true)
-        if (idx < 0) return null
-
-        val dataStart = idx + 4
-        if (clean.length < dataStart + 4) return null
-
-        return try {
-            val a = clean.substring(dataStart, dataStart + 2).toInt(16)
-            val b = clean.substring(dataStart + 2, dataStart + 4).toInt(16)
-            ((a * 256) + b) / 4
         } catch (_: Exception) {
             null
         }
-
-        if (!headerFound) return null
-
-        var byteA = 0
-        var byteB = 0
-        var count = 0
-
-        // Parse exactly 4 hex nibbles (2 bytes) for RPM data
-        while (i < len && count < 4) {
-            val c = response[i++]
-            if (c == ' ' || c == '\r' || c == '\n' || c == '\t' || c == '>') continue
-
-            val valNibble = when (c) {
-                in '0'..'9' -> c - '0'
-                in 'A'..'F' -> c - 'A' + 10
-                in 'a'..'f' -> c - 'a' + 10
-                else -> return null
-            }
-
-            if (count < 2) {
-                byteA = (byteA shl 4) or valNibble
-            } else {
-                byteB = (byteB shl 4) or valNibble
-            }
-            count++
-        }
-
-        if (count < 4) return null
-
-        return ((byteA * 256) + byteB) / 4
     }
 
     fun setSpeed(speed: Int) {
