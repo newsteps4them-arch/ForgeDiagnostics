@@ -35,6 +35,12 @@ import com.forge.app.services.ObdTelemetryData
 import com.forge.app.ui.theme.*
 import kotlin.math.*
 
+private data class GaugeTickSpec(
+    val cosAngle: Float,
+    val sinAngle: Float,
+    val isMajor: Boolean
+)
+
 /**
  * High-performance, hardware-styled Automotive Radial Gauge Composable
  * with physical spring needle damping, smooth numerical roll transitions, and warning aura pulsing.
@@ -54,6 +60,25 @@ fun RadialGauge(
     multiplierDisplay: String? = "x1000",
     modifier: Modifier = Modifier
 ) {
+    // Pre-calculate tick mark unit vectors (cos and sin) so trigonometric calculations (Math.toRadians, cos, sin)
+    // are executed once when layout/scale changes rather than on every 60 FPS needle animation draw frame.
+    val startAngle = 135f
+    val sweepAngle = 270f
+
+    val tickVectors = remember(minValue, maxValue, majorTickStep, minorTickDivisions, startAngle, sweepAngle) {
+        val totalTicks = ((maxValue - minValue) / majorTickStep).toInt()
+        val totalSubTicks = totalTicks * minorTickDivisions
+        Array(totalSubTicks + 1) { i ->
+            val tickFraction = i.toFloat() / totalSubTicks
+            val angleRad = Math.toRadians((startAngle + (tickFraction * sweepAngle)).toDouble())
+            TickVector(
+                cosAngle = cos(angleRad).toFloat(),
+                sinAngle = sin(angleRad).toFloat(),
+                isMajor = (i % minorTickDivisions) == 0
+            )
+        }
+    }
+
     // Physical Spring-damped needle animation for realistic automotive inertia
     val animatedValue by animateFloatAsState(
         targetValue = value.coerceIn(minValue, maxValue),
@@ -64,11 +89,25 @@ fun RadialGauge(
         label = "gauge_needle_spring"
     )
 
-    val startAngle = 135f
-    val sweepAngle = 270f
     val currentFraction = (animatedValue - minValue) / (maxValue - minValue)
     val isCritical = criticalThreshold != null && animatedValue >= criticalThreshold
     val isWarning = warningThreshold != null && animatedValue >= warningThreshold
+
+    // Precomputed tick mark angles and trig functions cached across animation frames
+    val tickSpecs = remember(minValue, maxValue, majorTickStep, minorTickDivisions, startAngle, sweepAngle) {
+        val totalTicks = ((maxValue - minValue) / majorTickStep).toInt()
+        val totalSubTicks = totalTicks * minorTickDivisions
+        List(totalSubTicks + 1) { i ->
+            val tickFraction = i.toFloat() / totalSubTicks
+            val angleDeg = startAngle + (tickFraction * sweepAngle)
+            val angleRad = Math.toRadians(angleDeg.toDouble())
+            GaugeTickSpec(
+                cosAngle = cos(angleRad).toFloat(),
+                sinAngle = sin(angleRad).toFloat(),
+                isMajor = (i % minorTickDivisions) == 0
+            )
+        }
+    }
 
     // Smooth animated color morphing
     val targetActiveColor = when {
@@ -83,21 +122,6 @@ fun RadialGauge(
         label = "active_color_morph"
     )
 
-    // Pre-calculated tick mark trigonometric unit vectors to avoid allocations and trig inside Canvas DrawScope
-    val tickData = remember(minValue, maxValue, majorTickStep, minorTickDivisions, startAngle, sweepAngle) {
-        val totalTicks = ((maxValue - minValue) / majorTickStep).toInt()
-        val totalSubTicks = totalTicks * minorTickDivisions
-        List(totalSubTicks + 1) { i ->
-            val tickFraction = i.toFloat() / totalSubTicks
-            val angleDeg = startAngle + (tickFraction * sweepAngle)
-            val angleRad = Math.toRadians(angleDeg.toDouble())
-            val isMajor = (i % minorTickDivisions) == 0
-            val cosVal = cos(angleRad).toFloat()
-            val sinVal = sin(angleRad).toFloat()
-            TickMark(isMajor, cosVal, sinVal)
-        }
-    }
-
     // Warning / Redline Infinite Pulsing Animation
     val infiniteTransition = rememberInfiniteTransition(label = "warning_pulse")
     val pulseAlpha by infiniteTransition.animateFloat(
@@ -109,6 +133,29 @@ fun RadialGauge(
         ),
         label = "pulse_alpha"
     )
+
+    // Pre-calculate tick mark trigonometry (cos, sin) and metadata outside Canvas DrawScope
+    // to prevent trigonometric calculation overhead and heap allocations on every 60/120 FPS frame draw.
+    val tickMarks = remember(startAngle, sweepAngle, maxValue, minValue, majorTickStep, minorTickDivisions) {
+        val totalTicks = ((maxValue - minValue) / majorTickStep).toInt()
+        val totalSubTicks = totalTicks * minorTickDivisions
+        if (totalSubTicks <= 0) emptyList()
+        else {
+            List(totalSubTicks + 1) { i ->
+                val tickFraction = i.toFloat() / totalSubTicks
+                val angleDeg = startAngle + (tickFraction * sweepAngle)
+                val angleRad = Math.toRadians(angleDeg.toDouble())
+                val isMajor = (i % minorTickDivisions) == 0
+                val tickColor = if (isMajor) Color(0xFF8C93A8) else Color(0xFF4A5168)
+                TickMarkGeometry(
+                    cosAngle = cos(angleRad).toFloat(),
+                    sinAngle = sin(angleRad).toFloat(),
+                    isMajor = isMajor,
+                    tickColor = tickColor
+                )
+            }
+        }
+    }
 
     Surface(
         color = ForgeSurface,
@@ -220,22 +267,29 @@ fun RadialGauge(
                         )
                     }
 
-                    // Pre-calculated Tick Marks rendering using cached trigonometry
-                    for (tick in tickData) {
-                        val tickLength = if (tick.isMajor) 10.dp.toPx() else 5.dp.toPx()
-                        val tickColor = if (tick.isMajor) Color(0xFF8C93A8) else Color(0xFF4A5168)
-                        val strokeWidth = if (tick.isMajor) 2.dp.toPx() else 1.dp.toPx()
+                    // Tick Marks rendered using precomputed trig specs
+                    val outerRadius = radius - 8.dp.toPx()
+                    val majorLength = 10.dp.toPx()
+                    val minorLength = 5.dp.toPx()
+                    val majorWidth = 2.dp.toPx()
+                    val minorWidth = 1.dp.toPx()
+                    val majorColor = Color(0xFF8C93A8)
+                    val minorColor = Color(0xFF4A5168)
 
-                        val outerRadius = radius - 8.dp.toPx()
+                    for (spec in tickSpecs) {
+                        val tickLength = if (spec.isMajor) majorLength else minorLength
+                        val tickColor = if (spec.isMajor) majorColor else minorColor
+                        val strokeWidth = if (spec.isMajor) majorWidth else minorWidth
                         val innerRadius = outerRadius - tickLength
+                        val strokeWidth = if (tick.isMajor) majorStrokeWidth else minorStrokeWidth
 
-                        val startX = center.x + outerRadius * tick.cosVal
-                        val startY = center.y + outerRadius * tick.sinVal
-                        val endX = center.x + innerRadius * tick.cosVal
-                        val endY = center.y + innerRadius * tick.sinVal
+                        val startX = center.x + outerRadius * spec.cosAngle
+                        val startY = center.y + outerRadius * spec.sinAngle
+                        val endX = center.x + innerRadius * spec.cosAngle
+                        val endY = center.y + innerRadius * spec.sinAngle
 
                         drawLine(
-                            color = tickColor,
+                            color = tick.tickColor,
                             start = Offset(startX, startY),
                             end = Offset(endX, endY),
                             strokeWidth = strokeWidth,
@@ -308,12 +362,6 @@ fun RadialGauge(
         }
     }
 }
-
-private data class TickMark(
-    val isMajor: Boolean,
-    val cosVal: Float,
-    val sinVal: Float
-)
 
 /**
  * Semi-circular / Arc Bar Gauge for Coolant Temp with smooth thermal transitions and overheating alert animations
@@ -390,7 +438,7 @@ fun CoolantTempGauge(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Thermostat,
-                        contentDescription = null,
+                        contentDescription = null, // Decorative icon adjacent to descriptive text
                         tint = statusColor,
                         modifier = Modifier.size(18.dp)
                     )
@@ -646,7 +694,7 @@ fun ObdInstrumentCluster(
                         }
                         Icon(
                             imageVector = Icons.Default.ElectricBolt,
-                            contentDescription = null,
+                            contentDescription = null, // Decorative icon adjacent to descriptive label
                             tint = if (telemetry.batteryVoltage < 12.0f) ForgeRed else ForgeGreen,
                             modifier = Modifier.size(20.dp)
                         )
@@ -681,7 +729,7 @@ fun ObdInstrumentCluster(
                         }
                         Icon(
                             imageVector = Icons.Default.Speed,
-                            contentDescription = null,
+                            contentDescription = null, // Decorative icon adjacent to descriptive label
                             tint = ForgeAmber,
                             modifier = Modifier.size(20.dp)
                         )
