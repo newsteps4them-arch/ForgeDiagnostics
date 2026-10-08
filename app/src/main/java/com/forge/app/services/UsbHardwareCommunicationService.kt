@@ -415,24 +415,12 @@ class UsbHardwareCommunicationService(private val scope: CoroutineScope) {
         addLog("TX", command, bytesToHex(txBytes))
 
         if (conn == null || epOut == null || epIn == null) {
-            // Simulated fallback response if physical USB cable is unplugged in emulator
-            val simulatedResp = when (command.trim().uppercase()) {
-                "AT Z" -> "ELM327 v2.1 (USB-Serial)"
-                "AT E0" -> "OK"
-                "AT L0" -> "OK"
-                "AT H1" -> "OK"
-                "AT DP" -> "ISO 15765-4 (CAN 11bit/500k)"
-                "AT RV" -> "14.2V"
-                "0100" -> "41 00 BE 3F A8 13"
-                "010C" -> "41 0C 0D 80" // 864 RPM
-                "010D" -> "41 0D 00"    // 0 km/h
-                "0105" -> "41 05 7B"    // 83 °C
-                "03" -> "43 02 03 00 01 71"
-                "04" -> "44"
-                else -> "41 00 OK"
-            }
-            addLog("RX", simulatedResp, bytesToHex(simulatedResp.toByteArray()))
-            return simulatedResp
+            // No USB adapter attached: fail explicitly. This path MUST NOT return
+            // canned ELM327 responses — callers (DTC fetch, telemetry polling, the
+            // raw terminal) have to be able to distinguish "not connected" from
+            // real hardware data. An empty response means "no data", never "demo data".
+            addLog("ERROR", "No USB device connected — cannot send \"$command\"", "")
+            return ""
         }
 
         try {

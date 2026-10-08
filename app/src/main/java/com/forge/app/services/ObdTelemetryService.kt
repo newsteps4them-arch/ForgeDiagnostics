@@ -35,7 +35,12 @@ data class ObdTelemetryData(
     val isConnected: Boolean = false,
     val connectionType: String = "SIMULATED",
     val connectionStatusText: String = "Disconnected",
-    val activeDtcCodes: List<DtcInfo> = emptyList()
+    val activeDtcCodes: List<DtcInfo> = emptyList(),
+    /**
+     * Provenance of the values in this snapshot. SIMULATED snapshots must be
+     * visibly labeled in the UI and must never be presented as live vehicle data.
+     */
+    val dataSource: DiagnosticDataSource = DiagnosticDataSource.UNKNOWN
 )
 
 data class DtcInfo(
@@ -114,15 +119,18 @@ class ObdTelemetryService(
                 if (parsedRpm != null) {
                     _telemetry.value = _telemetry.value.copy(
                         rpm = parsedRpm,
-                        connectionStatusText = statusMsg
+                        connectionStatusText = statusMsg,
+                        dataSource = DiagnosticDataSource.LIVE_HARDWARE
                     )
                     return true
                 }
             }
+            // No usable response: the adapter is detached, not paired, or the ECU
+            // did not answer. This is a failed poll — NOT a zero-RPM reading.
             _telemetry.value = _telemetry.value.copy(
-                connectionStatusText = statusMsg
+                connectionStatusText = "USB OBD-II adapter not connected or not responding"
             )
-            true
+            false
         } catch (e: Exception) {
             false
         }
@@ -195,7 +203,10 @@ class ObdTelemetryService(
             boostPressurePsi = boost,
             batteryVoltage = (voltage * 10).toInt() / 10.0f,
             fuelTrimShortPct = ((Random.nextFloat() * 4 - 2) * 10).toInt() / 10.0f,
-            oilPressurePsi = (35.0f + (newRpm / 200.0f) + Random.nextFloat()).coerceIn(25f, 75f)
+            oilPressurePsi = (35.0f + (newRpm / 200.0f) + Random.nextFloat()).coerceIn(25f, 75f),
+            // This generator is the explicit simulation path: label every snapshot
+            // it produces so demo data can never be mistaken for a live vehicle.
+            dataSource = DiagnosticDataSource.SIMULATED
         )
     }
 
@@ -229,7 +240,10 @@ class ObdTelemetryService(
                 val response = String(buffer, 0, bytesRead).trim()
                 val parsedRpm = parseRpmResponse(response)
                 if (parsedRpm != null) {
-                    _telemetry.value = _telemetry.value.copy(rpm = parsedRpm)
+                    _telemetry.value = _telemetry.value.copy(
+                        rpm = parsedRpm,
+                        dataSource = DiagnosticDataSource.LIVE_HARDWARE
+                    )
                     return true
                 }
             }
@@ -266,6 +280,18 @@ class ObdTelemetryService(
 
     fun setSpeed(speed: Int) {
         _telemetry.value = _telemetry.value.copy(speedKmh = speed.coerceIn(0, 240))
+    }
+
+    /**
+     * Records an RPM value decoded from a real adapter response.
+     * Never call this with fabricated or derived numbers (e.g. RPM-derived
+     * speed estimates) — unsupported PIDs must stay unavailable, not invented.
+     */
+    fun setRpm(rpm: Int) {
+        _telemetry.value = _telemetry.value.copy(
+            rpm = rpm.coerceIn(0, 12000),
+            dataSource = DiagnosticDataSource.LIVE_HARDWARE
+        )
     }
 
     fun clearDtcs() {
