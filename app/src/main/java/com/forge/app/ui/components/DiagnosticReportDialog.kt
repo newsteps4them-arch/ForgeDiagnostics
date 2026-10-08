@@ -387,7 +387,7 @@ fun DiagnosticReportDialog(
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
                         ) {
-                            Icon(imageVector = Icons.Default.Print, contentDescription = "Print", modifier = Modifier.size(16.dp))
+                            Icon(imageVector = Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Print PDF", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
@@ -408,7 +408,7 @@ fun DiagnosticReportDialog(
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
                         ) {
-                            Icon(imageVector = Icons.Default.Share, contentDescription = "Share", modifier = Modifier.size(16.dp))
+                            Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Share PDF", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
@@ -437,7 +437,7 @@ fun DiagnosticReportDialog(
                             border = androidx.compose.foundation.BorderStroke(1.dp, ForgeGreen),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                         ) {
-                            Icon(imageVector = Icons.Default.SaveAlt, contentDescription = "Save", modifier = Modifier.size(15.dp))
+                            Icon(imageVector = Icons.Default.SaveAlt, contentDescription = null, modifier = Modifier.size(15.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Save PDF", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
@@ -457,7 +457,7 @@ fun DiagnosticReportDialog(
                             border = androidx.compose.foundation.BorderStroke(1.dp, ForgeAmber),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                         ) {
-                            Icon(imageVector = Icons.Default.Send, contentDescription = "Share Text", modifier = Modifier.size(15.dp))
+                            Icon(imageVector = Icons.Default.Send, contentDescription = null, modifier = Modifier.size(15.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Share Text", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
@@ -473,7 +473,7 @@ fun DiagnosticReportDialog(
                             border = androidx.compose.foundation.BorderStroke(1.dp, ForgeBorder),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                         ) {
-                            Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Copy", modifier = Modifier.size(15.dp))
+                            Icon(imageVector = Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(15.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Copy", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }

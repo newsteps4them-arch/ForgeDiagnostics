@@ -115,9 +115,9 @@ enum class AssistantSkill(
         "workflow",
         "Workflow & Firestore",
         "gemini-3.5-flash",
-        "Orchestrate workshop tasks, work order stages, and real-time Firestore database sync for ",
-        "Manage workshop work orders, technician task delegation, time clock tracking, and Firestore cloud sync.",
-        "Skill Mode: OpenManus Task Coordination & Firestore Database Sync Agent. Plan repair pipelines, synchronize Firestore real-time database state across technicians, manage work order statuses (Draft, Approved, In Progress, Completed), and handle inventory reorders."
+        "Orchestrate workshop tasks, work order stages, and local work-order persistence for ",
+        "Manage workshop work orders, technician task delegation, time clock tracking, and local database persistence (cloud sync not configured).",
+        "Skill Mode: OpenManus Task Coordination Agent. Plan repair pipelines, manage local work order state across technicians, manage work order statuses (Draft, Approved, In Progress, Completed), and handle inventory reorders. Cloud sync is not integrated in this build."
     ),
     VISION(
         "vision",
@@ -380,6 +380,12 @@ object GeminiClient {
     }
 
 
+    /**
+     * Offline fallback used when the Gemini API is unreachable (no key, no
+     * network, or API error). The bodies below are CANNED DEMO TEXT — not AI
+     * analysis, not vehicle data, not verified OEM data. The banner prefix
+     * makes that unmistakable to anyone reading the output.
+     */
     private fun generateLocalDiagnosticAnalysis(
         prompt: String,
         skill: AssistantSkill,
@@ -388,11 +394,11 @@ object GeminiClient {
         project: String
     ): String {
         val lower = prompt.lowercase()
-        return when (skill) {
+        val demoBody = when (skill) {
             AssistantSkill.REPORTING -> {
                 "### 📊 OpenManus DVI & Diagnostic Report\n\n" +
-                        "**Verified Technical Source:** *Digital Vehicle Inspection Standard & OEM Service Data*\n\n" +
-                        "#### 🔬 Verified Technical Response\n" +
+                        "**Demo Source (NOT verified — canned offline text):** *Digital Vehicle Inspection Standard & OEM Service Data*\n\n" +
+                        "#### 🔬 Demo Response (NOT verified — canned offline text)\n" +
                         "**Vehicle:** $vehicle | **Active Project:** $project | **OBD Telemetry:** $telemetry\n\n" +
                         "- **DTC Fault Codes:** P0300 / P0301 Multi-Cylinder Misfire.\n" +
                         "- **Fuel System Health:** High-Pressure Fuel Rail target pressure = 200 bar, actual = 142 bar.\n" +
@@ -405,8 +411,8 @@ object GeminiClient {
             }
             AssistantSkill.WEB_DOCS -> {
                 "### 🔍 OEM Service Documentation & TSB Search\n\n" +
-                        "**Verified Technical Source:** *NHTSA Technical Service Bulletins & OEM Factory Service Manuals*\n\n" +
-                        "#### 🔬 Verified Technical Response\n" +
+                        "**Demo Source (NOT verified — canned offline text):** *NHTSA Technical Service Bulletins & OEM Factory Service Manuals*\n\n" +
+                        "#### 🔬 Demo Response (NOT verified — canned offline text)\n" +
                         "**Query:** \"$prompt\"\n\n" +
                         "- **Matched TSB:** TSB 2058491/4 (Rough Idling and Random Misfire Codes P0300/P0301 due to injector deposits).\n" +
                         "- **NHTSA Campaign:** Recall 21V904 (Fuel Pump Control Module Voltage Drop).\n" +
@@ -418,8 +424,8 @@ object GeminiClient {
             }
             AssistantSkill.COMPUTE -> {
                 "### 🧮 OBD PID & Signal Computation Engine\n\n" +
-                        "**Verified Technical Source:** *SAE J1979 Diagnostic Data Specification*\n\n" +
-                        "#### 🔬 Verified Technical Response\n" +
+                        "**Demo Source (NOT verified — canned offline text):** *SAE J1979 Diagnostic Data Specification*\n\n" +
+                        "#### 🔬 Demo Response (NOT verified — canned offline text)\n" +
                         "- **Mode 01 PID Decode:** Raw Hex Stream `01 0C 1F 40` -> Formula `RPM = (A * 256 + B) / 4` -> **2,000.0 RPM**.\n" +
                         "- **Oscilloscope Waveform:** Period T = 20.0 ms -> Frequency f = 1/T = **50.0 Hz**; Peak-to-Peak Voltage = **14.20 V**.\n" +
                         "- **Fuel Trim Math:** STFT (+14.2%) + LTFT (+6.8%) = **+21.0% Total Fuel Correction** (Triggers P0171 Lean Flag).\n\n" +
@@ -598,11 +604,11 @@ object GeminiClient {
             }
             else -> {
                 if ("p0300" in lower || "misfire" in lower) {
-                    "### 🛠️ Team Forge Verified Diagnostic Analysis: P0300 / P0301\n\n" +
-                            "**Verified Technical Source:** *Audi OEM Workshop Repair Manual (Group 28 Ignition System) & NHTSA TSB 2058491/4*\n\n" +
-                            "#### 🔬 Verified Technical Response\n" +
+                    "### 🛠️ Team Forge Demo Diagnostic Analysis (offline canned text): P0300 / P0301\n\n" +
+                            "**Demo Source (NOT verified — canned offline text):** *Audi OEM Workshop Repair Manual (Group 28 Ignition System) & NHTSA TSB 2058491/4*\n\n" +
+                            "#### 🔬 Demo Response (NOT verified — canned offline text)\n" +
                             "- **DTC Definition:** P0300 (Random/Multiple Cylinder Misfire Detected) / P0301 (Cylinder 1 Misfire).\n" +
-                            "- **Observed OBD-II Telemetry:** STFT Bank 1 +14.2% (Lean threshold breach), High-Pressure Fuel Rail pressure 142 bar vs 200 bar setpoint at 2,450 RPM.\n" +
+                            "- **Illustrative demo values (NOT measured from a vehicle):** STFT Bank 1 +14.2% (Lean threshold breach), High-Pressure Fuel Rail pressure 142 bar vs 200 bar setpoint at 2,450 RPM.\n" +
                             "- **Root Cause Mechanism:** Fuel delivery starvation under boost due to high-pressure fuel injector deposits or cam follower wear on HPFP, causing cylinder lean misfire.\n" +
                             "- **Factory Torque Specifications:** Spark Plugs = 25 Nm (18 ft-lb); HPFP Mounting Bolts = 20 Nm (15 ft-lb).\n\n" +
                             "#### 💡 Layman's Terms / Simplified Explanation\n" +
@@ -610,19 +616,23 @@ object GeminiClient {
                             "**Why it matters:** Driving with a misfire causes jerky acceleration and can damage the expensive catalytic converter over time.\n" +
                             "**What to do next:** Replacing the worn spark plugs and cleaning or replacing the high-pressure fuel injector on Cylinder #1 will fix the problem and smooth out your engine."
                 } else {
-                    "### 🛠️ Team Forge Verified Diagnostic Assistant\n\n" +
-                            "**Verified Technical Source:** *SAE J1979 Diagnostic Data Standards & OEM Factory Service Manuals*\n\n" +
-                            "#### 🔬 Verified Technical Response\n" +
+                    "### 🛠️ Team Forge Demo Diagnostic Assistant (offline canned text)\n\n" +
+                            "**Demo Source (NOT verified — canned offline text):** *SAE J1979 Diagnostic Data Standards & OEM Factory Service Manuals*\n\n" +
+                            "#### 🔬 Demo Response (NOT verified — canned offline text)\n" +
                             "- **Active Vehicle:** $vehicle\n" +
-                            "- **CAN Bus Status:** Operational (Mode 01 PID Live Data stream responding at 100Hz).\n" +
+                            "- **CAN Bus Status:** Unknown in offline demo mode — no live PID stream was read.\n" +
                             "- **Telemetry Analysis:** $telemetry\n" +
                             "- **Query Analysis:** Registered request \"$prompt\". Verified against SAE J1979 OBD-II standard parameters.\n\n" +
                             "#### 💡 Layman's Terms / Simplified Explanation\n" +
-                            "**System Status:** Your car's main computer network is fully healthy and sending real-time sensor updates to Team Forge.\n" +
+                            "**System Status:** Offline demo mode — no live vehicle connection exists, so no vehicle health claim can be made.\n" +
                             "**How we help you:** You can ask any question about fault codes, warning lights, maintenance steps, or repair costs. We provide both the exact technical specs for mechanics and simple plain-English explanations for everyday car owners!"
                 }
             }
         }
+        return "!!! DEMO OUTPUT — NOT FROM A LIVE VEHICLE OR A LIVE AI MODEL !!!\n\n" +
+            "The Gemini API was unreachable, so this is canned demo text — not an AI analysis, " +
+            "not vehicle data, and not verified OEM data. Configure a Gemini API key for live results.\n\n" +
+            demoBody
     }
 }
 

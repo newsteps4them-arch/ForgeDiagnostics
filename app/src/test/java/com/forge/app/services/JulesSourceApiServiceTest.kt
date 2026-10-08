@@ -12,6 +12,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.TimeUnit
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
@@ -81,7 +82,7 @@ class JulesSourceApiServiceTest {
             filter = null
         )
 
-        val recordedRequest = mockWebServer.takeRequest()
+        val recordedRequest = mockWebServer.takeRequest(5, java.util.concurrent.TimeUnit.SECONDS)!!
         assertEquals("GET", recordedRequest.method)
         assertTrue(recordedRequest.path!!.startsWith("/sources"))
         assertEquals("test_key", recordedRequest.getHeader("x-goog-api-key"))
@@ -122,7 +123,7 @@ class JulesSourceApiServiceTest {
             sourceId = "github-myorg-myrepo"
         )
 
-        val recordedRequest = mockWebServer.takeRequest()
+        val recordedRequest = mockWebServer.takeRequest(5, java.util.concurrent.TimeUnit.SECONDS)!!
         assertEquals("GET", recordedRequest.method)
         assertEquals("/sources/github-myorg-myrepo", recordedRequest.path)
         assertEquals("test_key", recordedRequest.getHeader("x-goog-api-key"))
