@@ -105,7 +105,7 @@ fun ActuatorTestScreen(
     var selectedTest by remember { mutableStateOf<ActuatorTestItem?>(null) }
     var activeTestingId by remember { mutableStateOf<String?>(null) }
     var testTimeRemaining by remember { mutableStateOf(0) }
-    var testLog by remember { mutableStateOf<List<String>>(listOf("System Ready: ECU Bi-Directional Service 2F Active")) }
+    var testLog by remember { mutableStateOf<List<String>>(listOf("System Ready (DEMO UI): actuator command transmission is NOT implemented — nothing below sends data to the ECU.")) }
     var safetyInterlockConfirmed by remember { mutableStateOf(false) }
 
     // Power Balance state
@@ -136,7 +136,7 @@ fun ActuatorTestScreen(
                         Icon(imageVector = Icons.Default.Tune, contentDescription = null, tint = ForgeRed)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "BI-DIRECTIONAL ACTUATOR CONTROLS",
+                            "ACTUATOR CONTROLS — DEMO UI (NOT WIRED TO ECU)",
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
@@ -144,7 +144,7 @@ fun ActuatorTestScreen(
                         )
                     }
                     Text(
-                        "ECU Service $2F (Short Term IO Control by Identifier) & $31 Routine Control",
+                        "Command transmission is NOT implemented: no CAN frames are sent. Timers below are UI simulations only.",
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
                         color = ForgeOnSurfaceVariant
@@ -156,7 +156,7 @@ fun ActuatorTestScreen(
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
-                        text = if (activeTestingId != null) "ACTUATION ACTIVE" else "INTERLOCK SAFE",
+                        text = if (activeTestingId != null) "DEMO TIMER ACTIVE" else "DEMO IDLE",
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
@@ -195,7 +195,7 @@ fun ActuatorTestScreen(
                 }
 
                 Text(
-                    "Tap cylinder button to momentarily cut injector pulse and monitor RPM drop contribution.",
+                    "DEMO ONLY: tapping a cylinder does NOT cut fuel injection — no command is sent to the ECU.",
                     fontSize = 10.sp,
                     color = ForgeOnSurfaceVariant
                 )
@@ -215,10 +215,10 @@ fun ActuatorTestScreen(
                                 .clickable {
                                     if (isKilled) {
                                         activeKilledCylinder = null
-                                        testLog = testLog + "[POWER BALANCE] Restored Cylinder #$cyl fuel injection."
+                                        testLog = testLog + "[POWER BALANCE DEMO] Cylinder #$cyl button released (no command was ever sent)."
                                     } else {
                                         activeKilledCylinder = cyl
-                                        testLog = testLog + "[POWER BALANCE] CUTTING Cylinder #$cyl (CMD: 2F 01 0$cyl 00)"
+                                        testLog = testLog + "[POWER BALANCE DEMO] Cylinder #$cyl selected (SIMULATED — no 2F command transmitted)"
                                     }
                                 }
                         ) {
@@ -335,7 +335,7 @@ fun ActuatorTestScreen(
                                     onClick = {
                                         activeTestingId = test.id
                                         testTimeRemaining = test.durationSeconds
-                                        testLog = testLog + "[COMMAND] Transmitted CAN frame ${test.canCommandHex} -> ${test.name}"
+                                        testLog = testLog + "[SIMULATION] Demo timer started for ${test.name} — NO CAN frame transmitted (not implemented)"
 
                                         coroutineScope.launch {
                                             while (testTimeRemaining > 0 && activeTestingId == test.id) {
@@ -344,7 +344,7 @@ fun ActuatorTestScreen(
                                             }
                                             if (activeTestingId == test.id) {
                                                 activeTestingId = null
-                                                testLog = testLog + "[COMPLETED] Test finished: ${test.name} - ECU returned 6F (Positive Response)"
+                                                testLog = testLog + "[SIMULATION] Demo timer finished: ${test.name} — no ECU response received (nothing was sent)"
                                             }
                                         }
                                     },
@@ -353,7 +353,7 @@ fun ActuatorTestScreen(
                                     shape = RoundedCornerShape(6.dp),
                                     enabled = activeTestingId == null
                                 ) {
-                                    Text("ACTUATE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                    Text("SIMULATE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                                 }
                             }
                         }

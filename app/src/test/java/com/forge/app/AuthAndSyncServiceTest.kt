@@ -16,10 +16,14 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Regression tests for honest auth/sync behavior:
+ * - The service must NEVER fabricate a signed-in user (no Firebase Auth SDK exists).
+ * - The service must NEVER claim a Firestore sync succeeded (no Firestore SDK exists).
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthAndSyncServiceTest {
 
@@ -36,59 +40,63 @@ class AuthAndSyncServiceTest {
     }
 
     @Test
-    fun testSignOutResetsUserAndSyncStatus() = runTest {
+    fun testInitialStateIsUnauthenticatedGuest() = runTest {
         val service = AuthAndSyncService(scope = CoroutineScope(testDispatcher))
 
-        // Initial state should be authenticated (based on the class's default initialization)
-        assertTrue(service.currentUser.value.isAuthenticated)
-        assertTrue(service.syncStatus.value.isConnectedToFirestore)
+        // Honest default: nobody is signed in, nothing is synced.
+        val user = service.currentUser.value
+        assertEquals("", user.uid)
+        assertEquals("Guest Tech", user.displayName)
+        assertFalse(user.isAuthenticated)
 
-        // Action
+        val sync = service.syncStatus.value
+        assertFalse(sync.isConnectedToFirestore)
+        assertEquals(0, sync.syncedItemsCount)
+    }
+
+    @Test
+    fun testSignOutKeepsHonestGuestState() = runTest {
+        val service = AuthAndSyncService(scope = CoroutineScope(testDispatcher))
+
         service.signOut()
 
-        // Verification - User
         val currentUser = service.currentUser.value
         assertEquals("", currentUser.uid)
         assertEquals("Guest Tech", currentUser.displayName)
         assertEquals("", currentUser.email)
-        assertEquals("", currentUser.photoUrl)
-        assertEquals("Guest", currentUser.role)
         assertFalse(currentUser.isAuthenticated)
-        assertEquals("ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9", currentUser.firestoreDbId)
 
-        // Verification - Sync
         val syncStatus = service.syncStatus.value
         assertFalse(syncStatus.isConnectedToFirestore)
         assertEquals("Signed Out - Offline Local Storage Mode", syncStatus.statusText)
     }
 
     @Test
-    fun testSignInWithGoogle() = runTest {
+    fun testSignInWithGoogleDoesNotFabricateAuth() = runTest {
         val authService = AuthAndSyncService(scope = CoroutineScope(testDispatcher))
 
-        val testEmail = "testuser@example.com"
-        val testName = "Test User"
+        authService.signInWithGoogle("testuser@example.com", "Test User")
 
-        // Sign out first to ensure state change
-        authService.signOut()
-        assertFalse(authService.currentUser.value.isAuthenticated)
-
-        authService.signInWithGoogle(testEmail, testName)
-
+        // MUST stay unauthenticated: Firebase Auth is not integrated, so success
+        // must not be invented.
         val currentUser = authService.currentUser.value
-
-        assertTrue(currentUser.uid.startsWith("usr_tf_google_"))
-        assertEquals(testName, currentUser.displayName)
-        assertEquals(testEmail, currentUser.email)
-        assertTrue(currentUser.isAuthenticated)
-        assertEquals("Master Workshop Tech & ECU Tuner", currentUser.role)
+        assertFalse(currentUser.isAuthenticated)
+        assertEquals("", currentUser.uid)
 
         val syncStatus = authService.syncStatus.value
+        assertFalse(syncStatus.isConnectedToFirestore)
+    }
 
-        assertTrue(syncStatus.isConnectedToFirestore)
-        assertTrue(
-            syncStatus.statusText.contains("Syncing with Firestore") ||
-            syncStatus.statusText.contains("Firestore Synced")
-        )
+    @Test
+    fun testTriggerFirestoreSyncDoesNotClaimSuccess() = runTest {
+        val service = AuthAndSyncService(scope = CoroutineScope(testDispatcher))
+
+        service.triggerFirestoreSync()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // MUST NOT claim a sync happened: no Firestore SDK is integrated.
+        val sync = service.syncStatus.value
+        assertFalse(sync.isConnectedToFirestore)
+        assertEquals(0, sync.syncedItemsCount)
     }
 }

@@ -18,12 +18,12 @@ if (localPropertiesFile.exists()) {
 
 android {
     namespace = "com.forge.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.aistudio.teamforge.a1b2c"
+        applicationId = "com.forgediagnostics.app"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -37,27 +37,51 @@ android {
             keyAlias = localProperties.getProperty("DEBUG_KEY_ALIAS") ?: System.getenv("DEBUG_KEY_ALIAS") ?: "androiddebugkey"
             keyPassword = localProperties.getProperty("DEBUG_KEY_PASSWORD") ?: System.getenv("DEBUG_KEY_PASSWORD") ?: "android"
         }
+
+        val releaseStoreFile = localProperties.getProperty("RELEASE_STORE_FILE")
+            ?: System.getenv("FORGE_RELEASE_STORE_FILE")
+        val releaseStorePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
+            ?: System.getenv("FORGE_RELEASE_STORE_PASSWORD")
+        val releaseKeyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
+            ?: System.getenv("FORGE_RELEASE_KEY_ALIAS")
+        val releaseKeyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
+            ?: System.getenv("FORGE_RELEASE_KEY_PASSWORD")
+
+        if (!releaseStoreFile.isNullOrBlank() && !releaseStorePassword.isNullOrBlank()
+            && !releaseKeyAlias.isNullOrBlank() && !releaseKeyPassword.isNullOrBlank()
+        ) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            val releaseSigningConfig = signingConfigs.findByName("release")
+            if (releaseSigningConfig != null) {
+                signingConfig = releaseSigningConfig
+            }
         }
         debug {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "21"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
