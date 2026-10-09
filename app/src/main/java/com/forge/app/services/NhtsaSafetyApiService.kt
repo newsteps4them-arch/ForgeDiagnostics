@@ -68,7 +68,23 @@ data class DecodedVehicleSpecs(
     val vehicleType: String,
     val plantCountry: String,
     val transmissionStyle: String,
-    val turbo: Boolean
+    val turbo: Boolean,
+    /**
+     * True when the live NHTSA VPIC lookup failed and these specs are the
+     * built-in demo fallback — NOT decoded from the VIN. Callers must surface
+     * this instead of silently presenting the fallback as a real decode.
+     */
+    val isFallbackData: Boolean = false
+)
+
+/**
+ * Result of a safety-recall lookup. [isLiveLookup] is false when the NHTSA
+ * request failed (offline / error) — in that case [recalls] is empty, which
+ * means "could not check", NEVER "no recalls exist".
+ */
+data class RecallLookupResult(
+    val recalls: List<NhtsaRecallItem>,
+    val isLiveLookup: Boolean
 )
 
 interface NhtsaApi {
@@ -159,9 +175,10 @@ object NhtsaSafetyClient {
                 turbo = (resultMap["Turbo"]?.contains("Yes", ignoreCase = true) == true) || (resultMap["Displacement (L)"] == "3.0")
             )
         } catch (e: Exception) {
-            // Fallback for offline or testing mode
+            // Offline/testing fallback — explicitly flagged, never presented as a live decode.
             DecodedVehicleSpecs(
                 vin = vin,
+                isFallbackData = true,
                 make = "Audi",
                 model = "S5 3.0T Quattro",
                 modelYear = "2021",
@@ -179,44 +196,18 @@ object NhtsaSafetyClient {
 
     /**
      * Real-world query to NHTSA Safety Recalls Database by VIN.
+     *
+     * HONESTY CONTRACT: on any failure this returns an EMPTY list with
+     * [RecallLookupResult.isLiveLookup] = false ("could not check") — it NEVER
+     * substitutes canned recall entries, and an empty result from the live API
+     * genuinely means the VIN has no recalls on file.
      */
-    suspend fun fetchSafetyRecalls(vin: String): List<NhtsaRecallItem> = withContext(Dispatchers.IO) {
+    suspend fun fetchSafetyRecalls(vin: String): RecallLookupResult = withContext(Dispatchers.IO) {
         try {
             val response = recallsApi.getRecallsByVin(vin)
-            if (response.results.isNotEmpty()) {
-                response.results
-            } else {
-                getVerifiedRecallsFallback(vin)
-            }
+            RecallLookupResult(recalls = response.results, isLiveLookup = true)
         } catch (e: Exception) {
-            getVerifiedRecallsFallback(vin)
+            RecallLookupResult(recalls = emptyList(), isLiveLookup = false)
         }
-    }
-
-    private fun getVerifiedRecallsFallback(vin: String): List<NhtsaRecallItem> {
-        return listOf(
-            NhtsaRecallItem(
-                nhtsaCampaignNumber = "21V947000",
-                component = "FUEL SYSTEM, GASOLINE:DELIVERY:HOSES, LINES/PIPING, AND FITTINGS",
-                summary = "Audi of America, Inc. is recalling certain 2019-2021 Audi S5, S4, and SQ5 vehicles. The low-pressure fuel line hose may have been damaged during assembly, potentially leading to a fuel leak in the presence of an ignition source.",
-                consequence = "A fuel leak in the presence of an ignition source increases the risk of a vehicle fire.",
-                remedy = "Dealers will inspect and replace the low-pressure fuel hose assembly free of charge.",
-                notes = "Manufacturer Recall ID: 20DC. NHTSA Safety Hotline: 1-888-327-4236.",
-                modelYear = "2021",
-                make = "AUDI",
-                model = "S5"
-            ),
-            NhtsaRecallItem(
-                nhtsaCampaignNumber = "22V131000",
-                component = "BACK OVER PREVENTION: DISPLAY FUNCTION",
-                summary = "The central infotainment MMI screen may fail to display the rear-view camera image upon shifting into reverse due to software timing latency in the zFAS central driver assistance controller.",
-                consequence = "A rearview camera that fails to display increases the risk of a collision or pedestrian injury when backing up.",
-                remedy = "Dealers will update the infotainment operating software free of charge.",
-                notes = "Manufacturer Recall ID: 91CR.",
-                modelYear = "2021",
-                make = "AUDI",
-                model = "S5"
-            )
-        )
     }
 }

@@ -50,6 +50,7 @@ fun ProjectDashboard(
     var filterStatus by remember { mutableStateOf("All") }
     var showAddProjectDialog by remember { mutableStateOf(false) }
     var showAddTaskDialog by remember { mutableStateOf(false) }
+    var taskToDelete by remember { mutableStateOf<TaskEntity?>(null) }
 
     // Selected project or fallback to first
     val activeProject = projects.find { it.id == selectedProjectId } ?: projects.firstOrNull()
@@ -400,7 +401,7 @@ fun ProjectDashboard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Assignment,
-                            contentDescription = null,
+                            contentDescription = "No tasks found",
                             tint = ForgeCyan,
                             modifier = Modifier.size(48.dp)
                         )
@@ -469,7 +470,7 @@ fun ProjectDashboard(
                                     }
                                     onUpdateTaskStatus(task, nextStatus)
                                 },
-                                onDelete = { onDeleteTask(task) }
+                                onDelete = { taskToDelete = task }
                             )
                         }
                     }
@@ -625,6 +626,32 @@ fun ProjectDashboard(
             },
             dismissButton = {
                 TextButton(onClick = { showAddTaskDialog = false }) {
+                    Text("Cancel", color = Color.White)
+                }
+            },
+            containerColor = ForgeSurface
+        )
+    }
+
+    // --- Delete Task Confirmation Dialog ---
+    if (taskToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { taskToDelete = null },
+            title = { Text("Delete Task", color = ForgeAmber, fontSize = 16.sp, fontWeight = FontWeight.Bold) },
+            text = { Text("Are you sure you want to delete '${taskToDelete?.title}'? This action cannot be undone.", color = ForgeOnSurface) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        taskToDelete?.let { onDeleteTask(it) }
+                        taskToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = ForgeRed, contentColor = Color.White)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { taskToDelete = null }) {
                     Text("Cancel", color = Color.White)
                 }
             },
