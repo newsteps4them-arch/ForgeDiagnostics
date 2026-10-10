@@ -401,14 +401,12 @@ fun ProjectDashboard(
                         Icon(
                             imageVector = Icons.Default.Assignment,
                             contentDescription = null,
-                            tint = ForgeOnSurfaceVariant.copy(alpha = 0.5f),
                             tint = ForgeCyan,
                             modifier = Modifier.size(48.dp)
                         )
                         Text(
                             text = if (filterStatus == "All") "No tasks in this project yet." else "No tasks match the filter.",
                             fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurface
                             fontWeight = FontWeight.Bold,
                             color = ForgeOnSurface,
                             textAlign = TextAlign.Center
