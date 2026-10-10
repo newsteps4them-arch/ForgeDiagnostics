@@ -28,6 +28,15 @@ class VirtualElm327SmokeTest(unittest.TestCase):
         self.assertIn("41 05 7B", output)
         self.assertIn("43 02 04 20 03 00", output)
 
+    def test_extended_obd_modes_and_pids(self):
+        output = self.run_commands("0106", "0107", "0142", "020200", "07", "0A")
+        self.assertIn("41 06 80", output)
+        self.assertIn("41 07 90", output)
+        self.assertIn("41 42 37 D8", output)
+        self.assertIn("42 02 04 20", output)
+        self.assertIn("47 01 71 03 00", output)
+        self.assertIn("4A 04 20 01 28", output)
+
     def test_clear_and_unsupported_commands(self):
         output = self.run_commands("04", "0122")
         self.assertIn("44 00", output)
