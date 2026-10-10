@@ -401,12 +401,14 @@ fun ProjectDashboard(
                         Icon(
                             imageVector = Icons.Default.Assignment,
                             contentDescription = null,
+                            tint = ForgeOnSurfaceVariant.copy(alpha = 0.5f),
                             tint = ForgeCyan,
                             modifier = Modifier.size(48.dp)
                         )
                         Text(
                             text = if (filterStatus == "All") "No tasks in this project yet." else "No tasks match the filter.",
                             fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
                             fontWeight = FontWeight.Bold,
                             color = ForgeOnSurface,
                             textAlign = TextAlign.Center
@@ -415,7 +417,6 @@ fun ProjectDashboard(
                             text = "Tap 'Add Task' to create a new task for this project.",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
                         )
                         if (filterStatus == "All") {
                             Button(
