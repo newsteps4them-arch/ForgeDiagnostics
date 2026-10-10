@@ -298,7 +298,7 @@ fun JulesAgentDialog(
                                                 },
                                                 modifier = Modifier.size(28.dp)
                                             ) {
-                                                Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Session", tint = ForgeRed, modifier = Modifier.size(16.dp))
+                                                Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete session: ${active.title ?: active.id}", tint = ForgeRed, modifier = Modifier.size(16.dp))
                                             }
                                         }
                                     }
