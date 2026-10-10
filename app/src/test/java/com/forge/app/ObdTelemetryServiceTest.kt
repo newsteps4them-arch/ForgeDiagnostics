@@ -1,14 +1,10 @@
-// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
-// Proprietary and Confidential.
-// This file is part of Forge Agentic Diagnostics.
-// Unauthorized copying of this file, via any medium is strictly prohibited.
-
 package com.forge.app
 
 import com.forge.app.services.ObdTelemetryService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelChildren
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,6 +56,13 @@ class ObdTelemetryServiceTest(
     fun testParseRpmResponse() {
         val scope = CoroutineScope(Dispatchers.Unconfined + Job())
         val service = ObdTelemetryService(scope, null)
+        try {
+            val actualRpm = service.parseRpmResponse(rawResponse)
+            assertEquals("Failed test case: $description", expectedRpm, actualRpm)
+        } finally {
+            service.stopTelemetryLoop()
+            scope.coroutineContext.cancelChildren()
+        }
 
         val actualRpm = service.parseRpmResponse(rawResponse)
         assertEquals("Failed test case: $description", expectedRpm, actualRpm)

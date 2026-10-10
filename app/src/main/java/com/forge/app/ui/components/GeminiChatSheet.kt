@@ -85,7 +85,8 @@ fun GeminiChatSheet(
                     **Screen Mode:** `${screenContext.title.uppercase()}` (${screenContext.specialistName})  
                     **Vehicle:** **$activeVehicle**  
                     **Live Telemetry:** `$activeTelemetry`  
-                    **Firestore Sync DB:** `${syncStatus.dbName}`  
+                    **Cloud Sync:** `${syncStatus.statusText}`
+                    **Cloud Sync:** `${syncStatus.statusText}`
                     
                     I am specialized for this screen and possess long-term persistent memory across all workshop tools. Ask any technical question or select a preset below!
                 """.trimIndent(),
@@ -237,7 +238,7 @@ fun GeminiChatSheet(
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "ROOM & FIRESTORE SYNC",
+                            text = "ROOM LOCAL STORAGE",
                             fontSize = 8.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
@@ -547,7 +548,7 @@ fun GeminiChatSheet(
                                     )
                                 )
 
-                                // Sync user message to Firestore
+                                // Persist user message locally (Room); cloud sync is not configured
                                 authAndSyncService?.saveChatMessageToLongTermMemory(
                                     sender = "USER",
                                     text = text,
@@ -598,7 +599,7 @@ fun GeminiChatSheet(
                                     )
                                 )
 
-                                // Sync AI message to Firestore
+                                // Persist AI message locally (Room); cloud sync is not configured
                                 authAndSyncService?.saveChatMessageToLongTermMemory(
                                     sender = "AI",
                                     text = reply,
@@ -628,7 +629,7 @@ fun GeminiChatSheet(
         AlertDialog(
             onDismissRequest = { showClearConfirmDialog = false },
             title = { Text("Clear Persistent Memory?", color = ForgeCyan, fontWeight = FontWeight.Bold) },
-            text = { Text("This will clear your diagnostic chat history in the local Room database and trigger a Firestore memory sync.", color = ForgeOnSurface) },
+            text = { Text("This will clear your diagnostic chat history in the local Room database. Cloud sync is not configured, so nothing is sent anywhere.", color = ForgeOnSurface) },
             confirmButton = {
                 Button(
                     onClick = {

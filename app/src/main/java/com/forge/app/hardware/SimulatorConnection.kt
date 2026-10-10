@@ -65,8 +65,9 @@ class SimulatorConnection(
             val responseBuilder = StringBuilder()
             var bytesRead: Int
 
-            while (true) {
-                // Ensure we don't block forever if simulator dies
+            val startTime = System.currentTimeMillis()
+            val timeoutMs = 3000L
+            while (System.currentTimeMillis() - startTime < timeoutMs) {
                 if (inputStream?.available() ?: 0 > 0) {
                     bytesRead = inputStream!!.read(buffer)
                     if (bytesRead == -1) break
@@ -76,8 +77,7 @@ class SimulatorConnection(
                         break
                     }
                 } else {
-                    kotlinx.coroutines.delay(50) // Small delay to prevent tight loop
-                    // Could add a timeout here
+                    kotlinx.coroutines.delay(50)
                 }
             }
             responseBuilder.toString()

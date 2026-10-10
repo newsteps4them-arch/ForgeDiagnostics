@@ -12,6 +12,8 @@
     "test:probabilistic": "python tools/probabilistic_diagnostics_test.py",
     "test:all:portable": "npm run lint && npm test && npm run test:simulator && npm run test:elm327",
     "test:all:environments": "bash scripts/run_all_tests.sh",
+    "test:reliability": "python3 scripts/scheduled_reliability_bot.py",
+    "test:all:portable": "npm run lint && npm test && npm run test:simulator && npm run test:elm327 && python3 -m unittest discover -s test/unit -p \"test*.py\"",
     "lint": "tsc --noEmit",
     "build": "npm run lint && npm test",
     "build:android": "gradlew.bat :app:assembleDebug",

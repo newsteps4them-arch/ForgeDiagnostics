@@ -12,6 +12,15 @@ const execFileAsync = promisify(execFile);
 
 dotenv.config();
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function generateIntelligentFallback(
   message: string,
   systemInstruction: string,
@@ -218,6 +227,64 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
+  // Android App Links Digital Asset Links Statement
+  app.get("/.well-known/assetlinks.json", (req, res) => {
+    res.setHeader("Content-Type", "application/json");
+    res.json([
+      {
+        relation: ["delegate_permission/common.handle_all_urls"],
+        target: {
+          namespace: "android_app",
+          package_name: "com.forge.app",
+          sha256_cert_fingerprints: [
+            "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C",
+          ],
+        },
+      },
+    ]);
+  });
+
+  // Deep link web landing gateway
+  app.get("/dl/*", (req, res) => {
+    const params = req.params as unknown as Record<string, string | undefined>;
+    const rawPath = params["0"] || params["*"] || params[""] || "";
+    const parts = rawPath.split("/").filter(Boolean);
+    const rawCategory = parts[0] || "app";
+    const rawParameter = parts[1] || "";
+
+    const category = rawCategory.match(/^[a-zA-Z0-9_\-]+$/) ? rawCategory : "app";
+    const parameter = rawParameter.match(/^[a-zA-Z0-9_\-]+$/) ? rawParameter : "";
+
+    const deepLinkUri = `forge://${category}${parameter ? "/" + parameter : ""}`;
+    const safeDisplay = `${escapeHtml(category.toUpperCase())} ${escapeHtml(parameter)}`.trim();
+    const safeUri = escapeHtml(deepLinkUri);
+
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forge Diagnostics - Deep Link</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; text-align: center; padding: 2rem; }
+    .card { background: #1e293b; border-radius: 12px; padding: 2rem; max-width: 480px; margin: 2rem auto; border: 1px solid #334155; }
+    .btn { display: inline-block; background: #00E676; color: #000; font-weight: bold; text-decoration: none; padding: 12px 24px; border-radius: 8px; margin-top: 1rem; }
+    .code { font-family: monospace; background: #020617; padding: 4px 8px; border-radius: 4px; color: #38bdf8; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>⚡ Forge Agentic Diagnostics</h2>
+    <p>Opening diagnostic target: <span class="code">${safeDisplay}</span></p>
+    <a href="${safeUri}" class="btn">Open in Forge Mobile App</a>
+  </div>
+  <script>
+    window.location.href = ${JSON.stringify(deepLinkUri)};
+  </script>
+</body>
+</html>`);
+  });
+
   // API endpoints
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
@@ -263,6 +330,64 @@ async function startServer() {
         initialized: isInitialized,
         error: error.message || "Git not initialized or not accessible.",
         statusOutput: error.stdout || error.message || "",
+      });
+    }
+  });
+
+  app.post("/api/git/conflicts/scan", async (req, res) => {
+    try {
+      const { stdout, stderr } = await execFileAsync("python3", [
+        "scripts/conflict_finder.py",
+      ]);
+      res.json({
+        success: true,
+        message: "Conflict scan completed.",
+        output: stdout || stderr,
+      });
+    } catch (error: any) {
+      console.error("Git Conflict Scan API Error:", error);
+      res.status(500).json({
+        error: error.message || "Failed conflict scan.",
+        output: error.stdout || error.stderr || "",
+      });
+    }
+  });
+
+  app.post("/api/git/conflicts/resolve", async (req, res) => {
+    try {
+      const { pr, head, base } = req.body;
+      const branchRegex = /^[a-zA-Z0-9_/-]+$/;
+      const prRegex = /^\d+$/;
+
+      if (!pr || !prRegex.test(String(pr))) {
+        return res.status(400).json({ error: "Invalid or missing PR number." });
+      }
+      if (!head || !branchRegex.test(String(head))) {
+        return res.status(400).json({ error: "Invalid or missing head branch name." });
+      }
+      if (!base || !branchRegex.test(String(base))) {
+        return res.status(400).json({ error: "Invalid or missing base branch name." });
+      }
+
+      const { stdout, stderr } = await execFileAsync("python3", [
+        "scripts/conflict_resolver_brain.py",
+        "--pr",
+        String(pr),
+        "--head",
+        String(head),
+        "--base",
+        String(base),
+      ]);
+      res.json({
+        success: true,
+        message: "Conflict resolution completed.",
+        output: stdout || stderr,
+      });
+    } catch (error: any) {
+      console.error("Git Conflict Resolve API Error:", error);
+      res.status(500).json({
+        error: error.message || "Failed conflict resolution.",
+        output: error.stdout || error.stderr || "",
       });
     }
   });
