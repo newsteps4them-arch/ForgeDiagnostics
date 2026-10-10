@@ -415,6 +415,7 @@ fun ProjectDashboard(
                             text = "Tap 'Add Task' to create a new task for this project.",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
                         if (filterStatus == "All") {
                             Button(

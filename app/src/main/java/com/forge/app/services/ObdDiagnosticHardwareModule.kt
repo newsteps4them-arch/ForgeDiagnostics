@@ -253,17 +253,6 @@ class ObdDiagnosticHardwareModule(
                 } else {
                     parsedDtcs.add(
                         LiveDtcRecord(
-                            code = "P0133",
-                            description = "O2 Sensor Circuit Slow Response (Bank 1 Sensor 1)",
-                            category = "Powertrain",
-                            status = "Stored",
-                            freezeFrameRpm = 1850,
-                            freezeFrameCoolantTempC = 92,
-                            freezeFrameSpeedKmh = 50
-                        )
-                    )
-                    parsedDtcs.add(
-                        LiveDtcRecord(
                             code = "P0300",
                             description = "Random/Multiple Cylinder Misfire Detected",
                             category = "Powertrain",
@@ -282,17 +271,6 @@ class ObdDiagnosticHardwareModule(
                             freezeFrameRpm = 1450,
                             freezeFrameCoolantTempC = 91,
                             freezeFrameSpeedKmh = 32
-                        )
-                    )
-                    parsedDtcs.add(
-                        LiveDtcRecord(
-                            code = "C0171",
-                            description = "Abs Sensor Circuit Range / Performance Fault",
-                            category = "Chassis",
-                            status = "Pending",
-                            freezeFrameRpm = 1200,
-                            freezeFrameCoolantTempC = 88,
-                            freezeFrameSpeedKmh = 20
                         )
                     )
                 }

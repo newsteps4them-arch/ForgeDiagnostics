@@ -83,9 +83,8 @@ class ObdDiagnosticHardwareModuleTest {
         assertFalse(state.isFetchingDtcs)
         assertTrue(state.activeDtcs.isNotEmpty())
         val dtcCodes = state.activeDtcs.map { it.code }
-        assertTrue(dtcCodes.contains("P0171"))
         assertTrue(dtcCodes.contains("P0300"))
-
+        assertTrue(dtcCodes.contains("P0171"))
         assertNotNull(openManusService.state.value.finalReport)
     }
 
