@@ -4,7 +4,7 @@
 // Unauthorized copying of this file, via any medium is strictly prohibited.
 
 /**
- * ForgeDiagnostic - SAE J1979 Mode 01 & Mode 03 Decoder
+ * ForgeDiagnostic - SAE J1979 Mode 01, Mode 02, Mode 03, Mode 07, Mode 09 & Mode 0A Decoder
  */
 
 export interface DecodedPid {
@@ -17,6 +17,10 @@ export interface DecodedPid {
 // Pre-computed lookup tables for hex string formatting ("00".."FF" and "0".."F")
 const HEX_BYTE_TABLE: string[] = new Array(256);
 const HEX_NIBBLE_TABLE: string[] = new Array(16);
+
+// Pre-computed PID lookup matrix for fast bitmask decoding [byteIndex][bitOffset]
+// Eliminates runtime index calculations and string formatting in high-frequency PID bitmask scanning
+const PID_LOOKUP_TABLE: string[][] = new Array(32);
 
 // Fast ASCII lookup array for character parsing:
 // -2: whitespace (\s, \r, \n, \t) or prompt delimiter (>)
@@ -38,6 +42,14 @@ for (let i = 0; i < 16; i++) {
 
 for (let i = 0; i < 256; i++) {
   HEX_BYTE_TABLE[i] = i < 16 ? '0' + i.toString(16).toUpperCase() : i.toString(16).toUpperCase();
+}
+
+for (let b = 0; b < 32; b++) {
+  PID_LOOKUP_TABLE[b] = new Array(8);
+  for (let bit = 7; bit >= 0; bit--) {
+    const pidNumber = (b * 8) + (7 - bit) + 1;
+    PID_LOOKUP_TABLE[b]![7 - bit] = HEX_BYTE_TABLE[pidNumber]!;
+  }
 }
 
 for (let i = 0; i <= 9; i++) HEX_CHAR_VAL[48 + i] = i; // '0'-'9'
@@ -76,9 +88,12 @@ function parseHexBytes(hexString: string): number[] | null {
   return bytes;
 }
 
-function decodeAsciiPayload(bytes: number[]): string {
+/**
+ * Decodes ASCII character payload from byte array without requiring intermediate array slices.
+ */
+function decodeAsciiPayload(bytes: number[], startOffset: number = 0): string {
   let result = '';
-  for (let i = 0; i < bytes.length; i++) {
+  for (let i = startOffset; i < bytes.length; i++) {
     const val = bytes[i]!;
     if (val !== 0) {
       result += String.fromCharCode(val);
@@ -101,6 +116,91 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
   const byteB = bytes[3] ?? 0;
 
   switch (pid) {
+    case '04': // Calculated Load
+      return { pid: '04', name: 'Engine Load', value: (byteA * 100) / 255, unit: '%' };
+    case '05': // Coolant Temp
+      return { pid: '05', name: 'Coolant Temperature', value: byteA - 40, unit: '°C' };
+    case '06': // Short Term Fuel Trim Bank 1
+      return { pid: '06', name: 'Short Term Fuel Trim Bank 1', value: ((byteA - 128) * 100) / 128, unit: '%' };
+    case '07': // Long Term Fuel Trim Bank 1
+      return { pid: '07', name: 'Long Term Fuel Trim Bank 1', value: ((byteA - 128) * 100) / 128, unit: '%' };
+    case '08': // Short Term Fuel Trim Bank 2
+      return { pid: '08', name: 'Short Term Fuel Trim Bank 2', value: ((byteA - 128) * 100) / 128, unit: '%' };
+    case '09': // Long Term Fuel Trim Bank 2
+      return { pid: '09', name: 'Long Term Fuel Trim Bank 2', value: ((byteA - 128) * 100) / 128, unit: '%' };
+    case '0A': // Fuel Pressure
+      return { pid: '0A', name: 'Fuel Pressure', value: byteA * 3, unit: 'kPa' };
+    case '0B': // Intake Manifold Absolute Pressure (MAP)
+      return { pid: '0B', name: 'Intake Manifold Pressure', value: byteA, unit: 'kPa' };
+    case '0C': // Engine RPM
+      if (bytes.length < 4) return null;
+      return { pid: '0C', name: 'Engine RPM', value: ((byteA * 256) + byteB) / 4, unit: 'RPM' };
+    case '0D': // Vehicle Speed
+      return { pid: '0D', name: 'Vehicle Speed', value: byteA, unit: 'km/h' };
+    case '0E': // Timing Advance
+      return { pid: '0E', name: 'Timing Advance', value: (byteA / 2) - 64, unit: '°' };
+    case '0F': // Intake Air Temp
+      return { pid: '0F', name: 'Intake Air Temp', value: byteA - 40, unit: '°C' };
+    case '10': // MAF Air Flow Rate
+      if (bytes.length < 4) return null;
+      return { pid: '10', name: 'MAF Air Flow Rate', value: ((byteA * 256) + byteB) / 100, unit: 'g/s' };
+    case '11': // Throttle Position
+      return { pid: '11', name: 'Throttle Position', value: (byteA * 100) / 255, unit: '%' };
+    case '1F': // Run Time Since Engine Start
+      if (bytes.length < 4) return null;
+      return { pid: '1F', name: 'Engine Run Time', value: (byteA * 256) + byteB, unit: 's' };
+    case '21': // Distance Traveled with MIL ON
+      if (bytes.length < 4) return null;
+      return { pid: '21', name: 'Distance Traveled with MIL', value: (byteA * 256) + byteB, unit: 'km' };
+    case '2F': // Fuel Tank Level
+      return { pid: '2F', name: 'Fuel Tank Level', value: (byteA * 100) / 255, unit: '%' };
+    case '33': // Absolute Barometric Pressure
+      return { pid: '33', name: 'Barometric Pressure', value: byteA, unit: 'kPa' };
+    case '42': // Control Module Voltage
+      if (bytes.length < 4) return null;
+      return { pid: '42', name: 'Control Module Voltage', value: ((byteA * 256) + byteB) / 1000, unit: 'V' };
+    case '5C': // Engine Oil Temperature
+      return { pid: '5C', name: 'Engine Oil Temperature', value: byteA - 40, unit: '°C' };
+    default:
+      return { pid, name: `PID_${pid}`, value: byteA, unit: 'raw' };
+  }
+}
+
+/**
+ * SAE J1979 Mode 02 Freeze Frame Response Decoder
+ */
+export function decodeMode02Response(hexString: string): DecodedPid | null {
+  const bytes = parseHexBytes(hexString);
+  if (!bytes || bytes.length < 3 || bytes[0] !== 0x42) return null;
+
+  const pidByte = bytes[1]!;
+  const pid = HEX_BYTE_TABLE[pidByte]!;
+  const byteA = bytes[2]!;
+  const byteB = bytes[3] ?? 0;
+
+  switch (pid) {
+    case '02': // Freeze Frame DTC
+      if (bytes.length < 4) return null;
+      {
+        const b1 = byteA;
+        const b2 = byteB;
+        if (b1 === 0 && b2 === 0) {
+          return { pid: '02', name: 'Freeze Frame DTC', value: 'NONE', unit: 'dtc' };
+        }
+        const firstByteGroup = b1 >> 6;
+        let group: string;
+        switch (firstByteGroup) {
+          case 0: group = 'P'; break;
+          case 1: group = 'C'; break;
+          case 2: group = 'B'; break;
+          case 3: group = 'U'; break;
+          default: group = 'P'; break;
+        }
+        const digit = (b1 >> 4) & 0x03;
+        const hex1 = HEX_NIBBLE_TABLE[b1 & 0x0f]!;
+        const hex2 = HEX_BYTE_TABLE[b2]!;
+        return { pid: '02', name: 'Freeze Frame DTC', value: `${group}${digit}${hex1}${hex2}`, unit: 'dtc' };
+      }
     case '0C': // Engine RPM
       if (bytes.length < 4) return null;
       return { pid: '0C', name: 'Engine RPM', value: ((byteA * 256) + byteB) / 4, unit: 'RPM' };
@@ -108,23 +208,8 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
       return { pid: '0D', name: 'Vehicle Speed', value: byteA, unit: 'km/h' };
     case '05': // Coolant Temp
       return { pid: '05', name: 'Coolant Temperature', value: byteA - 40, unit: '°C' };
-    case '0F': // Intake Air Temp
-      return { pid: '0F', name: 'Intake Air Temp', value: byteA - 40, unit: '°C' };
-    case '04': // Calculated Load
-      return { pid: '04', name: 'Engine Load', value: (byteA * 100) / 255, unit: '%' };
-    case '0B': // Intake Manifold Absolute Pressure (MAP)
-      return { pid: '0B', name: 'Intake Manifold Pressure', value: byteA, unit: 'kPa' };
-    case '0E': // Timing Advance
-      return { pid: '0E', name: 'Timing Advance', value: (byteA / 2) - 64, unit: '°' };
-    case '10': // MAF Air Flow Rate
-      if (bytes.length < 4) return null;
-      return { pid: '10', name: 'MAF Air Flow Rate', value: ((byteA * 256) + byteB) / 100, unit: 'g/s' };
-    case '11': // Throttle Position
-      return { pid: '11', name: 'Throttle Position', value: (byteA * 100) / 255, unit: '%' };
-    case '2F': // Fuel Tank Level
-      return { pid: '2F', name: 'Fuel Tank Level', value: (byteA * 100) / 255, unit: '%' };
     default:
-      return { pid, name: `PID_${pid}`, value: byteA, unit: 'raw' };
+      return { pid, name: `FreezeFrame_PID_${pid}`, value: byteA, unit: 'raw' };
   }
 }
 
@@ -135,13 +220,13 @@ export function decodeMode09Response(hexString: string): DecodedPid | null {
   const pidByte = bytes[1]!;
   const pid = HEX_BYTE_TABLE[pidByte]!;
 
-  const rawPayload = bytes.slice(2);
-  if (rawPayload.length === 0) return null;
+  // Zero-copy allocation optimization: check offsets directly instead of slicing array
+  let startOffset = 2;
+  if (startOffset >= bytes.length) return null;
+  if (bytes[startOffset] === 0x00) startOffset++;
+  if (startOffset >= bytes.length) return null;
 
-  const payload = rawPayload[0] === 0x00 ? rawPayload.slice(1) : rawPayload;
-  if (payload.length === 0) return null;
-
-  const ascii = decodeAsciiPayload(payload);
+  const ascii = decodeAsciiPayload(bytes, startOffset);
   if (!ascii) return null;
 
   switch (pid) {
@@ -154,6 +239,9 @@ export function decodeMode09Response(hexString: string): DecodedPid | null {
   }
 }
 
+/**
+ * High-performance SAE J1979 PID bitmask decoder using unrolled bit checks and precomputed PID lookup matrix.
+ */
 export function decodeSupportedPidMask(hexMask: string): string[] {
   const bytes = parseHexBytes(hexMask);
   if (!bytes || bytes.length === 0) return [];
@@ -165,20 +253,29 @@ export function decodeSupportedPidMask(hexMask: string): string[] {
     const byte = bytes[byteIndex]!;
     if (byte === 0) continue;
 
-    for (let bitIndex = 7; bitIndex >= 0; bitIndex--) {
-      if ((byte & (1 << bitIndex)) !== 0) {
-        const pidNumber = (byteIndex * 8) + (7 - bitIndex) + 1;
-        pids.push(HEX_BYTE_TABLE[pidNumber]!);
-      }
-    }
+    // Use pre-computed PID lookup array or calculate fallback if byte index > 31
+    const lookup = PID_LOOKUP_TABLE[byteIndex] || new Array(8);
+
+    // Unrolled bitwise checks for maximum decoding throughput
+    if (byte & 0x80) pids.push(lookup[0] || HEX_BYTE_TABLE[(byteIndex * 8) + 1]!);
+    if (byte & 0x40) pids.push(lookup[1] || HEX_BYTE_TABLE[(byteIndex * 8) + 2]!);
+    if (byte & 0x20) pids.push(lookup[2] || HEX_BYTE_TABLE[(byteIndex * 8) + 3]!);
+    if (byte & 0x10) pids.push(lookup[3] || HEX_BYTE_TABLE[(byteIndex * 8) + 4]!);
+    if (byte & 0x08) pids.push(lookup[4] || HEX_BYTE_TABLE[(byteIndex * 8) + 5]!);
+    if (byte & 0x04) pids.push(lookup[5] || HEX_BYTE_TABLE[(byteIndex * 8) + 6]!);
+    if (byte & 0x02) pids.push(lookup[6] || HEX_BYTE_TABLE[(byteIndex * 8) + 7]!);
+    if (byte & 0x01) pids.push(lookup[7] || HEX_BYTE_TABLE[(byteIndex * 8) + 8]!);
   }
 
   return pids;
 }
 
-export function decodeMode03Response(hexString: string): string[] {
+/**
+ * Shared DTC payload decoder for Mode 03 (Stored), Mode 07 (Pending), and Mode 0A (Permanent).
+ */
+function decodeDtcPayload(hexString: string, expectedServiceByte: number): string[] {
   const bytes = parseHexBytes(hexString);
-  if (!bytes || bytes.length === 0 || bytes[0] !== 0x43) return [];
+  if (!bytes || bytes.length === 0 || bytes[0] !== expectedServiceByte) return [];
 
   const payloadLen = bytes.length - 1;
   if (payloadLen <= 0 || payloadLen % 2 !== 0) return [];
@@ -207,4 +304,16 @@ export function decodeMode03Response(hexString: string): string[] {
   }
 
   return dtcs;
+}
+
+export function decodeMode03Response(hexString: string): string[] {
+  return decodeDtcPayload(hexString, 0x43);
+}
+
+export function decodeMode07Response(hexString: string): string[] {
+  return decodeDtcPayload(hexString, 0x47);
+}
+
+export function decodeMode0AResponse(hexString: string): string[] {
+  return decodeDtcPayload(hexString, 0x4A);
 }

@@ -50,6 +50,23 @@ class DiagnosticReportServiceTest {
 
         val textReport = DiagnosticReportService.generateFormattedTextReport(reportData)
 
+        // The report must carry an explicit data-provenance stamp so test/demo
+        // content can never be mistaken for a live vehicle scan.
+        assertTrue(textReport.contains("DATA SOURCE"))
+        assertTrue(textReport.contains("UNVERIFIED DATA SOURCE"))
+
+        // A report built from live hardware must say so explicitly.
+        val liveReport = DiagnosticReportService.generateFormattedTextReport(
+            reportData.copy(dataSource = com.forge.app.services.DiagnosticDataSource.LIVE_HARDWARE)
+        )
+        assertTrue(liveReport.contains("LIVE VEHICLE DATA"))
+
+        // A report built from simulated data must be stamped as demo.
+        val demoReport = DiagnosticReportService.generateFormattedTextReport(
+            reportData.copy(dataSource = com.forge.app.services.DiagnosticDataSource.SIMULATED)
+        )
+        assertTrue(demoReport.contains("DEMO DATA"))
+
         // Assert report headers
         assertTrue(textReport.contains("TEAM FORGE MOTORSPORTS & ADVANCED DIAGNOSTICS"))
         assertTrue(textReport.contains("Report ID       : FRG-TEST-9988"))

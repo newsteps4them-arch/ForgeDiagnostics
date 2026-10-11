@@ -52,10 +52,27 @@ data class DiagnosticReportData(
         "ADAS Radar (0x7E4): OK - 0 DTCs"
     ),
     val aiGuidanceSummary: String = "Recommended Action: Inspect Cylinder 1 & 3 ignition coil packs, verify high-pressure fuel rail pressure sensor voltage (1.2V - 4.5V range), and clean direct injectors.",
-    val technicianNotes: String = "Full pre-repair baseline scan completed. Freeze frame parameters recorded. Ready for customer estimate and physical component test bench validation."
+    val technicianNotes: String = "Full pre-repair baseline scan completed. Freeze frame parameters recorded. Ready for customer estimate and physical component test bench validation.",
+    /**
+     * Provenance of the data in this report. Reports built from demo/default
+     * content MUST be stamped as such and must never be presented as
+     * vehicle-derived. Prefer [DiagnosticDataSource.LIVE_HARDWARE] only when the
+     * underlying telemetry/DTCs were actually read from a connected adapter.
+     */
+    val dataSource: DiagnosticDataSource = DiagnosticDataSource.UNKNOWN
 )
 
 object DiagnosticReportService {
+
+    /**
+     * Human-readable provenance stamp. Anything that is not LIVE_HARDWARE is
+     * explicitly called out as NOT vehicle-derived.
+     */
+    fun dataSourceLabel(source: DiagnosticDataSource): String = when (source) {
+        DiagnosticDataSource.LIVE_HARDWARE -> "LIVE VEHICLE DATA — read from a connected OBD-II adapter"
+        DiagnosticDataSource.SIMULATED -> "DEMO DATA — simulated for demonstration/testing, NOT from a live vehicle"
+        DiagnosticDataSource.UNKNOWN -> "UNVERIFIED DATA SOURCE — do not treat as a live vehicle scan"
+    }
 
     /**
      * Generates a plain-text formatted diagnostic report string.
@@ -68,6 +85,7 @@ object DiagnosticReportService {
             appendLine("                      VEHICLE HEALTH & DIAGNOSTIC SCAN REPORT")
             appendLine("================================================================================")
             appendLine("Report ID       : ${data.reportId}")
+            appendLine("DATA SOURCE     : ${dataSourceLabel(data.dataSource)}")
             appendLine("Scan Date & Time: ${data.timestamp}")
             appendLine("Technician      : ${data.technicianName}")
             appendLine("--------------------------------------------------------------------------------")
@@ -150,7 +168,12 @@ object DiagnosticReportService {
 
         // Top Right Stamp
         val stampPaint = Paint().apply { color = Color.rgb(6, 182, 212); textSize = 10f; isAntiAlias = true; typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD); textAlign = Paint.Align.RIGHT }
-        canvas.drawText("OEM CERTIFIED SCAN", (pageWidth - 25).toFloat(), 35f, stampPaint)
+        val sourceStamp = when (data.dataSource) {
+            DiagnosticDataSource.LIVE_HARDWARE -> "LIVE VEHICLE SCAN"
+            DiagnosticDataSource.SIMULATED -> "DEMO DATA — NOT A LIVE SCAN"
+            DiagnosticDataSource.UNKNOWN -> "UNVERIFIED DATA SOURCE"
+        }
+        canvas.drawText(sourceStamp, (pageWidth - 25).toFloat(), 35f, stampPaint)
         val liveStatusPaint = Paint().apply { color = if (data.telemetry.isConnected) Color.rgb(34, 197, 94) else Color.rgb(239, 68, 68); textSize = 9f; isAntiAlias = true; textAlign = Paint.Align.RIGHT }
         canvas.drawText(if (data.telemetry.isConnected) "● CAN LINK ACTIVE" else "○ OFFLINE LOG", (pageWidth - 25).toFloat(), 50f, liveStatusPaint)
 
