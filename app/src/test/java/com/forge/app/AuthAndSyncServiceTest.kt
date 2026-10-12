@@ -7,17 +7,12 @@ package com.forge.app
 
 import com.forge.app.services.AuthAndSyncService
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -25,21 +20,11 @@ class AuthAndSyncServiceTest {
 
     private val testDispatcher = StandardTestDispatcher()
 
-    @Before
-    fun setUp() {
-        Dispatchers.setMain(testDispatcher)
-    }
-
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
-
     @Test
-    fun testSignOutResetsUserAndSyncStatus() = runTest {
+    fun testSignOutResetsUserAndSyncStatus() = runTest(testDispatcher) {
         val service = AuthAndSyncService(scope = CoroutineScope(testDispatcher))
 
-        // Initial state should be authenticated (based on the class's default initialization)
+        // Initial state should be authenticated (based on default initialization)
         assertTrue(service.currentUser.value.isAuthenticated)
         assertTrue(service.syncStatus.value.isConnectedToFirestore)
 
@@ -63,7 +48,7 @@ class AuthAndSyncServiceTest {
     }
 
     @Test
-    fun testSignInWithGoogle() = runTest {
+    fun testSignInWithGoogleUpdatesUserAndSyncStatus() = runTest(testDispatcher) {
         val authService = AuthAndSyncService(scope = CoroutineScope(testDispatcher))
 
         val testEmail = "testuser@example.com"
