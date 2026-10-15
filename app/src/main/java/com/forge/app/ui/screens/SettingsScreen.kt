@@ -60,6 +60,7 @@ fun SettingsScreen(
     var vinQueryInput by remember { mutableStateOf("WAUZZZF58MA019284") }
     var nhtsaDecodedSpecs by remember { mutableStateOf<DecodedVehicleSpecs?>(null) }
     var nhtsaRecallsList by remember { mutableStateOf<List<NhtsaRecallItem>>(emptyList()) }
+    var nhtsaRecallsLive by remember { mutableStateOf(true) }
     var isNhtsaLoading by remember { mutableStateOf(false) }
 
     val userProfile by (authAndSyncService?.currentUser?.collectAsState() ?: remember { mutableStateOf(UserProfile()) })
@@ -320,7 +321,9 @@ fun SettingsScreen(
                                 isNhtsaLoading = true
                                 coroutineScope.launch {
                                     nhtsaDecodedSpecs = NhtsaSafetyClient.decodeVinLive(vinQueryInput)
-                                    nhtsaRecallsList = NhtsaSafetyClient.fetchSafetyRecalls(vinQueryInput)
+                                    val recallLookup = NhtsaSafetyClient.fetchSafetyRecalls(vinQueryInput)
+                                    nhtsaRecallsList = recallLookup.recalls
+                                    nhtsaRecallsLive = recallLookup.isLiveLookup
                                     isNhtsaLoading = false
                                 }
                             }
@@ -348,8 +351,15 @@ fun SettingsScreen(
                             Text("DECODED VEHICLE SPECIFICATIONS (VPIC API):", fontSize = 9.sp, fontFamily = FontFamily.Monospace, color = ForgeCyan, fontWeight = FontWeight.Bold)
                             Text("${specs.modelYear} ${specs.make} ${specs.model} — ${specs.engineCylinders} Cyl ${specs.displacementL} (${specs.driveType})", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = ForgeOnSurface)
                             Text("Plant: ${specs.plantCountry} | Transmission: ${specs.transmissionStyle} | Fuel: ${specs.fuelTypePrimary}", fontSize = 10.sp, color = ForgeOnSurfaceVariant)
+                        if (specs.isFallbackData) {
+                            Text("OFFLINE DEMO SPECS — live NHTSA VIN decode failed; these values were NOT decoded from the VIN.", fontSize = 9.sp, fontFamily = FontFamily.Monospace, color = ForgeAmber, fontWeight = FontWeight.Bold)
+                        }
                         }
                     }
+                }
+
+                if (!nhtsaRecallsLive) {
+                    Text("NHTSA RECALL LOOKUP FAILED (offline or error) — recall status UNKNOWN, not \"no recalls\".", fontSize = 9.sp, fontFamily = FontFamily.Monospace, color = ForgeAmber, fontWeight = FontWeight.Bold)
                 }
 
                 if (nhtsaRecallsList.isNotEmpty()) {
@@ -428,7 +438,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(userProfile.displayName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = ForgeOnSurface)
-                        Text(userProfile.email.ifEmpty { "newsteps4them@gmail.com" }, fontSize = 12.sp, color = ForgeOnSurfaceVariant)
+                        Text(userProfile.email.ifEmpty { "Not signed in" }, fontSize = 12.sp, color = ForgeOnSurfaceVariant)
                         Text(userProfile.role, fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = ForgeAmber)
                     }
                 }
@@ -470,12 +480,12 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("REAL-TIME FIRESTORE PERSISTENCE", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = ForgeCyan, fontWeight = FontWeight.Bold)
-                    Icon(imageVector = Icons.Default.CloudDone, contentDescription = null, tint = ForgeGreen, modifier = Modifier.size(20.dp))
+                    Text("CLOUD SYNC (NOT CONFIGURED)", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = ForgeCyan, fontWeight = FontWeight.Bold)
+                    Icon(imageVector = Icons.Default.CloudOff, contentDescription = null, tint = ForgeAmber, modifier = Modifier.size(20.dp))
                 }
 
                 Text(
-                    text = "Firestore Database ID:\n`${syncStatus.dbName}`",
+                    text = "Cloud Database ID:\n`${syncStatus.dbName.ifEmpty { "Not configured" }}`",
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
                     color = ForgeAmber
@@ -494,7 +504,7 @@ fun SettingsScreen(
                 ) {
                     Icon(imageVector = Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Trigger Manual Firestore Sync (${syncStatus.syncedItemsCount} items)", fontSize = 12.sp)
+                    Text("Sync Status (${syncStatus.syncedItemsCount} items)", fontSize = 12.sp)
                 }
             }
         }

@@ -12,97 +12,83 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 data class UserProfile(
-    val uid: String = "usr_tf_lead_8841",
-    val displayName: String = "Lead Diagnostic Master Tech",
-    val email: String = "newsteps4them@gmail.com",
-    val photoUrl: String = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-    val role: String = "Master Workshop Tech & ECU Tuner",
-    val isAuthenticated: Boolean = true,
-    val firestoreDbId: String = "ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9"
+    val uid: String = "",
+    val displayName: String = "Guest Tech",
+    val email: String = "",
+    val photoUrl: String = "",
+    val role: String = "Guest",
+    /**
+     * Defaults to FALSE. This app has no Firebase Auth SDK integrated, so a
+     * signed-in user must never be fabricated — see [AuthAndSyncService.signInWithGoogle].
+     */
+    val isAuthenticated: Boolean = false,
+    val firestoreDbId: String = ""
 )
 
 data class SyncStatus(
-    val isConnectedToFirestore: Boolean = true,
-    val dbName: String = "ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9",
-    val lastSyncTime: Long = System.currentTimeMillis(),
-    val syncedItemsCount: Int = 42,
-    val statusText: String = "Real-time Firestore Sync Active"
+    /**
+     * Defaults to FALSE. No Firestore client SDK is integrated in this build,
+     * so "sync active" must never be claimed — see [AuthAndSyncService.triggerFirestoreSync].
+     */
+    val isConnectedToFirestore: Boolean = false,
+    val dbName: String = "",
+    val lastSyncTime: Long = 0L,
+    val syncedItemsCount: Int = 0,
+    val statusText: String = "Cloud sync not configured — local Room database is the source of truth"
 )
 
 class AuthAndSyncService(
     private val repository: ForgeRepository? = null,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
-    private val _currentUser = MutableStateFlow(
-        UserProfile(
-            uid = "usr_tf_lead_8841",
-            displayName = "Lead Master Tech",
-            email = "newsteps4them@gmail.com",
-            photoUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-            role = "Master Workshop Tech & ECU Tuner",
-            isAuthenticated = true,
-            firestoreDbId = "ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9"
-        )
-    )
+    private val _currentUser = MutableStateFlow(UserProfile())
     val currentUser: StateFlow<UserProfile> = _currentUser.asStateFlow()
 
-    private val _syncStatus = MutableStateFlow(
-        SyncStatus(
-            isConnectedToFirestore = true,
-            dbName = "ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9",
-            lastSyncTime = System.currentTimeMillis(),
-            syncedItemsCount = 48,
-            statusText = "Real-Time Firestore Sync Active"
-        )
-    )
+    private val _syncStatus = MutableStateFlow(SyncStatus())
     val syncStatus: StateFlow<SyncStatus> = _syncStatus.asStateFlow()
 
-    fun signInWithGoogle(email: String = "newsteps4them@gmail.com", name: String = "Lead Master Tech") {
-        _currentUser.value = UserProfile(
-            uid = "usr_tf_google_${System.currentTimeMillis() % 10000}",
-            displayName = name,
-            email = email,
-            photoUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
-            role = "Master Workshop Tech & ECU Tuner",
-            isAuthenticated = true,
-            firestoreDbId = "ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9"
-        )
-        triggerFirestoreSync()
-    }
-
-    fun signOut() {
+    /**
+     * Google/Firebase sign-in is NOT implemented in this build (no Firebase Auth
+     * SDK is integrated). This function deliberately does NOT fabricate a
+     * signed-in user: it leaves the session unauthenticated and says so, instead
+     * of inventing a uid and claiming success.
+     */
+    fun signInWithGoogle(email: String = "", name: String = "") {
         _currentUser.value = UserProfile(
             uid = "",
             displayName = "Guest Tech",
-            email = "",
+            email = email,
             photoUrl = "",
             role = "Guest",
             isAuthenticated = false,
-            firestoreDbId = "ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9"
+            firestoreDbId = ""
         )
+        _syncStatus.value = _syncStatus.value.copy(
+            isConnectedToFirestore = false,
+            statusText = "Sign-in unavailable — Firebase Auth is not integrated in this build"
+        )
+    }
+
+    fun signOut() {
+        _currentUser.value = UserProfile()
         _syncStatus.value = _syncStatus.value.copy(
             isConnectedToFirestore = false,
             statusText = "Signed Out - Offline Local Storage Mode"
         )
     }
 
+    /**
+     * No Firestore client SDK is integrated in this build, so there is nothing
+     * to sync with. This is an honest no-op: it reports "not configured" instead
+     * of waiting 800ms and pretending a cloud sync completed.
+     */
     fun triggerFirestoreSync() {
         _syncStatus.value = _syncStatus.value.copy(
-            isConnectedToFirestore = true,
-            lastSyncTime = System.currentTimeMillis(),
-            statusText = "Syncing with Firestore (${_syncStatus.value.dbName})..."
+            isConnectedToFirestore = false,
+            statusText = "Cloud sync not configured — data stays in the local Room database"
         )
-        scope.launch {
-            kotlinx.coroutines.delay(800)
-            _syncStatus.value = _syncStatus.value.copy(
-                lastSyncTime = System.currentTimeMillis(),
-                syncedItemsCount = _syncStatus.value.syncedItemsCount + 1,
-                statusText = "Firestore Synced (DB: ${_syncStatus.value.dbName})"
-            )
-        }
     }
 
     suspend fun saveChatMessageToLongTermMemory(
