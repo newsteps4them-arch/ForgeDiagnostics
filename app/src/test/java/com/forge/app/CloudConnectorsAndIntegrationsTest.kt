@@ -19,8 +19,14 @@ class CloudConnectorsAndIntegrationsTest {
 
         assertEquals("ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9", state.firestoreDbId)
         assertEquals("ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9", state.googleCloudProjectId)
-        assertEquals(8, state.totalActiveConnectors)
+        assertEquals(9, state.totalActiveConnectors)
         assertTrue("All connectors should be initialized", state.connectors.isNotEmpty())
+        // Honest initial states: nothing is "healthy" until a real check runs,
+        // and Firestore is honestly reported as not integrated.
+        val firestoreInit = state.connectors.firstOrNull { it.id == "firebase_firestore" }
+        assertEquals(ConnectorStatus.DISCONNECTED, firestoreInit?.status)
+        val geminiInit = state.connectors.firstOrNull { it.id == "google_gemini_api" }
+        assertEquals(ConnectorStatus.STANDBY, geminiInit?.status)
 
         val geminiConn = state.connectors.firstOrNull { it.id == "google_gemini_api" }
         assertNotNull("Gemini API connector must exist", geminiConn)
@@ -47,11 +53,15 @@ class CloudConnectorsAndIntegrationsTest {
         assertTrue(specs.model.isNotBlank())
         assertTrue(specs.modelYear.isNotBlank())
 
-        val recalls = NhtsaSafetyClient.fetchSafetyRecalls(testVin)
-        assertNotNull(recalls)
-        assertTrue("Recalls list should contain verified recall campaigns", recalls.isNotEmpty())
-        assertTrue(recalls.first().nhtsaCampaignNumber.isNotBlank())
-        assertTrue(recalls.first().summary.isNotBlank())
+        val lookup = NhtsaSafetyClient.fetchSafetyRecalls(testVin)
+        assertNotNull(lookup)
+        // Honest contract: a failed/offline recall lookup must be empty —
+        // recall campaigns must NEVER be fabricated as a fallback.
+        if (!lookup.isLiveLookup) {
+            assertTrue("Offline recall lookup must be empty, never fabricated", lookup.recalls.isEmpty())
+        } else {
+            assertTrue(lookup.recalls.all { it.nhtsaCampaignNumber.isNotBlank() && it.summary.isNotBlank() })
+        }
     }
 
     @Test

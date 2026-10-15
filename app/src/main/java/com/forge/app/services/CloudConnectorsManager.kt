@@ -43,8 +43,8 @@ data class CloudConnectorItem(
 
 data class CloudHubState(
     val isRunningFullHealthCheck: Boolean = false,
-    val totalActiveConnectors: Int = 8,
-    val healthyCount: Int = 8,
+    val totalActiveConnectors: Int = 9,
+    val healthyCount: Int = 1,
     val firestoreDbId: String = "ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9",
     val googleCloudProjectId: String = "ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9",
     val connectors: List<CloudConnectorItem> = emptyList()
@@ -68,9 +68,11 @@ class CloudConnectorsManager(
                     category = "AI & CLOUD",
                     provider = "Google DeepMind / Google Cloud",
                     endpointUrl = "https://generativelanguage.googleapis.com/v1beta/models",
-                    status = ConnectorStatus.CONNECTED_HEALTHY,
-                    latencyMs = 86L,
-                    details = "Multi-turn reasoning, vision inspection, & multimodal parts identification active."
+                    // HONESTY: health is UNKNOWN until a real check runs; nothing here is
+                    // assumed connected from a hardcoded claim.
+                    status = ConnectorStatus.STANDBY,
+                    latencyMs = 0L,
+                    details = "API key status unknown until configured — endpoint not probed."
                 ),
                 CloudConnectorItem(
                     id = "firebase_firestore",
@@ -78,9 +80,9 @@ class CloudConnectorsManager(
                     category = "AI & CLOUD",
                     provider = "Google Cloud Firebase",
                     endpointUrl = "firestore.googleapis.com/v1/projects/ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9",
-                    status = ConnectorStatus.CONNECTED_HEALTHY,
-                    latencyMs = 38L,
-                    details = "DB: ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9. Bi-directional Room-Firestore sync active."
+                    status = ConnectorStatus.DISCONNECTED,
+                    latencyMs = 0L,
+                    details = "Not integrated — no Firestore client in this build. Local Room database is the source of truth."
                 ),
                 CloudConnectorItem(
                     id = "nhtsa_safety_recalls",
@@ -88,9 +90,9 @@ class CloudConnectorsManager(
                     category = "AUTOMOTIVE OEM",
                     provider = "US Department of Transportation / NHTSA",
                     endpointUrl = "https://vpic.nhtsa.dot.gov/api/ & https://api.nhtsa.gov/recalls",
-                    status = ConnectorStatus.CONNECTED_HEALTHY,
-                    latencyMs = 112L,
-                    details = "Real-time government safety recall notices, crash test ratings, and VIN decoding active."
+                    status = ConnectorStatus.STANDBY,
+                    latencyMs = 0L,
+                    details = "Genuine NHTSA vPIC/recalls network API; reachability unknown until a health check runs."
                 ),
                 CloudConnectorItem(
                     id = "alldata_oem",
@@ -98,9 +100,9 @@ class CloudConnectorsManager(
                     category = "AUTOMOTIVE OEM",
                     provider = "ALLDATA Automotive Network",
                     endpointUrl = "https://api.alldata.com/v1/oem",
-                    status = ConnectorStatus.CONNECTED_HEALTHY,
-                    latencyMs = 74L,
-                    details = "Factory Technical Service Bulletins, step-by-step procedures, and ECM pinouts active."
+                    status = ConnectorStatus.STANDBY,
+                    latencyMs = 0L,
+                    details = "Data served from the built-in demo catalog; live ALLDATA API not verified."
                 ),
                 CloudConnectorItem(
                     id = "nexpart_catalog",
@@ -108,9 +110,9 @@ class CloudConnectorsManager(
                     category = "AUTOMOTIVE OEM",
                     provider = "Nexpart / WHI Solutions",
                     endpointUrl = "https://api.nexpart.com/v2/catalog",
-                    status = ConnectorStatus.CONNECTED_HEALTHY,
-                    latencyMs = 65L,
-                    details = "Distributor live warehouse inventory, wholesale pricing, and automated reorders active."
+                    status = ConnectorStatus.STANDBY,
+                    latencyMs = 0L,
+                    details = "Parts served from the built-in demo catalog; live B2B inventory not verified."
                 ),
                 CloudConnectorItem(
                     id = "openai_gpt4o",
@@ -118,9 +120,9 @@ class CloudConnectorsManager(
                     category = "AI & CLOUD",
                     provider = "OpenAI Platform",
                     endpointUrl = "https://api.openai.com/v1/chat/completions",
-                    status = ConnectorStatus.CONNECTED_HEALTHY,
-                    latencyMs = 94L,
-                    details = "Secondary compute fallback for complex automotive physics and signal math calculations."
+                    status = ConnectorStatus.STANDBY,
+                    latencyMs = 0L,
+                    details = "Key status unknown until configured — endpoint not probed."
                 ),
                 CloudConnectorItem(
                     id = "firebase_telemetry",
@@ -130,7 +132,7 @@ class CloudConnectorsManager(
                     endpointUrl = "crashlytics.google.com & google-analytics.com",
                     status = ConnectorStatus.CONNECTED_HEALTHY,
                     latencyMs = 28L,
-                    details = "Automated breadcrumbs, protocol crash reporting, and vehicle telemetry tracking active."
+                    details = "Crashlytics/Analytics SDK integrated in this build (v33.7.0 BOM); crash reporting active."
                 ),
                 CloudConnectorItem(
                     id = "jules_rest_api",
@@ -138,9 +140,9 @@ class CloudConnectorsManager(
                     category = "AI & CLOUD",
                     provider = "Google Jules / Google Cloud",
                     endpointUrl = "https://jules.googleapis.com/v1alpha/sessions",
-                    status = ConnectorStatus.CONNECTED_HEALTHY,
-                    latencyMs = 52L,
-                    details = "Automated code fixes, PR generation (AUTO_CREATE_PR), and multi-turn software development agent active."
+                    status = ConnectorStatus.STANDBY,
+                    latencyMs = 0L,
+                    details = "Jules REST client available; session health not probed by this check."
                 ),
                 CloudConnectorItem(
                     id = "obd_hardware_bridge",
@@ -148,9 +150,9 @@ class CloudConnectorsManager(
                     category = "HARDWARE & PROTOCOLS",
                     provider = "ELM327 / FTDI / STN1170 Driver",
                     endpointUrl = "Android UsbManager / BluetoothAdapter RFCOMM Socket",
-                    status = ConnectorStatus.CONNECTED_HEALTHY,
-                    latencyMs = 12L,
-                    details = "High-speed Mode 01 PID stream (50Hz), AT command parser, and CAN bus gateway active."
+                    status = ConnectorStatus.STANDBY,
+                    latencyMs = 0L,
+                    details = "USB OTG / Bluetooth ELM327 bridge available; no adapter connection verified."
                 )
             )
         )
@@ -187,10 +189,12 @@ class CloudConnectorsManager(
                 "nhtsa_safety_recalls" -> {
                     val vinResult = NhtsaSafetyClient.decodeVinLive("WAUZZZF58MA019284")
                     val duration = System.currentTimeMillis() - startTime
+                    val live = !vinResult.isFallbackData
                     item.copy(
-                        status = ConnectorStatus.CONNECTED_HEALTHY,
+                        status = if (live) ConnectorStatus.CONNECTED_HEALTHY else ConnectorStatus.CONNECTED_DEGRADED,
                         latencyMs = duration.coerceAtLeast(15),
-                        details = "NHTSA Live Query OK: Decoded ${vinResult.modelYear} ${vinResult.make} ${vinResult.model} (${vinResult.engineCylinders} Cyl).",
+                        details = if (live) "NHTSA Live Query OK: Decoded ${vinResult.modelYear} ${vinResult.make} ${vinResult.model} (${vinResult.engineCylinders} Cyl)."
+                            else "NHTSA unreachable — showing demo specs, NOT a live VIN decode.",
                         lastPingTimestamp = System.currentTimeMillis()
                     )
                 }
@@ -198,19 +202,23 @@ class CloudConnectorsManager(
                     // Check Gemini key and model capability
                     val hasKey = BuildConfig.GEMINI_API_KEY.isNotBlank() && !BuildConfig.GEMINI_API_KEY.contains("PLACEHOLDER")
                     val duration = System.currentTimeMillis() - startTime + 45
+                    // Only checks key presence — the endpoint itself is NOT probed here,
+                    // so "verified/healthy" is never claimed on this evidence alone.
                     item.copy(
-                        status = ConnectorStatus.CONNECTED_HEALTHY,
+                        status = if (hasKey) ConnectorStatus.STANDBY else ConnectorStatus.DISCONNECTED,
                         latencyMs = duration,
-                        details = if (hasKey) "Gemini 2.5 Flash Live API endpoint responsive (Key configured)." else "Gemini 2.5 Flash verified with internal prompt reasoning.",
+                        details = if (hasKey) "API key configured; live endpoint not probed by this check." else "No Gemini API key configured — AI features use on-device fallbacks.",
                         lastPingTimestamp = System.currentTimeMillis()
                     )
                 }
                 "firebase_firestore" -> {
                     val duration = System.currentTimeMillis() - startTime + 22
+                    // No Firestore client SDK is integrated in this build: there is no
+                    // project to sync with, so a sync must never be reported.
                     item.copy(
-                        status = ConnectorStatus.CONNECTED_HEALTHY,
+                        status = ConnectorStatus.DISCONNECTED,
                         latencyMs = duration,
-                        details = "Firestore project ai-studio-d176f2ad-cc8f-47d3-8f8a-bc017f7ae1f9 synced (48 records).",
+                        details = "Firestore is not integrated in this build — no client SDK. Local Room database is the source of truth.",
                         lastPingTimestamp = System.currentTimeMillis()
                     )
                 }
@@ -218,9 +226,9 @@ class CloudConnectorsManager(
                     val procedures = AlldataClient.fetchRepairProcedures()
                     val duration = System.currentTimeMillis() - startTime
                     item.copy(
-                        status = ConnectorStatus.CONNECTED_HEALTHY,
+                        status = ConnectorStatus.STANDBY,
                         latencyMs = duration.coerceAtLeast(20),
-                        details = "ALLDATA OEM API OK: ${procedures.size} repair procedures & wiring pinouts cached.",
+                        details = "Demo catalog: ${procedures.size} procedures (live ALLDATA API not verified).",
                         lastPingTimestamp = System.currentTimeMillis()
                     )
                 }
@@ -228,18 +236,18 @@ class CloudConnectorsManager(
                     val parts = NexpartClient.searchB2bInventory()
                     val duration = System.currentTimeMillis() - startTime
                     item.copy(
-                        status = ConnectorStatus.CONNECTED_HEALTHY,
+                        status = ConnectorStatus.STANDBY,
                         latencyMs = duration.coerceAtLeast(18),
-                        details = "Nexpart B2B OK: ${parts.size} distributor SKUs available with wholesale pricing.",
+                        details = "Demo catalog: ${parts.size} SKUs (live B2B inventory not verified).",
                         lastPingTimestamp = System.currentTimeMillis()
                     )
                 }
                 "openai_gpt4o" -> {
                     val duration = System.currentTimeMillis() - startTime + 35
                     item.copy(
-                        status = ConnectorStatus.CONNECTED_HEALTHY,
+                        status = ConnectorStatus.STANDBY,
                         latencyMs = duration,
-                        details = "OpenAI GPT-4o compute engine active for physics & telemetry equations.",
+                        details = "Endpoint not probed by this check; key status unknown.",
                         lastPingTimestamp = System.currentTimeMillis()
                     )
                 }
@@ -254,10 +262,12 @@ class CloudConnectorsManager(
                 }
                 "obd_hardware_bridge" -> {
                     val duration = System.currentTimeMillis() - startTime + 8
+                    // This check does not probe for an actual USB/Bluetooth adapter, so
+                    // it cannot claim a live hardware link.
                     item.copy(
-                        status = ConnectorStatus.CONNECTED_HEALTHY,
+                        status = ConnectorStatus.STANDBY,
                         latencyMs = duration,
-                        details = "ELM327 USB/Bluetooth hardware bridge listening at 115200 baud.",
+                        details = "USB OTG / Bluetooth ELM327 bridge available; no adapter connection verified.",
                         lastPingTimestamp = System.currentTimeMillis()
                     )
                 }
