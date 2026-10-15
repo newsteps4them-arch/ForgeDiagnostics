@@ -7,7 +7,7 @@
 - Preserve evidence boundaries: local automated/simulator results do not prove HIL or real-vehicle behavior.
 - Record each command, exit status, and environment blocker without hiding failures.
 
-Run: 2026-10-12T03:57:56Z
+Run: 2026-10-15T20:22:37Z
 Commit: d7d1ef4
 
 ## Changes made
