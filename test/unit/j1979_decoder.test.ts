@@ -143,4 +143,35 @@ describe('SAE J1979 Protocol Decoder', () => {
   it('should reject non-response Mode 09 noise', () => {
     expect(decodeMode09Response('NO DATA 49020054455354')).toBeNull();
   });
+
+  it('should reject empty and whitespace-only Mode 01 frames', () => {
+    expect(decodeMode01Response('')).toBeNull();
+    expect(decodeMode01Response(' \r\n\t> ')).toBeNull();
+  });
+
+  it('should reject non-ASCII and odd-length hex input without throwing', () => {
+    expect(() => decodeMode01Response('41 0D 37🙂')).not.toThrow();
+    expect(decodeMode01Response('41 0D 37🙂')).toBeNull();
+    expect(decodeMode01Response('41 0D 3')).toBeNull();
+  });
+
+  it('should decode signed and maximum single-byte PID boundaries', () => {
+    expect(decodeMode01Response('41 05 00')?.value).toBe(-40);
+    expect(decodeMode01Response('41 0F FF')?.value).toBe(215);
+    expect(decodeMode01Response('41 0E 00')?.value).toBe(-64);
+  });
+
+  it('should reject Mode 09 responses with no usable ASCII payload', () => {
+    expect(decodeMode09Response('49 02')).toBeNull();
+    expect(decodeMode09Response('49 02 00')).toBeNull();
+    expect(decodeMode09Response('49 02 00 00')).toBeNull();
+  });
+
+  it('should preserve supported-PID ordering across multiple mask bytes', () => {
+    expect(decodeSupportedPidMask('80000001 00000080')).toEqual(['01', '20', '39']);
+  });
+
+  it('should reject Mode 03 frames with an incomplete DTC pair', () => {
+    expect(decodeMode03Response('43 01 33 03')).toEqual([]);
+  });
 });
