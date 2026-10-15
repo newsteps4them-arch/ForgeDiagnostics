@@ -85,8 +85,7 @@ fun GeminiChatSheet(
                     **Screen Mode:** `${screenContext.title.uppercase()}` (${screenContext.specialistName})  
                     **Vehicle:** **$activeVehicle**  
                     **Live Telemetry:** `$activeTelemetry`  
-                    **Cloud Sync:** `${syncStatus.statusText}`
-                    **Cloud Sync:** `${syncStatus.statusText}`
+                    **Cloud Sync:** `${syncStatus.statusText}`  
                     
                     I am specialized for this screen and possess long-term persistent memory across all workshop tools. Ask any technical question or select a preset below!
                 """.trimIndent(),
