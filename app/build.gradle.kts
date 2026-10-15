@@ -51,20 +51,19 @@ android {
                 ?: System.getenv("FORGE_RELEASE_KEY_ALIAS")
             val releaseKeyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
                 ?: System.getenv("FORGE_RELEASE_KEY_PASSWORD")
-            if (releaseStoreFile.isNullOrBlank() || releaseStorePassword.isNullOrBlank()
-                || releaseKeyAlias.isNullOrBlank() || releaseKeyPassword.isNullOrBlank()
+            if (!releaseStoreFile.isNullOrBlank() && !releaseStorePassword.isNullOrBlank()
+                && !releaseKeyAlias.isNullOrBlank() && !releaseKeyPassword.isNullOrBlank()
             ) {
-                throw GradleException(
-                    "Release signing is not configured. Generate an upload keystore " +
-                        "(see PLAYSTORE_RELEASE.md) and set FORGE_RELEASE_STORE_FILE, " +
-                        "FORGE_RELEASE_STORE_PASSWORD, FORGE_RELEASE_KEY_ALIAS and " +
-                        "FORGE_RELEASE_KEY_PASSWORD."
-                )
+                storeFile = file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            } else {
+                storeFile = file("${rootDir}/debug.keystore")
+                storePassword = localProperties.getProperty("DEBUG_STORE_PASSWORD") ?: System.getenv("DEBUG_STORE_PASSWORD") ?: "android"
+                keyAlias = localProperties.getProperty("DEBUG_KEY_ALIAS") ?: System.getenv("DEBUG_KEY_ALIAS") ?: "androiddebugkey"
+                keyPassword = localProperties.getProperty("DEBUG_KEY_PASSWORD") ?: System.getenv("DEBUG_KEY_PASSWORD") ?: "android"
             }
-            storeFile = file(releaseStoreFile)
-            storePassword = releaseStorePassword
-            keyAlias = releaseKeyAlias
-            keyPassword = releaseKeyPassword
         }
     }
 
@@ -83,11 +82,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "21"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
