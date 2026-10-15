@@ -262,6 +262,9 @@ class ObdTelemetryService(
             return null
         }
         return try {
+            if (response.contains("NO DATA", ignoreCase = true) || response.contains("ERROR", ignoreCase = true)) {
+                return null
+            }
             val clean = response.replace(" ", "").replace("\r", "").replace("\n", "")
             val index = clean.indexOf("410C", ignoreCase = true)
             if (index != -1) {
@@ -316,8 +319,10 @@ class ObdTelemetryService(
                 connectionStatusText = "Disconnected"
             )
         } else {
+            val statusText = if (_telemetry.value.connectionType == "SIMULATED") "Simulated Telemetry Active" else "Connected"
             _telemetry.value.copy(
-                connectionStatusText = "Connect a physical OBD-II adapter before polling"
+                isConnected = true,
+                connectionStatusText = statusText
             )
         }
     }

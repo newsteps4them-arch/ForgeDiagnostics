@@ -17,3 +17,7 @@
 ## 2026-09-08 - [Empty States] Actionable Empty States
 **Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
 **Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+
+## 2024-10-24 - Jetpack Compose Icon Accessibility in Buttons
+**Learning:** In Jetpack Compose, when an `Icon` component is placed inside a `Button` (or `OutlinedButton`, etc.) immediately alongside descriptive `Text` (e.g., Icon with `contentDescription="Print"` next to `Text("Print PDF")`), screen readers will read both the icon description and the text, resulting in redundant, annoying announcements for visually impaired users.
+**Action:** Always set `contentDescription = null` for `Icon` components that are purely decorative or immediately accompanied by functionally identical descriptive text within the same focusable container. Only icon-only buttons (`IconButton`) require a descriptive `contentDescription`.

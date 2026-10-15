@@ -76,6 +76,11 @@ fun OscilloscopeScreen() {
     val peakToPeakVolts = voltageScale * 1.8f
     val vRms = peakToPeakVolts * 0.707f
 
+    // Pre-allocated reusable Path objects for 60 FPS waveform rendering
+    val pathCH1 = remember { Path() }
+    val glowPathCH1 = remember { Path() }
+    val pathCH2 = remember { Path() }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -215,8 +220,8 @@ fun OscilloscopeScreen() {
 
                     // CH1 Waveform (Amber - Crank Sensor 60-2 Square Pulse with missing teeth pattern)
                     if (activeChannelTab == 0 || activeChannelTab == 1) {
-                        val pathCH1 = Path()
-                        val glowPathCH1 = Path()
+                        pathCH1.reset()
+                        glowPathCH1.reset()
                         val points = 240
 
                         for (p in 0 until points) {
@@ -256,7 +261,7 @@ fun OscilloscopeScreen() {
 
                     // CH2 Waveform (Cyan - Camshaft Sine / Hall pulse)
                     if (activeChannelTab == 0) {
-                        val pathCH2 = Path()
+                        pathCH2.reset()
                         val points = 240
 
                         for (p in 0 until points) {
