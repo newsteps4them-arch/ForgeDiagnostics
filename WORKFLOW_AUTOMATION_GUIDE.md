@@ -103,6 +103,12 @@ Team Forge includes a two-tier automated GitHub bot collective designed to scan,
 - **Triggers**: `workflow_dispatch` or `repository_dispatch` with PR parameters (`pr_number`, `head_branch`, `base_branch`).
 - **Actions**: Merges branches, resolves conflict markers with Gemini 2.5 Flash AI, validates syntax and zero conflict markers, commits, pushes, and auto-merges the PR.
 
+### 3. Forge Autonomous Guardian (Self-Healing CI/CD Bot)
+- **Workflow**: `.github/workflows/forge_guardian.yml`
+- **Script**: `forge_brain_v2.py`
+- **Schedule/Triggers**: Cron schedule (`0 */6 * * *`) and push to main.
+- **Actions**: Analyzes failed CI workflow runs, generates targeted fix patches using Gemini AI, verifies compilation/tests, and commits code fixes back to repository automatically.
+
 ---
 
 ## 📱 Opening in Android Studio
