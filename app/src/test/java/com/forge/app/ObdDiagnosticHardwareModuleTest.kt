@@ -85,7 +85,34 @@ class ObdDiagnosticHardwareModuleTest {
         val dtcCodes = state.activeDtcs.map { it.code }
         assertTrue(dtcCodes.contains("P0300"))
         assertTrue(dtcCodes.contains("P0171"))
+        // Demo-mode DTCs must be unmistakably tagged as simulated.
+        assertTrue(state.activeDtcs.all { it.dataSource == DiagnosticDataSource.SIMULATED })
+        assertEquals(DiagnosticDataSource.SIMULATED, state.dtcDataSource)
+        assertNull(state.dtcFetchError)
         assertNotNull(openManusService.state.value.finalReport)
+    }
+
+    @Test
+    fun testFetchDtcsWithNoAdapterReportsTransportErrorNotFakeCodes() = runBlocking {
+        // Hardware mode with no adapter connected: the scan must report a
+        // transport failure and return ZERO DTCs — never invented codes.
+        hardwareModule.setHardwareInterface(ObdHardwareInterface.USB_OTG)
+        hardwareModule.fetchLiveDiagnosticTroubleCodes(
+            vehicleName = "2021 Audi S5 Sportback",
+            autoTriggerOpenManus = false,
+        )
+
+        var attempts = 0
+        while (attempts < 50 && hardwareModule.hardwareState.value.isFetchingDtcs) {
+            delay(100)
+            attempts++
+        }
+
+        val state = hardwareModule.hardwareState.value
+        assertFalse(state.isFetchingDtcs)
+        assertTrue(state.activeDtcs.isEmpty())
+        assertNotNull(state.dtcFetchError)
+        assertEquals(DiagnosticDataSource.LIVE_HARDWARE, state.dtcDataSource)
     }
 
     @Test
