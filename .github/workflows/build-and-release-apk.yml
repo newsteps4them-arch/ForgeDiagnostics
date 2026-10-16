@@ -47,10 +47,25 @@ jobs:
           echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
 
       - name: Build APK and App Bundle
+        env:
+          FORGE_RELEASE_STORE_FILE: ${{ secrets.FORGE_RELEASE_STORE_FILE }}
+          FORGE_RELEASE_STORE_PASSWORD: ${{ secrets.FORGE_RELEASE_STORE_PASSWORD }}
+          FORGE_RELEASE_KEY_ALIAS: ${{ secrets.FORGE_RELEASE_KEY_ALIAS }}
+          FORGE_RELEASE_KEY_PASSWORD: ${{ secrets.FORGE_RELEASE_KEY_PASSWORD }}
         run: |
-          ./gradlew :app:assembleDebug :app:assembleRelease :app:bundleRelease
+          ./gradlew :app:assembleDebug
+          # Release artifacts need the upload keystore (see PLAYSTORE_RELEASE.md).
+          # They build automatically once the FORGE_RELEASE_* repository secrets
+          # exist; until then only the debug APK is produced and the build stays
+          # green instead of failing on the release-signing check.
+          if [ -n "$FORGE_RELEASE_STORE_FILE" ]; then
+            ./gradlew :app:assembleRelease :app:bundleRelease
+          else
+            echo "No upload keystore configured; skipping release artifacts."
+          fi
 
       - name: Locate and Rename Artifacts
+        id: artifacts
         run: |
           mkdir -p artifacts
           
@@ -81,13 +96,17 @@ jobs:
             echo "Warning: Release AAB not found"
           fi
 
+          # Export the artifacts that actually exist, so the release step
+          # below never references missing files (release artifacts are absent
+          # until the upload keystore secrets are configured).
+          echo "files<<EOF" >> "$GITHUB_OUTPUT"
+          ls artifacts/* 2>/dev/null || true
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            artifacts/Forge-debug-${{ steps.version.outputs.version }}.apk
-            artifacts/Forge-release-unsigned-${{ steps.version.outputs.version }}.apk
-            artifacts/Forge-production-release-${{ steps.version.outputs.version }}.aab
+          files: ${{ steps.artifacts.outputs.files }}
           tag_name: v${{ steps.version.outputs.version }}
           name: "Forge Diagnostics v${{ steps.version.outputs.version }}"
           make_latest: true
