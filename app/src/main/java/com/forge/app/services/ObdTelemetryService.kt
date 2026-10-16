@@ -316,8 +316,10 @@ class ObdTelemetryService(
                 connectionStatusText = "Disconnected"
             )
         } else {
+            val isSimulated = _telemetry.value.connectionType == "SIMULATED"
             _telemetry.value.copy(
-                connectionStatusText = "Connect a physical OBD-II adapter before polling"
+                isConnected = isSimulated,
+                connectionStatusText = if (isSimulated) "Simulated Stream Active" else "Connect a physical OBD-II adapter before polling"
             )
         }
     }
