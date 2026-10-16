@@ -12,6 +12,7 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.TimeUnit
 
 class NexpartApiServiceTest {
 
@@ -65,7 +66,7 @@ class NexpartApiServiceTest {
             apiKeyOverride = "real-api-key"
         )
 
-        val request = mockWebServer.takeRequest()
+        val request = mockWebServer.takeRequest(5, TimeUnit.SECONDS)!!
         assertEquals("/v2/b2b/inventory/search", request.path)
 
         assertNotNull(result)
@@ -103,7 +104,7 @@ class NexpartApiServiceTest {
             apiKeyOverride = "real-api-key"
         )
 
-        val request = mockWebServer.takeRequest()
+        val request = mockWebServer.takeRequest(5, TimeUnit.SECONDS)!!
         assertEquals("/v2/b2b/orders/create", request.path)
 
         assertNotNull(result)
