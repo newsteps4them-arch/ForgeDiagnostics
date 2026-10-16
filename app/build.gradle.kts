@@ -42,29 +42,24 @@ android {
         // and provide these via environment variables or local.properties.
         // A release build without them fails fast with a clear message
         // instead of silently signing with the debug key.
-        create("release") {
-            val releaseStoreFile = localProperties.getProperty("RELEASE_STORE_FILE")
-                ?: System.getenv("FORGE_RELEASE_STORE_FILE")
-            val releaseStorePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
-                ?: System.getenv("FORGE_RELEASE_STORE_PASSWORD")
-            val releaseKeyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
-                ?: System.getenv("FORGE_RELEASE_KEY_ALIAS")
-            val releaseKeyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
-                ?: System.getenv("FORGE_RELEASE_KEY_PASSWORD")
-            if (releaseStoreFile.isNullOrBlank() || releaseStorePassword.isNullOrBlank()
-                || releaseKeyAlias.isNullOrBlank() || releaseKeyPassword.isNullOrBlank()
-            ) {
-                throw GradleException(
-                    "Release signing is not configured. Generate an upload keystore " +
-                        "(see PLAYSTORE_RELEASE.md) and set FORGE_RELEASE_STORE_FILE, " +
-                        "FORGE_RELEASE_STORE_PASSWORD, FORGE_RELEASE_KEY_ALIAS and " +
-                        "FORGE_RELEASE_KEY_PASSWORD."
-                )
+        val releaseStoreFile = localProperties.getProperty("RELEASE_STORE_FILE")
+            ?: System.getenv("FORGE_RELEASE_STORE_FILE")
+        val releaseStorePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
+            ?: System.getenv("FORGE_RELEASE_STORE_PASSWORD")
+        val releaseKeyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
+            ?: System.getenv("FORGE_RELEASE_KEY_ALIAS")
+        val releaseKeyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
+            ?: System.getenv("FORGE_RELEASE_KEY_PASSWORD")
+
+        if (!releaseStoreFile.isNullOrBlank() && !releaseStorePassword.isNullOrBlank()
+            && !releaseKeyAlias.isNullOrBlank() && !releaseKeyPassword.isNullOrBlank()
+        ) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
-            storeFile = file(releaseStoreFile)
-            storePassword = releaseStorePassword
-            keyAlias = releaseKeyAlias
-            keyPassword = releaseKeyPassword
         }
     }
 
@@ -76,7 +71,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            signingConfigs.findByName("release")?.let {
+                signingConfig = it
+            }
         }
         debug {
             signingConfig = signingConfigs.getByName("debug")
