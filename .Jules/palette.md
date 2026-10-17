@@ -17,3 +17,84 @@
 ## 2026-09-08 - [Empty States] Actionable Empty States
 **Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
 **Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+## 2024-05-19 - [Empty States] Actionable Empty States in Garage
+**Learning:** Found an empty state in `GarageScreen.kt` that displayed a static message ("Tap ADD VEHICLE to store a profile.") without offering a way forward directly from the text. This leaves users at a dead end when starting to add a new vehicle profile.
+**Action:** Replaced passive instructional text with a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+
+## 2026-09-10 - Empty States and Interaction
+**Learning:** Empty states in Jetpack Compose should not be plain text. Replacing a static "No tasks found" text with a structured component comprising an icon, descriptive text, and a direct Call-To-Action (CTA) button significantly enhances user interaction by reducing friction and providing a clear path forward.
+**Action:** When encountering or designing empty states (e.g., empty lists or missing data scenarios), ensure they include a relevant icon, helpful context, and an actionable button aligned with the application's aesthetic.
+
+## 2026-09-08 - [Empty States] Actionable Empty States
+**Learning:** Found an empty state in `GarageScreen.kt` that displayed a static message ("No vehicles saved in garage yet.") without offering a way forward. This leaves users at a dead end when starting a new project or entering an empty page.
+**Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+
+## 2024-05-19 - [Empty States] Actionable Empty States in Garage
+**Learning:** Found an empty state in `GarageScreen.kt` that displayed a static message ("Tap ADD VEHICLE to store a profile.") without offering a way forward directly from the text. This leaves users at a dead end when starting to add a new vehicle profile.
+**Action:** Replaced passive instructional text with a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+
+## 2026-09-12 - [Empty States] Actionable Empty States in Garage
+**Learning:** Found an empty state in `GarageScreen.kt` that displayed a static message ("Tap ADD VEHICLE to store a profile.") without offering a way forward directly within the empty state container. This leaves users at a dead end when starting out in the garage.
+
+## 2026-10-25 - Jetpack Compose Empty States UX & Accessibility
+**Learning:** Empty states with only text and a decorative icon cause high user friction, and screen readers fail to convey context if the primary visual element has a null contentDescription.
+**Action:** Always provide a semantic `contentDescription` for primary empty state icons, and ensure a clear, actionable Call-To-Action (CTA) button is included directly inside the empty state component to encourage immediate user interaction.
+
+## 2025-02-12 - Empty State Semantic Images
+**Learning:** In Jetpack Compose empty states, a large central icon or image should not use `contentDescription = null`. It serves as the primary contextual anchor for the empty state block.
+**Action:** Always provide a semantic content description (e.g., 'No tasks found') for the primary visual element in empty states to assist screen reader users navigating the block structure.
+
+## 2024-10-24 - Jetpack Compose Icon Accessibility in Buttons
+**Learning:** In Jetpack Compose, when an `Icon` component is placed inside a `Button` (or `OutlinedButton`, etc.) immediately alongside descriptive `Text` (e.g., Icon with `contentDescription="Print"` next to `Text("Print PDF")`), screen readers will read both the icon description and the text, resulting in redundant, annoying announcements for visually impaired users.
+**Action:** Always set `contentDescription = null` for `Icon` components that are purely decorative or immediately accompanied by functionally identical descriptive text within the same focusable container. Only icon-only buttons (`IconButton`) require a descriptive `contentDescription`.
+
+## 2024-05-14 - Empty State Accessibility Context
+**Learning:** Empty states in Jetpack Compose that rely heavily on a primary central visual element (like an illustration or large Icon) need a semantic `contentDescription` (e.g., 'No tasks found' or 'No items found') rather than `null`. Using `null` deprives screen reader users of the primary context of the empty block before they encounter the secondary text details.
+**Action:** Always verify that empty state primary icons/illustrations have descriptive accessibility labels instead of being marked as decorative.
+
+## 2026-09-24 - Actionable Empty States
+**Learning:** Found empty states in `GarageScreen.kt` and `PartsCatalogScreen.kt` that displayed a static message ('Tap ADD VEHICLE...') without offering a direct way forward. This leaves users at a dead end when starting out.
+**Action:** Added a relevant Call-To-Action (CTA) button directly within empty states to encourage interaction and reduce user friction, rather than relying on global app bar buttons.
+## 2026-09-08 - [Empty States] Actionable Empty States\n**Learning:** Found an empty state in `GarageScreen.kt` that displayed a static message ("No vehicles saved in garage yet.") without offering a way forward. This leaves users at a dead end when starting a new project or entering an empty page.\n**Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+
+## 2026-09-08 - [Empty States] Actionable Empty States\n**Learning:** Found an empty state in `GarageScreen.kt` that displayed a static message ("No vehicles saved in garage yet.") without offering a way forward. This leaves users at a dead end when starting a new project or entering an empty page.\n**Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+**Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+
+## 2026-09-08 - [Empty States] Actionable Empty States in GarageScreen
+**Learning:** Found an empty state in `GarageScreen.kt` that displayed a static message ("No vehicles saved in garage yet.") without offering a way forward, similar to a previous finding in `ProjectDashboard.kt`. This leaves users at a dead end when starting out.
+**Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states across all screens to encourage interaction and reduce user friction.
+**Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+## 2024-06-18 - [Accessibility] Unique contentDescription for list items
+**Learning:** When adding `contentDescription` to interactive elements (like `IconButton`s) inside lists in Jetpack Compose, the generic descriptions (e.g., "Delete Task") should be replaced with contextual ones (e.g., "Delete task: ${task.title}") to provide better navigation and understanding for screen reader users.
+**Action:** When working on lists or repeated elements in Jetpack Compose, ensure the `contentDescription` includes context specific to the item.
+## 2026-09-08 - [Empty States] Actionable Empty States
+**Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
+
+## 2026-09-12 - [Empty States] Actionable Empty States in Garage
+**Learning:** Found an empty state in `GarageScreen.kt` that displayed a static message ("Tap ADD VEHICLE to store a profile.") without offering a way forward directly within the empty state container. This leaves users at a dead end when starting out in the garage.
+**Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+
+## 2026-09-08 - [UX] Confirmation Dialog for Destructive Actions
+**Learning:** Destructive actions like deleting tasks in lists lacked a confirmation step, which could lead to accidental data loss, especially on touch interfaces where mis-taps are common.
+**Action:** Always wrap destructive list actions (like delete) in a confirmation `AlertDialog` or provide an undo mechanism (e.g., Snackbar) to prevent accidental data loss.
+## 2026-10-25 - Jetpack Compose Empty States UX & Accessibility
+**Learning:** Empty states with only text and a decorative icon cause high user friction, and screen readers fail to convey context if the primary visual element has a null contentDescription.
+**Action:** Always provide a semantic `contentDescription` for primary empty state icons, and ensure a clear, actionable Call-To-Action (CTA) button is included directly inside the empty state component to encourage immediate user interaction.
+## 2026-09-08 - [Empty States] Actionable Empty States in GarageScreen
+**Learning:** Found an empty state in `GarageScreen.kt` that displayed a static message ("No vehicles saved in garage yet.") without offering a way forward, similar to a previous finding in `ProjectDashboard.kt`. This leaves users at a dead end when starting out.
+**Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states across all screens to encourage interaction and reduce user friction.
+## 2025-02-12 - Empty State Semantic Images
+**Learning:** In Jetpack Compose empty states, a large central icon or image should not use `contentDescription = null`. It serves as the primary contextual anchor for the empty state block.
+**Action:** Always provide a semantic content description (e.g., 'No tasks found') for the primary visual element in empty states to assist screen reader users navigating the block structure.
+## 2024-10-24 - Jetpack Compose Icon Accessibility in Buttons
+**Learning:** In Jetpack Compose, when an `Icon` component is placed inside a `Button` (or `OutlinedButton`, etc.) immediately alongside descriptive `Text` (e.g., Icon with `contentDescription="Print"` next to `Text("Print PDF")`), screen readers will read both the icon description and the text, resulting in redundant, annoying announcements for visually impaired users.
+**Action:** Always set `contentDescription = null` for `Icon` components that are purely decorative or immediately accompanied by functionally identical descriptive text within the same focusable container. Only icon-only buttons (`IconButton`) require a descriptive `contentDescription`.
+## 2024-05-14 - Empty State Accessibility Context
+**Learning:** Empty states in Jetpack Compose that rely heavily on a primary central visual element (like an illustration or large Icon) need a semantic `contentDescription` (e.g., 'No tasks found' or 'No items found') rather than `null`. Using `null` deprives screen reader users of the primary context of the empty block before they encounter the secondary text details.
+**Action:** Always verify that empty state primary icons/illustrations have descriptive accessibility labels instead of being marked as decorative.
+## 2026-09-24 - Actionable Empty States
+**Learning:** Found empty states in `GarageScreen.kt` and `PartsCatalogScreen.kt` that displayed a static message ('Tap ADD VEHICLE...') without offering a direct way forward. This leaves users at a dead end when starting out.
+**Action:** Added a relevant Call-To-Action (CTA) button directly within empty states to encourage interaction and reduce user friction, rather than relying on global app bar buttons.
+## 2026-09-10 - Empty States and Interaction
+**Learning:** Empty states in Jetpack Compose should not be plain text. Replacing a static "No tasks found" text with a structured component comprising an icon, descriptive text, and a direct Call-To-Action (CTA) button significantly enhances user interaction by reducing friction and providing a clear path forward.
+**Action:** When encountering or designing empty states (e.g., empty lists or missing data scenarios), ensure they include a relevant icon, helpful context, and an actionable button aligned with the application's aesthetic.

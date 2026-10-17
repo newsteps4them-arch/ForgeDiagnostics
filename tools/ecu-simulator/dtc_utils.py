@@ -29,13 +29,17 @@ def encode_uds_dtcs(dtcs):
 
 
 def is_dtc_valid(dtc):
-    return len(dtc) == DTC_LENGTH and DTC_GROUP.get(dtc[0]) is not None and DTC_TYPE.get(dtc[1]) is not None \
-           and is_hex_value(dtc[2]) and is_hex_value(dtc[3]) and is_hex_value(dtc[4])
+    if not isinstance(dtc, str) or len(dtc) != DTC_LENGTH:
+        return False
+    dtc_upper = dtc.upper()
+    return DTC_GROUP.get(dtc_upper[0]) is not None and DTC_TYPE.get(dtc_upper[1]) is not None \
+           and is_hex_value(dtc_upper[2]) and is_hex_value(dtc_upper[3]) and is_hex_value(dtc_upper[4])
 
 
 def get_dtc_first_byte(dtc):
-    bits_0_3 = int(DTC_GROUP.get(dtc[0]) + DTC_TYPE.get(dtc[1]) + "0000", 2)
-    bits_4_7 = int("0000" + dtc[2], 16)
+    dtc_upper = dtc.upper()
+    bits_0_3 = int(DTC_GROUP.get(dtc_upper[0]) + DTC_TYPE.get(dtc_upper[1]) + "0000", 2)
+    bits_4_7 = int("0000" + dtc_upper[2], 16)
     return (bits_0_3 | bits_4_7).to_bytes(1, BIG_ENDIAN)
 
 
