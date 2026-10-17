@@ -15,6 +15,7 @@
     "lint": "tsc --noEmit",
     "build": "npm run lint && npm test",
     "build:android": "gradlew.bat :app:assembleDebug",
+    "verify:release": "python3 scripts/verify_release_readiness.py",
     "verify:integrations": "powershell -ExecutionPolicy Bypass -File ./scripts/verify_integrations.ps1",
     "verify:gemini": "powershell -ExecutionPolicy Bypass -File ./scripts/verify_integrations.ps1 -ProbeGemini",
     "verify:serial": "powershell -ExecutionPolicy Bypass -File ./scripts/verify_integrations.ps1 -ProbeSerialAdapters",

@@ -112,6 +112,8 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
       return { pid: '0F', name: 'Intake Air Temp', value: byteA - 40, unit: '°C' };
     case '04': // Calculated Load
       return { pid: '04', name: 'Engine Load', value: (byteA * 100) / 255, unit: '%' };
+    case '0A': // Fuel Pressure
+      return { pid: '0A', name: 'Fuel Pressure', value: byteA * 3, unit: 'kPa' };
     case '0B': // Intake Manifold Absolute Pressure (MAP)
       return { pid: '0B', name: 'Intake Manifold Pressure', value: byteA, unit: 'kPa' };
     case '0E': // Timing Advance
@@ -121,8 +123,13 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
       return { pid: '10', name: 'MAF Air Flow Rate', value: ((byteA * 256) + byteB) / 100, unit: 'g/s' };
     case '11': // Throttle Position
       return { pid: '11', name: 'Throttle Position', value: (byteA * 100) / 255, unit: '%' };
+    case '14': // O2 Sensor Voltage
+      return { pid: '14', name: 'O2 Sensor 1 Voltage', value: byteA / 200, unit: 'V' };
     case '2F': // Fuel Tank Level
       return { pid: '2F', name: 'Fuel Tank Level', value: (byteA * 100) / 255, unit: '%' };
+    case '43': // Absolute Load Value
+      if (bytes.length < 4) return null;
+      return { pid: '43', name: 'Absolute Load Value', value: (((byteA * 256) + byteB) * 100) / 255, unit: '%' };
     default:
       return { pid, name: `PID_${pid}`, value: byteA, unit: 'raw' };
   }

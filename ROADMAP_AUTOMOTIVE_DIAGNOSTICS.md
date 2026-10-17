@@ -61,6 +61,7 @@ This approach keeps the project legal, practical, and valuable. It turns the app
 - Continuous automated testing across TypeScript, Python ECU simulators, and HIL emulators (`npm run test:all:portable`)
 - Store listing asset validation, privacy compliance, and Google Play App Bundle (AAB) automated build pipeline
 - Automated CI/CD self-healing guardians and conflict-resolution bot suite for 24/7 automated delivery
+- Full automated release readiness verifier (`npm run verify:release` / `python3 scripts/verify_release_readiness.py`)
 
 ## Recommended next actions
 

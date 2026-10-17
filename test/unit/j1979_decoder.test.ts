@@ -39,6 +39,15 @@ describe('SAE J1979 Protocol Decoder', () => {
     expect(result?.unit).toBe('°C');
   });
 
+  it('should decode Fuel Pressure correctly (PID 0A)', () => {
+    const result = decodeMode01Response('41 0A 64');
+    expect(result).not.toBeNull();
+    expect(result?.pid).toBe('0A');
+    expect(result?.name).toBe('Fuel Pressure');
+    expect(result?.value).toBe(300);
+    expect(result?.unit).toBe('kPa');
+  });
+
   it('should decode MAP Intake Pressure correctly (PID 0B)', () => {
     const result = decodeMode01Response('41 0B 64');
     expect(result).not.toBeNull();
@@ -46,6 +55,24 @@ describe('SAE J1979 Protocol Decoder', () => {
     expect(result?.name).toBe('Intake Manifold Pressure');
     expect(result?.value).toBe(100);
     expect(result?.unit).toBe('kPa');
+  });
+
+  it('should decode O2 Sensor 1 Voltage correctly (PID 14)', () => {
+    const result = decodeMode01Response('41 14 80');
+    expect(result).not.toBeNull();
+    expect(result?.pid).toBe('14');
+    expect(result?.name).toBe('O2 Sensor 1 Voltage');
+    expect(result?.value).toBe(0.64);
+    expect(result?.unit).toBe('V');
+  });
+
+  it('should decode Absolute Load Value correctly (PID 43)', () => {
+    const result = decodeMode01Response('41 43 00 FF');
+    expect(result).not.toBeNull();
+    expect(result?.pid).toBe('43');
+    expect(result?.name).toBe('Absolute Load Value');
+    expect(result?.value).toBeCloseTo(100, 2);
+    expect(result?.unit).toBe('%');
   });
 
   it('should decode Timing Advance correctly (PID 0E)', () => {
