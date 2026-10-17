@@ -213,35 +213,40 @@ fun OscilloscopeScreen() {
                         strokeWidth = 1f
                     )
 
+                    // Performance Optimization: Hoist static canvas dimensions & scaling factors outside render loops
+                    val halfH = h / 2f
+                    val points = 240
+                    val invPoints = 1f / points
+
                     // CH1 Waveform (Amber - Crank Sensor 60-2 Square Pulse with missing teeth pattern)
                     if (activeChannelTab == 0 || activeChannelTab == 1) {
                         val pathCH1 = Path()
-                        val glowPathCH1 = Path()
-                        val points = 240
+                        val timebaseFactor = 10f / timebaseMs
+                        val ch1PStep = (1f / 12f) * timebaseFactor
+                        val ch1Phase = if (isRunning) phaseOffset else 0f
+                        val ch1Scale = (h / 3.4f) * (5f / voltageScale)
 
                         for (p in 0 until points) {
-                            val x = w * (p.toFloat() / points)
-                            val normalizedP = (p.toFloat() / 12f) * (10f / timebaseMs) + (if (isRunning) phaseOffset else 0f)
+                            val x = w * (p * invPoints)
+                            val normalizedP = p * ch1PStep + ch1Phase
                             
                             // Simulate missing tooth gap every 58 pulses
                             val isMissingTooth = (normalizedP.toInt() % 16) in 14..15
                             val rawWave = if (isMissingTooth) 0f else if (sin(normalizedP.toDouble()) > 0) 1f else -1f
                             val jitter = if (isRunning) (Random.nextFloat() - 0.5f) * 0.04f else 0f
                             
-                            val y = (h / 2) - ((rawWave + jitter) * (h / 3.4f) * (5f / voltageScale))
+                            val y = halfH - ((rawWave + jitter) * ch1Scale)
                             if (p == 0) {
                                 pathCH1.moveTo(x, y)
-                                glowPathCH1.moveTo(x, y)
                             } else {
                                 pathCH1.lineTo(x, y)
-                                glowPathCH1.lineTo(x, y)
                             }
                         }
 
-                        // Phosphor glow layer
+                        // Phosphor glow layer (reusing pathCH1 directly to prevent duplicate path allocations)
                         if (showPhosphorGlow) {
                             drawPath(
-                                path = glowPathCH1,
+                                path = pathCH1,
                                 color = ForgeAmber.copy(alpha = 0.25f),
                                 style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
                             )
@@ -257,13 +262,17 @@ fun OscilloscopeScreen() {
                     // CH2 Waveform (Cyan - Camshaft Sine / Hall pulse)
                     if (activeChannelTab == 0) {
                         val pathCH2 = Path()
-                        val points = 240
+                        val timebaseFactor = 10f / timebaseMs
+                        val ch2PStep = (1f / 24f) * timebaseFactor
+                        val ch2Phase = if (isRunning) (phaseOffset * 0.5f) else 0f
+                        val ch2Scale = (h / 4.5f) * (5f / voltageScale)
+                        val ch2CenterY = halfH + 40.dp.toPx()
 
                         for (p in 0 until points) {
-                            val x = w * (p.toFloat() / points)
-                            val normalizedP = (p.toFloat() / 24f) * (10f / timebaseMs) + (if (isRunning) (phaseOffset * 0.5f) else 0f)
+                            val x = w * (p * invPoints)
+                            val normalizedP = p * ch2PStep + ch2Phase
                             val sineVal = sin(normalizedP.toDouble()).toFloat()
-                            val y = (h / 2) + 40.dp.toPx() - (sineVal * (h / 4.5f) * (5f / voltageScale))
+                            val y = ch2CenterY - (sineVal * ch2Scale)
                             
                             if (p == 0) pathCH2.moveTo(x, y) else pathCH2.lineTo(x, y)
                         }
