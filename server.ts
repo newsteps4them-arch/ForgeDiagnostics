@@ -267,6 +267,64 @@ async function startServer() {
     }
   });
 
+  app.post("/api/git/conflicts/scan", async (req, res) => {
+    try {
+      const { stdout, stderr } = await execFileAsync("python3", [
+        "scripts/conflict_finder.py",
+      ]);
+      res.json({
+        success: true,
+        message: "Conflict scan completed.",
+        output: stdout || stderr,
+      });
+    } catch (error: any) {
+      console.error("Git Conflict Scan API Error:", error);
+      res.status(500).json({
+        error: error.message || "Failed conflict scan.",
+        output: error.stdout || error.stderr || "",
+      });
+    }
+  });
+
+  app.post("/api/git/conflicts/resolve", async (req, res) => {
+    try {
+      const { pr, head, base } = req.body;
+      const branchRegex = /^[a-zA-Z0-9_/-]+$/;
+      const prRegex = /^\d+$/;
+
+      if (!pr || !prRegex.test(String(pr))) {
+        return res.status(400).json({ error: "Invalid or missing PR number." });
+      }
+      if (!head || !branchRegex.test(String(head))) {
+        return res.status(400).json({ error: "Invalid or missing head branch name." });
+      }
+      if (!base || !branchRegex.test(String(base))) {
+        return res.status(400).json({ error: "Invalid or missing base branch name." });
+      }
+
+      const { stdout, stderr } = await execFileAsync("python3", [
+        "scripts/conflict_resolver_brain.py",
+        "--pr",
+        String(pr),
+        "--head",
+        String(head),
+        "--base",
+        String(base),
+      ]);
+      res.json({
+        success: true,
+        message: "Conflict resolution completed.",
+        output: stdout || stderr,
+      });
+    } catch (error: any) {
+      console.error("Git Conflict Resolve API Error:", error);
+      res.status(500).json({
+        error: error.message || "Failed conflict resolution.",
+        output: error.stdout || error.stderr || "",
+      });
+    }
+  });
+
   app.post("/api/git/link", async (req, res) => {
     try {
       const { repoUrl, githubToken } = req.body;
