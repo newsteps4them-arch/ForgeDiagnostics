@@ -22,10 +22,16 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
       - name: Clean Dependency Installation
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Run Complete Automated Diagnostic & Portable Test Suite
-        run: npm run test:all:portable
+      - name: Run Linting
+        run: npm run lint --if-present
+
+      - name: Run Vitest Suite
+        run: npm test --if-present
+
+      - name: Run Virtual HIL Diagnostics Check
+        run: python3 test/hil_emulator/virtual_elm327.py <<< "010C"
