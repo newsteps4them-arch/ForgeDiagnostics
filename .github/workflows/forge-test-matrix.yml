@@ -24,6 +24,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: "17"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -50,7 +54,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: zulu
-          java-version: "21"
+          java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
       - name: Run Android JVM unit tests
         run: ./gradlew :app:testDebugUnitTest --no-daemon
