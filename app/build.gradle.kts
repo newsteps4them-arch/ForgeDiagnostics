@@ -36,8 +36,8 @@ val hasReleaseSigning = !releaseStoreFile.isNullOrBlank()
 // upload keystore — instead of silently signing with the debug key. This check
 // runs only when release tasks are in the task graph, so plain debug builds
 // (and CI before the keystore exists) still configure and run.
-gradle.taskGraph.whenReady { graph ->
-    val buildingRelease = graph.allTasks.any { task ->
+gradle.taskGraph.whenReady {
+    val buildingRelease = allTasks.any { task ->
         task.name.contains("Release", ignoreCase = true)
     }
     if (buildingRelease && !hasReleaseSigning) {
