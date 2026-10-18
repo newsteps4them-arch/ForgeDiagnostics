@@ -90,7 +90,7 @@ def resolve_conflict_content_gemini(content: str, filename: str) -> Optional[str
         return None
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-1.5-flash")
 
         prompt = (
             f"You are Team Forge's Autonomous Git Conflict Resolution AI.\n"

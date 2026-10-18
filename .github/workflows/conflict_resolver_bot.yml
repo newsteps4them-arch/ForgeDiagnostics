@@ -45,8 +45,10 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Python Dependencies
-        run: pip install google-generativeai requests --quiet
+      - name: Install Dependencies
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          pip install google-generativeai requests --quiet
 
       - name: Run Conflict Resolver Brain
         env:
