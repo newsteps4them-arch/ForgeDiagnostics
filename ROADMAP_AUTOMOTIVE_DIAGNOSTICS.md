@@ -60,7 +60,8 @@ This approach keeps the project legal, practical, and valuable. It turns the app
 
 - Continuous automated testing across TypeScript, Python ECU simulators, and HIL emulators (`npm run test:all:portable`)
 - Store listing asset validation, privacy compliance, and Google Play App Bundle (AAB) automated build pipeline
-- Automated CI/CD self-healing guardians and conflict-resolution bot suite for 24/7 automated delivery
+- Automated CI/CD self-healing guardians (`forge_guardian.yml`) and conflict-resolution bot suite (`conflict_finder.py`, `conflict_resolver_brain.py`) for 24/7 automated zero-conflict delivery
+- Multi-environment local sync daemon (`npm run sync:watch` / `npm run sync:silent`) bridging Android Studio, Antigravity IDE, Google AI Studio, and GitHub
 
 ## Recommended next actions
 
