@@ -27,7 +27,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,6 +49,7 @@ fun ProjectDashboard(
     var filterStatus by remember { mutableStateOf("All") }
     var showAddProjectDialog by remember { mutableStateOf(false) }
     var showAddTaskDialog by remember { mutableStateOf(false) }
+    var taskToDelete by remember { mutableStateOf<TaskEntity?>(null) }
 
     // Selected project or fallback to first
     val activeProject = projects.find { it.id == selectedProjectId } ?: projects.firstOrNull()
@@ -394,43 +394,40 @@ fun ProjectDashboard(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 32.dp, horizontal = 20.dp),
+                            .padding(32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Assignment,
-                            contentDescription = null,
+                            contentDescription = "No tasks found",
                             tint = ForgeCyan,
                             modifier = Modifier.size(48.dp)
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = if (filterStatus == "All") "No tasks in this project yet." else "No tasks match the filter.",
+                            text = "No tasks found matching current filter for this project.",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = ForgeOnSurface,
-                            textAlign = TextAlign.Center
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Tap 'Add Task' to create a new task for this project.",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
-                        if (filterStatus == "All") {
-                            Button(
-                                onClick = { showAddTaskDialog = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = ForgeCyan, contentColor = Color.Black),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Create First Task", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            }
-                        } else {
-                            TextButton(onClick = { filterStatus = "All" }) {
-                                Text("Clear Filter", color = ForgeCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { showAddTaskDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = ForgeCyan, contentColor = Color.Black),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("ADD TASK", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -469,7 +466,7 @@ fun ProjectDashboard(
                                     }
                                     onUpdateTaskStatus(task, nextStatus)
                                 },
-                                onDelete = { onDeleteTask(task) }
+                                onDelete = { taskToDelete = task }
                             )
                         }
                     }
@@ -631,6 +628,32 @@ fun ProjectDashboard(
             containerColor = ForgeSurface
         )
     }
+
+    // --- Delete Task Confirmation Dialog ---
+    if (taskToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { taskToDelete = null },
+            title = { Text("Delete Task", color = ForgeAmber, fontSize = 16.sp, fontWeight = FontWeight.Bold) },
+            text = { Text("Are you sure you want to delete '${taskToDelete?.title}'? This action cannot be undone.", color = ForgeOnSurface) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        taskToDelete?.let { onDeleteTask(it) }
+                        taskToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = ForgeRed, contentColor = Color.White)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { taskToDelete = null }) {
+                    Text("Cancel", color = Color.White)
+                }
+            },
+            containerColor = ForgeSurface
+        )
+    }
 }
 
 @Composable
@@ -639,6 +662,8 @@ private fun TaskCardItem(
     onStatusToggle: () -> Unit,
     onDelete: () -> Unit
 ) {
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+
     // Smooth animated color transitions for card state changes
     val animatedBorderColor by animateColorAsState(
         targetValue = when (task.status) {
@@ -816,7 +841,7 @@ private fun TaskCardItem(
             }
 
             IconButton(
-                onClick = onDelete,
+                onClick = { showDeleteConfirmDialog = true },
                 modifier = Modifier.size(28.dp)
             ) {
                 Icon(
@@ -827,6 +852,34 @@ private fun TaskCardItem(
                 )
             }
         }
+    }
+
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = {
+                Text(text = "Delete Task", fontWeight = FontWeight.Bold, color = ForgeRed)
+            },
+            text = {
+                Text(text = "Are you sure you want to delete '${task.title}'? This action cannot be undone.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirmDialog = false
+                    onDelete()
+                }) {
+                    Text("Delete", color = ForgeRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text("Cancel", color = ForgeOnSurfaceVariant)
+                }
+            },
+            containerColor = ForgeSurface,
+            titleContentColor = ForgeOnSurface,
+            textContentColor = ForgeOnSurface
+        )
     }
 }
 

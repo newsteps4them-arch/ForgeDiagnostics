@@ -1,18 +1,15 @@
-// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
-// Proprietary and Confidential.
-// This file is part of Forge Agentic Diagnostics.
-// Unauthorized copying of this file, via any medium is strictly prohibited.
-
 package com.forge.app.services
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
+import android.content.Context
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -43,6 +40,12 @@ data class ObdTelemetryData(
     val dataSource: DiagnosticDataSource = DiagnosticDataSource.UNKNOWN
 )
 
+enum class DiagnosticDataSource {
+    UNKNOWN,
+    SIMULATED,
+    LIVE_HARDWARE
+}
+
 data class DtcInfo(
     val code: String,
     val description: String,
@@ -52,7 +55,8 @@ data class DtcInfo(
 class ObdTelemetryService(
     private val scope: CoroutineScope,
     private val usbHardwareService: UsbHardwareCommunicationService? = null,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val context: Context? = null
 ) {
     private val _telemetry = MutableStateFlow(ObdTelemetryData())
     val telemetry: StateFlow<ObdTelemetryData> = _telemetry.asStateFlow()
@@ -212,7 +216,8 @@ class ObdTelemetryService(
 
     private fun tryConnectAndReadBluetoothObd(): Boolean {
         return try {
-            val btAdapter = BluetoothAdapter.getDefaultAdapter() ?: return false
+            val btManager = context?.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+            val btAdapter = btManager?.adapter ?: @Suppress("DEPRECATION") BluetoothAdapter.getDefaultAdapter() ?: return false
             if (!btAdapter.isEnabled) return false
 
             val pairedDevices: Set<BluetoothDevice>? = btAdapter.bondedDevices
@@ -262,6 +267,9 @@ class ObdTelemetryService(
             return null
         }
         return try {
+            if (response.contains("NO DATA", ignoreCase = true) || response.contains("ERROR", ignoreCase = true)) {
+                return null
+            }
             val clean = response.replace(" ", "").replace("\r", "").replace("\n", "")
             val index = clean.indexOf("410C", ignoreCase = true)
             if (index != -1) {
@@ -316,8 +324,10 @@ class ObdTelemetryService(
                 connectionStatusText = "Disconnected"
             )
         } else {
+            val isSimulated = _telemetry.value.connectionType == "SIMULATED"
             _telemetry.value.copy(
-                connectionStatusText = "Connect a physical OBD-II adapter before polling"
+                isConnected = isSimulated,
+                connectionStatusText = if (isSimulated) "Simulated Connection Active" else "Connect a physical OBD-II adapter before polling"
             )
         }
     }

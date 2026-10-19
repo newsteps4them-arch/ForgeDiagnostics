@@ -248,11 +248,11 @@ object ScreenAiContextRegistry {
         "settings" to ScreenContextInfo(
             route = "settings",
             title = "Settings & Cloud Sync",
-            specialistName = "Security, Hardware & Sync Status Specialist",
+            specialistName = "Security, Hardware & Firestore Sync Specialist",
             defaultSkill = AssistantSkill.GENERAL,
-            screenDescription = "Bluetooth/USB serial settings, cloud sync status, and Gemini API keys.",
+            screenDescription = "Bluetooth/USB serial settings, Firestore cloud database sync, and Gemini API keys.",
             suggestedPrompts = listOf(
-                "Check cloud sync configuration status (local Room database is the source of truth)",
+                "Verify Firestore database real-time sync connectivity",
                 "Check Gemini API key configuration and quotas",
                 "Configure USB OTG serial baud rate (115200)",
                 "Audit local Room database persistence records"

@@ -1,5 +1,7 @@
 import java.util.Properties
 import java.io.FileInputStream
+import org.gradle.api.Action
+import org.gradle.api.execution.TaskExecutionGraph
 
 plugins {
     alias(libs.plugins.android.application)
@@ -36,19 +38,21 @@ val hasReleaseSigning = !releaseStoreFile.isNullOrBlank()
 // upload keystore — instead of silently signing with the debug key. This check
 // runs only when release tasks are in the task graph, so plain debug builds
 // (and CI before the keystore exists) still configure and run.
-gradle.taskGraph.whenReady { graph ->
-    val buildingRelease = graph.allTasks.any { task ->
-        task.name.contains("Release", ignoreCase = true)
+gradle.taskGraph.whenReady(object : Action<TaskExecutionGraph> {
+    override fun execute(graph: TaskExecutionGraph) {
+        val buildingRelease = graph.allTasks.any { task ->
+            task.name.contains("Release", ignoreCase = true)
+        }
+        if (buildingRelease && !hasReleaseSigning) {
+            throw GradleException(
+                "Release signing is not configured. Generate an upload keystore " +
+                    "(see PLAYSTORE_RELEASE.md) and set FORGE_RELEASE_STORE_FILE, " +
+                    "FORGE_RELEASE_STORE_PASSWORD, FORGE_RELEASE_KEY_ALIAS and " +
+                    "FORGE_RELEASE_KEY_PASSWORD."
+            )
+        }
     }
-    if (buildingRelease && !hasReleaseSigning) {
-        throw GradleException(
-            "Release signing is not configured. Generate an upload keystore " +
-                "(see PLAYSTORE_RELEASE.md) and set FORGE_RELEASE_STORE_FILE, " +
-                "FORGE_RELEASE_STORE_PASSWORD, FORGE_RELEASE_KEY_ALIAS and " +
-                "FORGE_RELEASE_KEY_PASSWORD."
-        )
-    }
-}
+})
 
 android {
     namespace = "com.forge.app"
@@ -63,6 +67,20 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    val releaseStoreFile = localProperties.getProperty("RELEASE_STORE_FILE")
+        ?: System.getenv("FORGE_RELEASE_STORE_FILE")
+    val releaseStorePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
+        ?: System.getenv("FORGE_RELEASE_STORE_PASSWORD")
+    val releaseKeyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
+        ?: System.getenv("FORGE_RELEASE_KEY_ALIAS")
+    val releaseKeyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
+        ?: System.getenv("FORGE_RELEASE_KEY_PASSWORD")
+
+    val hasReleaseSigning = !releaseStoreFile.isNullOrBlank() &&
+            !releaseStorePassword.isNullOrBlank() &&
+            !releaseKeyAlias.isNullOrBlank() &&
+            !releaseKeyPassword.isNullOrBlank()
 
     signingConfigs {
         getByName("debug") {
@@ -106,11 +124,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "21"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
