@@ -17,7 +17,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '21'
+          java-version: '17'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
@@ -30,14 +30,8 @@ jobs:
           FORGE_RELEASE_KEY_PASSWORD: ${{ secrets.FORGE_RELEASE_KEY_PASSWORD }}
         run: |
           ./gradlew :app:assembleDebug
-          # Release artifacts need the upload keystore (see PLAYSTORE_RELEASE.md).
-          # They build automatically once the FORGE_RELEASE_* repository secrets
-          # exist; until then only the debug APK is produced and the build stays
-          # green instead of failing on the release-signing check.
           if [ -n "$FORGE_RELEASE_STORE_FILE" ]; then
             ./gradlew :app:assembleRelease :app:bundleRelease
-          else
-            echo "No upload keystore configured; skipping release artifacts."
           fi
 
       - name: Organize Artifacts
@@ -62,4 +56,3 @@ jobs:
           name: app-ci-build-artifacts
           path: artifacts/*
           retention-days: 14
-

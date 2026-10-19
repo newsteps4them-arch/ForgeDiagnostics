@@ -12,6 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.TimeUnit
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
@@ -90,7 +91,7 @@ class NexpartApiServiceTest {
         assertEquals("Mock Distributor", result.distributorRef)
         assertEquals("Tomorrow", result.estimatedArrival)
 
-        val request = mockWebServer.takeRequest()
+        val request = mockWebServer.takeRequest(5, java.util.concurrent.TimeUnit.SECONDS)!!
         assertEquals("/v2/b2b/orders/create", request.path)
         assertEquals("POST", request.method)
         assertEquals("VALID_KEY", request.getHeader("X-Nexpart-API-Key"))

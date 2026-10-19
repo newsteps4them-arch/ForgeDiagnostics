@@ -1,5 +1,7 @@
 import java.util.Properties
 import java.io.FileInputStream
+import org.gradle.api.Action
+import org.gradle.api.execution.TaskExecutionGraph
 
 plugins {
     alias(libs.plugins.android.application)
@@ -36,19 +38,21 @@ val hasReleaseSigning = !releaseStoreFile.isNullOrBlank()
 // upload keystore — instead of silently signing with the debug key. This check
 // runs only when release tasks are in the task graph, so plain debug builds
 // (and CI before the keystore exists) still configure and run.
-gradle.taskGraph.whenReady { graph ->
-    val buildingRelease = graph.allTasks.any { task ->
-        task.name.contains("Release", ignoreCase = true)
+gradle.taskGraph.whenReady(object : Action<TaskExecutionGraph> {
+    override fun execute(graph: TaskExecutionGraph) {
+        val buildingRelease = graph.allTasks.any { task ->
+            task.name.contains("Release", ignoreCase = true)
+        }
+        if (buildingRelease && !hasReleaseSigning) {
+            throw GradleException(
+                "Release signing is not configured. Generate an upload keystore " +
+                    "(see PLAYSTORE_RELEASE.md) and set FORGE_RELEASE_STORE_FILE, " +
+                    "FORGE_RELEASE_STORE_PASSWORD, FORGE_RELEASE_KEY_ALIAS and " +
+                    "FORGE_RELEASE_KEY_PASSWORD."
+            )
+        }
     }
-    if (buildingRelease && !hasReleaseSigning) {
-        throw GradleException(
-            "Release signing is not configured. Generate an upload keystore " +
-                "(see PLAYSTORE_RELEASE.md) and set FORGE_RELEASE_STORE_FILE, " +
-                "FORGE_RELEASE_STORE_PASSWORD, FORGE_RELEASE_KEY_ALIAS and " +
-                "FORGE_RELEASE_KEY_PASSWORD."
-        )
-    }
-}
+})
 
 android {
     namespace = "com.forge.app"
