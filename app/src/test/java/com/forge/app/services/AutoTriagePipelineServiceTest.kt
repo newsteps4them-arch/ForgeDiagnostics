@@ -75,8 +75,12 @@ class AutoTriagePipelineServiceTest {
 
         assertNotNull(finalState.decodedSpecs)
         assertEquals("Audi", finalState.decodedSpecs?.make)
+        // Offline: the VIN decode fell back to demo specs — must be flagged, not silent.
+        assertTrue(finalState.decodedSpecs?.isFallbackData == true)
 
-        assertTrue(finalState.safetyRecalls.isNotEmpty())
+        // Offline: a failed NHTSA recall lookup must yield an empty list
+        // ("could not check"), NEVER fabricated recall entries.
+        assertTrue(finalState.safetyRecalls.isEmpty())
         assertTrue(finalState.matchedTsbs.isNotEmpty())
         assertTrue(finalState.sourcedParts.isNotEmpty())
 
@@ -84,6 +88,10 @@ class AutoTriagePipelineServiceTest {
         assertTrue(finalState.totalEstimatedCost > 0.0)
 
         assertNotNull(finalState.summaryRecommendation)
+        // The pipeline's canned content must be labeled as demo, never as a live diagnosis.
+        assertTrue(finalState.summaryRecommendation!!.contains("DEMO DATA"))
+        val step1Summary = finalState.steps.first { it.id == "1_obd_dtc" }.resultSummary ?: ""
+        assertTrue(step1Summary.contains("DEMO"))
     }
 
     @Test

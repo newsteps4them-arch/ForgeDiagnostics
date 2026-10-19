@@ -441,7 +441,16 @@ fun PartsCatalogScreen(
                     Icon(imageVector = Icons.Default.Inventory2, contentDescription = null, tint = ForgeCyan, modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.height(12.dp))
                     Text("No parts logged in inventory yet.", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ForgeOnSurface)
-                    Text("Tap BARCODE SCAN to scan workshop tags or register parts.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { showBarcodeScannerSheet = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForgeCyan, contentColor = Color.Black),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("BARCODE SCAN", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         } else {
