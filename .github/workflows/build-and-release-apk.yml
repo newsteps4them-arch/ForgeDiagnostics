@@ -92,10 +92,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            artifacts/Forge-debug-${{ steps.version.outputs.version }}.apk
-            artifacts/Forge-release-unsigned-${{ steps.version.outputs.version }}.apk
-            artifacts/Forge-production-release-${{ steps.version.outputs.version }}.aab
+          files: artifacts/*
           tag_name: v${{ steps.version.outputs.version }}
           name: "Forge Diagnostics v${{ steps.version.outputs.version }}"
           make_latest: true
