@@ -27,19 +27,31 @@ def run_command(cmd: List[str], cwd: Optional[str] = None, check: bool = False) 
     except Exception as ex:
         return 1, "", str(ex)
 
-def gh_api_request(endpoint: str, method: str = "GET", data: Optional[Dict[str, Any]] = None) -> Any:
+def gh_api_request(endpoint: str, method: str = "GET", data: Optional[Dict[str, Any]] = None, raw_json: bool = False) -> Any:
     """Executes a GitHub API request using the gh CLI."""
     cmd = ["gh", "api", "-H", "Accept: application/vnd.github+json", endpoint]
     if method != "GET":
         cmd.extend(["-X", method])
-    if data:
-        for k, v in data.items():
-            if isinstance(v, (dict, list, bool)):
-                cmd.extend(["-F", f"{k}={json.dumps(v)}"])
-            else:
-                cmd.extend(["-f", f"{k}={v}"])
 
-    code, stdout, stderr = run_command(cmd)
+    stdin_data = None
+    if data:
+        if raw_json:
+            cmd.extend(["-H", "Content-Type: application/json", "--input", "-"])
+            stdin_data = json.dumps(data)
+        else:
+            for k, v in data.items():
+                if isinstance(v, (dict, list, bool)):
+                    cmd.extend(["-F", f"{k}={json.dumps(v)}"])
+                else:
+                    cmd.extend(["-f", f"{k}={v}"])
+
+    try:
+        res = subprocess.run(cmd, input=stdin_data, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        code, stdout, stderr = res.returncode, res.stdout.strip(), res.stderr.strip()
+    except Exception as ex:
+        print(f"[ERROR] Subprocess error during API request ({endpoint}): {ex}")
+        return None
+
     if code != 0:
         print(f"[ERROR] API request failed ({endpoint}): {stderr}")
         return None
@@ -124,7 +136,7 @@ def post_pr_conflict_comment(repo: str, pr_number: int, conflicting_files: List[
 def dispatch_conflict_resolver_bot(repo: str, pr_number: int, head_branch: str, base_branch: str):
     """Triggers the Conflict Resolver Bot (Bot 2) workflow via workflow_dispatch API."""
     endpoint = f"repos/{repo}/actions/workflows/conflict_resolver_bot.yml/dispatches"
-    result = gh_api_request(endpoint, method="POST", data={
+    result = gh_api_request(endpoint, method="POST", raw_json=True, data={
         "ref": base_branch if base_branch in ["main", "master"] else "main",
         "inputs": {
             "pr_number": str(pr_number),

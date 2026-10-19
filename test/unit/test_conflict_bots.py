@@ -11,47 +11,42 @@ import sys
 # Add scripts/ directory to path for importing bot modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../scripts')))
 
+from conflict_resolver_brain import resolve_conflict_content_smart
+
 class TestConflictResolutionEngine(unittest.TestCase):
 
     def test_smart_conflict_resolution(self):
-        """Tests that conflict_resolver_brain.resolve_conflict_content_smart resolves conflict blocks without markers."""
-        conflict_sample = (
+        """Tests that conflict_resolver_brain.resolve_conflict_content_smart resolves identical conflict blocks."""
+        identical_conflict = (
             "def calculate_total(a, b):\n"
             "<<<<<<< HEAD\n"
-            "    # Head branch change\n"
             "    tax = 0.05\n"
             "=======\n"
-            "    # Base branch update\n"
+            "    tax = 0.05\n"
+            ">>>>>>> origin/main\n"
+            "    return (a + b) * (1 + tax)\n"
+        )
+
+        resolved = resolve_conflict_content_smart(identical_conflict, "test.py")
+
+        self.assertIsNotNone(resolved)
+        self.assertNotIn("<<<<<<<", resolved)
+        self.assertNotIn("=======", resolved)
+        self.assertNotIn(">>>>>>>", resolved)
+        self.assertIn("tax = 0.05", resolved)
+
+        different_conflict = (
+            "def calculate_total(a, b):\n"
+            "<<<<<<< HEAD\n"
+            "    tax = 0.05\n"
+            "=======\n"
             "    tax = 0.08\n"
             ">>>>>>> origin/main\n"
             "    return (a + b) * (1 + tax)\n"
         )
 
-        # Inline smart conflict resolver
-        import re
-        conflict_pattern = re.compile(r'<<<<<<< [^\n]*\n(.*?)=======\n(.*?)>>>>>>> [^\n]*\n', re.DOTALL)
-
-        def replacer(match):
-            side_a = match.group(1).splitlines(keepends=True)
-            side_b = match.group(2).splitlines(keepends=True)
-            merged_lines = []
-            seen = set()
-            for line in side_a + side_b:
-                stripped = line.strip()
-                if not stripped or stripped not in seen:
-                    merged_lines.append(line)
-                    if stripped:
-                        seen.add(stripped)
-            return "".join(merged_lines)
-
-        resolved = conflict_pattern.sub(replacer, conflict_sample)
-
-        self.assertNotIn("<<<<<<<", resolved)
-        self.assertNotIn("=======", resolved)
-        self.assertNotIn(">>>>>>>", resolved)
-        self.assertIn("tax = 0.05", resolved)
-        self.assertIn("tax = 0.08", resolved)
-        self.assertIn("return (a + b) * (1 + tax)", resolved)
+        # Smart resolver must return None for non-identical conflicts to avoid syntax errors
+        self.assertIsNone(resolve_conflict_content_smart(different_conflict, "test.py"))
 
     def test_conflict_marker_verification(self):
         """Tests checking for remaining conflict markers in file contents."""
