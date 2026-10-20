@@ -639,6 +639,8 @@ private fun TaskCardItem(
     onStatusToggle: () -> Unit,
     onDelete: () -> Unit
 ) {
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+
     // Smooth animated color transitions for card state changes
     val animatedBorderColor by animateColorAsState(
         targetValue = when (task.status) {
@@ -816,7 +818,7 @@ private fun TaskCardItem(
             }
 
             IconButton(
-                onClick = onDelete,
+                onClick = { showDeleteConfirmDialog = true },
                 modifier = Modifier.size(28.dp)
             ) {
                 Icon(
@@ -827,6 +829,35 @@ private fun TaskCardItem(
                 )
             }
         }
+    }
+
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = {
+                Text("Delete Task", color = ForgeRed, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            },
+            text = {
+                Text("Are you sure you want to delete '${task.title}'? This action cannot be undone.", color = ForgeOnSurface)
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDelete()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = ForgeRed, contentColor = Color.White)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text("Cancel", color = ForgeOnSurfaceVariant)
+                }
+            },
+            containerColor = ForgeSurface
+        )
     }
 }
 
