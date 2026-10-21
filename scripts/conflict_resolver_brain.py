@@ -14,6 +14,7 @@ import re
 import json
 import subprocess
 import argparse
+import urllib.request
 from typing import List, Dict, Any, Optional
 
 try:
@@ -35,7 +36,7 @@ def run_cmd(cmd: List[str], cwd: Optional[str] = None) -> tuple[int, str, str]:
         return 1, "", str(e)
 
 def gh_api(endpoint: str, method: str = "GET", data: Optional[Dict[str, Any]] = None) -> Any:
-    """Executes GitHub API calls via gh CLI."""
+    """Executes GitHub API calls via gh CLI with urllib fallback."""
     cmd = ["gh", "api", "-H", "Accept: application/vnd.github+json", endpoint]
     if method != "GET":
         cmd.extend(["-X", method])
@@ -46,38 +47,55 @@ def gh_api(endpoint: str, method: str = "GET", data: Optional[Dict[str, Any]] = 
             else:
                 cmd.extend(["-f", f"{k}={v}"])
     code, stdout, stderr = run_cmd(cmd)
-    if code != 0:
-        print(f"[ERROR] API Call failed ({endpoint}): {stderr}")
-        return None
-    try:
-        return json.loads(stdout) if stdout else {}
-    except json.JSONDecodeError:
-        return stdout
+    if code == 0:
+        try:
+            return json.loads(stdout) if stdout else {}
+        except json.JSONDecodeError:
+            return stdout
 
-def resolve_conflict_content_smart(content: str, filename: str) -> str:
+    # Fallback to urllib.request if gh CLI fails or is missing
+    url = f"https://api.github.com/{endpoint.lstrip('/')}"
+    req = urllib.request.Request(url, method=method)
+    if GITHUB_TOKEN:
+        req.add_header("Authorization", f"token {GITHUB_TOKEN}")
+    req.add_header("Accept", "application/vnd.github+json")
+    req.add_header("User-Agent", "ForgeConflictBot/2.0")
+
+    body = None
+    if data:
+        req.add_header("Content-Type", "application/json")
+        body = json.dumps(data).encode("utf-8")
+
+    try:
+        with urllib.request.urlopen(req, data=body) as resp:
+            res_text = resp.read().decode("utf-8")
+            return json.loads(res_text) if res_text else {}
+    except Exception as e:
+        print(f"[ERROR] API Call failed ({endpoint}): {e}")
+        return None
+
+def resolve_conflict_content_smart(content: str, filename: str) -> Optional[str]:
     """
     Fallback deterministic smart conflict resolver when offline/no API key.
-    Merges conflicting blocks by preserving side A and side B lines without unsafe line-level deduplication.
+    If conflict sides are identical, resolves them cleanly.
+    Returns None on non-identical code blocks to prevent syntax corruption.
     """
     conflict_pattern = re.compile(r'<<<<<<< [^\n]*\n(.*?)=======\n(.*?)>>>>>>> [^\n]*\n', re.DOTALL)
 
+    has_non_identical = False
     def replacer(match):
-        side_a = match.group(1).splitlines(keepends=True)
-        side_b = match.group(2).splitlines(keepends=True)
+        nonlocal has_non_identical
+        side_a = match.group(1)
+        side_b = match.group(2)
+        if side_a.strip() == side_b.strip():
+            return side_a
+        has_non_identical = True
+        return match.group(0)
 
-        if side_a == side_b:
-            return "".join(side_a)
-
-        # Retain both sides in order, dropping duplicate trailing blank lines
-        merged = []
-        for line in side_a + side_b:
-            if merged and not line.strip() and not merged[-1].strip():
-                continue
-            merged.append(line)
-
-        return "".join(merged)
-
-    return conflict_pattern.sub(replacer, content)
+    resolved = conflict_pattern.sub(replacer, content)
+    if has_non_identical:
+        return None
+    return resolved
 
 def resolve_conflict_content_gemini(content: str, filename: str) -> Optional[str]:
     """Resolves conflict markers using Gemini API."""
@@ -85,7 +103,7 @@ def resolve_conflict_content_gemini(content: str, filename: str) -> Optional[str
         return None
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-1.5-flash")
 
         prompt = (
             f"You are Team Forge's Autonomous Git Conflict Resolution AI.\n"
@@ -98,6 +116,7 @@ def resolve_conflict_content_gemini(content: str, filename: str) -> Optional[str
         response = model.generate_content(prompt)
         text = response.text.strip()
 
+        # Clean up any markdown code block fences if returned
         if text.startswith("```"):
             lines = text.splitlines()
             if lines[0].startswith("```"):
@@ -139,11 +158,11 @@ def resolve_pr_conflicts(pr_number: str, head_branch: str, base_branch: str, rep
     run_cmd(["git", "config", "user.name", "Forge Conflict Resolver Bot"])
     run_cmd(["git", "config", "user.email", "conflict-resolver@forge.local"])
 
-    # Safely fetch origin refs
-    run_cmd(["git", "fetch", "origin", base_branch])
-    run_cmd(["git", "fetch", "origin", head_branch])
+    # Fetch and checkout branches
+    run_cmd(["git", "fetch", "origin", f"{base_branch}:{base_branch}"], cwd=None)
+    run_cmd(["git", "fetch", "origin", f"{head_branch}:{head_branch}"], cwd=None)
 
-    code, _, err = run_cmd(["git", "checkout", "-B", head_branch, f"origin/{head_branch}"])
+    code, _, err = run_cmd(["git", "checkout", head_branch])
     if code != 0:
         print(f"[ERROR] Failed to checkout head branch {head_branch}: {err}")
         return False
@@ -160,6 +179,7 @@ def resolve_pr_conflicts(pr_number: str, head_branch: str, base_branch: str, rep
 
         if not conflicting_files:
             print(f"[WARN] Git merge reported non-zero return code but no files were marked UU.")
+            # Fallback: find files containing conflict markers directly
             code, stdout, _ = run_cmd(["git", "grep", "-l", "-E", "^<<<<<<< "])
             if code == 0 and stdout:
                 conflicting_files = stdout.splitlines()
@@ -177,6 +197,10 @@ def resolve_pr_conflicts(pr_number: str, head_branch: str, base_branch: str, rep
             if not resolved_code:
                 print(f"[INFO] Falling back to smart deterministic resolver for `{fname}`.")
                 resolved_code = resolve_conflict_content_smart(content, fname)
+
+            if not resolved_code:
+                print(f"[ERROR] Could not safely resolve conflicts in `{fname}` without AI model or identical lines.")
+                return False
 
             with open(fname, "w", encoding="utf-8") as f:
                 f.write(resolved_code)

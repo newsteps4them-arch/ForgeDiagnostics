@@ -12,6 +12,7 @@ import sys
 import json
 import subprocess
 import argparse
+import urllib.request
 from typing import List, Dict, Any, Optional
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
@@ -28,7 +29,7 @@ def run_command(cmd: List[str], cwd: Optional[str] = None, check: bool = False) 
         return 1, "", str(ex)
 
 def gh_api_request(endpoint: str, method: str = "GET", data: Optional[Dict[str, Any]] = None) -> Any:
-    """Executes a GitHub API request using the gh CLI."""
+    """Executes a GitHub API request using the gh CLI with urllib fallback."""
     cmd = ["gh", "api", "-H", "Accept: application/vnd.github+json", endpoint]
     if method != "GET":
         cmd.extend(["-X", method])
@@ -40,13 +41,32 @@ def gh_api_request(endpoint: str, method: str = "GET", data: Optional[Dict[str, 
                 cmd.extend(["-f", f"{k}={v}"])
 
     code, stdout, stderr = run_command(cmd)
-    if code != 0:
-        print(f"[ERROR] API request failed ({endpoint}): {stderr}")
-        return None
+    if code == 0:
+        try:
+            return json.loads(stdout) if stdout else {}
+        except json.JSONDecodeError:
+            return stdout
+
+    # Fallback to urllib.request if gh CLI is not available or fails
+    url = f"https://api.github.com/{endpoint.lstrip('/')}"
+    req = urllib.request.Request(url, method=method)
+    if GITHUB_TOKEN:
+        req.add_header("Authorization", f"token {GITHUB_TOKEN}")
+    req.add_header("Accept", "application/vnd.github+json")
+    req.add_header("User-Agent", "ForgeConflictBot/1.0")
+
+    body = None
+    if data:
+        req.add_header("Content-Type", "application/json")
+        body = json.dumps(data).encode("utf-8")
+
     try:
-        return json.loads(stdout) if stdout else {}
-    except json.JSONDecodeError:
-        return stdout
+        with urllib.request.urlopen(req, data=body) as resp:
+            res_text = resp.read().decode("utf-8")
+            return json.loads(res_text) if res_text else {}
+    except Exception as e:
+        print(f"[ERROR] API request failed ({endpoint}): {e}")
+        return None
 
 def get_open_pull_requests(repo: str) -> List[Dict[str, Any]]:
     """Retrieves all open Pull Requests for the repository."""

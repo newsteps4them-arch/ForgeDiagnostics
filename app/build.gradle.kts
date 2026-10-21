@@ -1,5 +1,7 @@
 import java.util.Properties
 import java.io.FileInputStream
+import org.gradle.api.Action
+import org.gradle.api.execution.TaskExecutionGraph
 
 plugins {
     alias(libs.plugins.android.application)

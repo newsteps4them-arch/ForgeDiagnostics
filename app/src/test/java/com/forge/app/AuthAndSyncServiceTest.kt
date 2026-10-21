@@ -1,19 +1,10 @@
-// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
-// Proprietary and Confidential.
-// This file is part of Forge Agentic Diagnostics.
-// Unauthorized copying of this file, via any medium is strictly prohibited.
-
 package com.forge.app
 
 import com.forge.app.services.AuthAndSyncService
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Before
@@ -28,16 +19,6 @@ import org.junit.Test
 class AuthAndSyncServiceTest {
 
     private val testDispatcher = StandardTestDispatcher()
-
-    @Before
-    fun setUp() {
-        Dispatchers.setMain(testDispatcher)
-    }
-
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
 
     @Test
     fun testInitialStateIsUnauthenticatedGuest() = runTest {
