@@ -46,14 +46,20 @@ for (let i = 0; i < 6; i++) {
   HEX_CHAR_VAL[97 + i] = 10 + i; // 'a'-'f'
 }
 
+// Module-scoped pre-allocated buffer for zero-allocation byte parsing in single-threaded context
+const SHARED_BYTE_BUF = new Uint8Array(1024);
+
 /**
- * Fast zero-regex lookup table helper to extract raw hex bytes from OBD-II responses.
+ * Fast zero-allocation lookup table helper to extract raw hex bytes from OBD-II responses.
+ * Reuses SHARED_BYTE_BUF to avoid array heap allocations during high-frequency telemetry decoding.
  * Ignores whitespace (\s, \r, \n, \t) and prompt character (>).
- * Returns null if non-hex characters are present or if digit count is odd.
+ * Returns Uint8Array view or null if non-hex characters are present, buffer overflows, or if digit count is odd.
  */
-function parseHexBytes(hexString: string): number[] | null {
+function parseHexBytes(hexString: string): Uint8Array | null {
   const len = hexString.length;
-  const bytes: number[] = [];
+  if (len === 0) return null;
+
+  let byteCount = 0;
   let highNibble = -1;
 
   for (let i = 0; i < len; i++) {
@@ -67,24 +73,14 @@ function parseHexBytes(hexString: string): number[] | null {
     if (highNibble === -1) {
       highNibble = val;
     } else {
-      bytes.push((highNibble << 4) | val);
+      if (byteCount >= 1024) return null; // Prevent buffer overflow
+      SHARED_BYTE_BUF[byteCount++] = (highNibble << 4) | val;
       highNibble = -1;
     }
   }
 
   if (highNibble !== -1) return null;
-  return bytes;
-}
-
-function decodeAsciiPayload(bytes: number[]): string {
-  let result = '';
-  for (let i = 0; i < bytes.length; i++) {
-    const val = bytes[i]!;
-    if (val !== 0) {
-      result += String.fromCharCode(val);
-    }
-  }
-  return result;
+  return SHARED_BYTE_BUF.subarray(0, byteCount);
 }
 
 /**
@@ -135,13 +131,21 @@ export function decodeMode09Response(hexString: string): DecodedPid | null {
   const pidByte = bytes[1]!;
   const pid = HEX_BYTE_TABLE[pidByte]!;
 
-  const rawPayload = bytes.slice(2);
-  if (rawPayload.length === 0) return null;
+  let startIdx = 2;
+  if (startIdx >= bytes.length) return null;
 
-  const payload = rawPayload[0] === 0x00 ? rawPayload.slice(1) : rawPayload;
-  if (payload.length === 0) return null;
+  if (bytes[startIdx] === 0x00) {
+    startIdx++;
+  }
+  if (startIdx >= bytes.length) return null;
 
-  const ascii = decodeAsciiPayload(payload);
+  let ascii = '';
+  for (let i = startIdx; i < bytes.length; i++) {
+    const val = bytes[i]!;
+    if (val !== 0) {
+      ascii += String.fromCharCode(val);
+    }
+  }
   if (!ascii) return null;
 
   switch (pid) {
