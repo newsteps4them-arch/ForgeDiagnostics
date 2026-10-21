@@ -15,6 +15,12 @@ permissions:
   issues: write
   actions: write
 
+# The schedule fires every 15 minutes and PR/push events can overlap it;
+# serialize finder passes so two passes never dispatch at the same time.
+concurrency:
+  group: conflict-finder
+  cancel-in-progress: false
+
 jobs:
   find-conflicts:
     runs-on: ubuntu-latest
