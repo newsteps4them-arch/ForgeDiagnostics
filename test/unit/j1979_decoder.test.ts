@@ -7,6 +7,8 @@ import { describe, it, expect } from 'vitest';
 import {
   decodeMode01Response,
   decodeMode03Response,
+  decodeMode07Response,
+  decodeMode0AResponse,
   decodeMode09Response,
   decodeSupportedPidMask,
 } from '../../src/protocols/j1979_decoder';
@@ -173,5 +175,81 @@ describe('SAE J1979 Protocol Decoder', () => {
 
   it('should reject Mode 03 frames with an incomplete DTC pair', () => {
     expect(decodeMode03Response('43 01 33 03')).toEqual([]);
+  });
+
+  it('should decode pending DTCs from a Mode 07 response', () => {
+    expect(decodeMode07Response('47 01 33 03 00')).toEqual(['P0133', 'P0300']);
+    expect(decodeMode07Response('47 00 00')).toEqual([]);
+    expect(decodeMode07Response('NO DATA 47 01 33')).toEqual([]);
+  });
+
+  it('should decode permanent DTCs from a Mode 0A response', () => {
+    expect(decodeMode0AResponse('4A 01 33 03 00')).toEqual(['P0133', 'P0300']);
+    expect(decodeMode0AResponse('4A 00 00')).toEqual([]);
+    expect(decodeMode0AResponse('NO DATA 4A 01 33')).toEqual([]);
+  });
+
+  it('should decode Short Term Fuel Trim (PID 06)', () => {
+    const res = decodeMode01Response('41 06 80');
+    expect(res?.pid).toBe('06');
+    expect(res?.name).toBe('Short Term Fuel Trim');
+    expect(res?.value).toBe(0);
+    expect(res?.unit).toBe('%');
+  });
+
+  it('should decode Long Term Fuel Trim (PID 07)', () => {
+    const res = decodeMode01Response('41 07 90');
+    expect(res?.pid).toBe('07');
+    expect(res?.name).toBe('Long Term Fuel Trim');
+    expect(res?.value).toBeCloseTo(12.5, 1);
+    expect(res?.unit).toBe('%');
+  });
+
+  it('should decode Fuel Pressure (PID 0A)', () => {
+    const res = decodeMode01Response('41 0A 64');
+    expect(res?.pid).toBe('0A');
+    expect(res?.name).toBe('Fuel Pressure');
+    expect(res?.value).toBe(300);
+    expect(res?.unit).toBe('kPa');
+  });
+
+  it('should decode O2 Sensor 1 Voltage (PID 14)', () => {
+    const res = decodeMode01Response('41 14 64 80');
+    expect(res?.pid).toBe('14');
+    expect(res?.name).toBe('O2 Sensor 1 Voltage');
+    expect(res?.value).toBe(0.5);
+    expect(res?.unit).toBe('V');
+  });
+
+  it('should decode Distance Traveled with MIL on (PID 21)', () => {
+    const res = decodeMode01Response('41 21 03 E8');
+    expect(res?.pid).toBe('21');
+    expect(res?.name).toBe('Distance Traveled with MIL');
+    expect(res?.value).toBe(1000);
+    expect(res?.unit).toBe('km');
+  });
+
+  it('should decode Barometric Pressure (PID 33)', () => {
+    const res = decodeMode01Response('41 33 65');
+    expect(res?.pid).toBe('33');
+    expect(res?.name).toBe('Barometric Pressure');
+    expect(res?.value).toBe(101);
+    expect(res?.unit).toBe('kPa');
+  });
+
+  it('should decode Control Module Voltage (PID 42)', () => {
+    const res = decodeMode01Response('41 42 34 DC');
+    expect(res?.pid).toBe('42');
+    expect(res?.name).toBe('Control Module Voltage');
+    expect(res?.value).toBeCloseTo(13.532, 3);
+    expect(res?.unit).toBe('V');
+  });
+
+  it('should decode Engine Oil Temperature (PID 5C)', () => {
+    const res = decodeMode01Response('41 5C 8C');
+    expect(res?.pid).toBe('5C');
+    expect(res?.name).toBe('Engine Oil Temp');
+    expect(res?.value).toBe(100);
+    expect(res?.unit).toBe('°C');
   });
 });
