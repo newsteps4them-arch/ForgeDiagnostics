@@ -81,7 +81,7 @@ class JulesSourceApiServiceTest {
             filter = null
         )
 
-        val recordedRequest = mockWebServer.takeRequest()
+        val recordedRequest = mockWebServer.takeRequest(5, java.util.concurrent.TimeUnit.SECONDS)!!
         assertEquals("GET", recordedRequest.method)
         assertTrue(recordedRequest.path!!.startsWith("/sources"))
         assertEquals("test_key", recordedRequest.getHeader("x-goog-api-key"))
@@ -122,7 +122,7 @@ class JulesSourceApiServiceTest {
             sourceId = "github-myorg-myrepo"
         )
 
-        val recordedRequest = mockWebServer.takeRequest()
+        val recordedRequest = mockWebServer.takeRequest(5, java.util.concurrent.TimeUnit.SECONDS)!!
         assertEquals("GET", recordedRequest.method)
         assertEquals("/sources/github-myorg-myrepo", recordedRequest.path)
         assertEquals("test_key", recordedRequest.getHeader("x-goog-api-key"))

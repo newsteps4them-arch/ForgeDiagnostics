@@ -88,9 +88,10 @@ fun GarageScreen(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(imageVector = Icons.Default.DirectionsCar, contentDescription = null, tint = ForgeAmber, modifier = Modifier.size(48.dp))
+                    Icon(imageVector = Icons.Default.DirectionsCar, contentDescription = "No vehicles found", tint = ForgeAmber, modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.height(12.dp))
                     Text("No vehicles saved in garage yet.", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ForgeOnSurface)
+                    Text("Tap ADD VEHICLE to store a profile.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = { showAddModal = true },
