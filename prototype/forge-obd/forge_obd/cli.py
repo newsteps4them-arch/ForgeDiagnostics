@@ -3,10 +3,48 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 
+from . import consent
 from .adapter import read_fault_codes
 from .diagnosis import diagnose_codes
+
+
+def _ensure_llm_consent() -> None:
+    """Ask for Claude-explanation consent before the first Claude call.
+
+    The "screen" is consent.DISCLOSURE printed to stderr, followed by a
+    y/N prompt. Rules:
+    - No API key, or a choice already on record: never ask.
+    - Not an interactive terminal: never ask and never opt in silently —
+      the diagnosis layer reports "consent_required" and uses built-ins.
+    - The answer is saved (grant or decline) so the user is asked once.
+    """
+    if not os.environ.get("FORGE_OBD_LLM_KEY"):
+        return
+    if consent.get_consent() != "unknown":
+        return
+    if not sys.stdin.isatty():
+        return
+    print(consent.DISCLOSURE, file=sys.stderr)
+    # Prompt on stderr (not via input(), which prompts on stdout) so the
+    # JSON report on stdout stays machine-readable.
+    print("Allow Claude explanations? [y/N] ", end="", file=sys.stderr,
+          flush=True)
+    try:
+        answer = sys.stdin.readline()
+    except (EOFError, OSError):
+        return
+    if not answer:  # EOF — treat as "not now", record nothing
+        return
+    granted = answer.strip().lower() in ("y", "yes")
+    consent.record_consent(granted)
+    if not granted:
+        print(
+            "Okay — built-in explanations only. Nothing will be sent to Claude.",
+            file=sys.stderr,
+        )
 
 
 def main(argv=None) -> int:
@@ -25,7 +63,16 @@ def main(argv=None) -> int:
         default=None,
         help="Serial port for the ELM327 adapter (e.g. /dev/ttyUSB0).",
     )
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="Built-in explanations only for this run, even if Claude "
+             "explanations were allowed before. Nothing is sent to Claude.",
+    )
     args = parser.parse_args(argv)
+
+    if args.no_llm:
+        consent.set_run_override("declined")
 
     use_simulator = args.simulator or not args.port
     if use_simulator and args.port:
@@ -36,6 +83,7 @@ def main(argv=None) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
 
+    _ensure_llm_consent()
     print(json.dumps(diagnose_codes(readings), indent=2))
     return 0
 
