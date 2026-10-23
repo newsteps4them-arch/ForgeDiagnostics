@@ -1,8 +1,3 @@
-// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
-// Proprietary and Confidential.
-// This file is part of Forge Agentic Diagnostics.
-// Unauthorized copying of this file, via any medium is strictly prohibited.
-
 package com.forge.app
 
 import org.junit.Assert.*
@@ -57,21 +52,6 @@ class ObdParserAndProtocolTest {
             return ((a - 128) * 100f) / 128f
         }
 
-        private fun parseCodeHex(codeHex: String): String? {
-            if (codeHex == "0000") return null
-            val firstNibble = codeHex[0].digitToInt(16)
-            val prefix = when (firstNibble shr 2) {
-                0 -> "P"
-                1 -> "C"
-                2 -> "B"
-                3 -> "U"
-                else -> "P"
-            }
-            val firstCharNum = (firstNibble and 0x03).toString()
-            val restChars = codeHex.substring(1)
-            return "$prefix$firstCharNum$restChars"
-        }
-
         fun parseDtcResponse(hexResponse: String): List<String> {
             // Mode 03 response: "43 01 33 03 00 00 00" -> P0133, P0300
             val clean = hexResponse.replace(" ", "").trim()
@@ -81,7 +61,18 @@ class ObdParserAndProtocolTest {
             for (i in 0 until payload.length step 4) {
                 if (i + 4 <= payload.length) {
                     val codeHex = payload.substring(i, i + 4)
-                    parseCodeHex(codeHex)?.let { dtcs.add(it) }
+                    if (codeHex == "0000") continue
+                    val firstNibble = codeHex[0].digitToInt(16)
+                    val prefix = when (firstNibble shr 2) {
+                        0 -> "P"
+                        1 -> "C"
+                        2 -> "B"
+                        3 -> "U"
+                        else -> "P"
+                    }
+                    val firstCharNum = (firstNibble and 0x03).toString()
+                    val restChars = codeHex.substring(1)
+                    dtcs.add("$prefix$firstCharNum$restChars")
                 }
             }
             return dtcs

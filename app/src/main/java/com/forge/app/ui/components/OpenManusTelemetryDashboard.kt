@@ -1,8 +1,3 @@
-// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
-// Proprietary and Confidential.
-// This file is part of Forge Agentic Diagnostics.
-// Unauthorized copying of this file, via any medium is strictly prohibited.
-
 package com.forge.app.ui.components
 
 import androidx.compose.animation.*
@@ -188,7 +183,7 @@ fun OpenManusTelemetryDashboard(
                     ) {
                         Icon(
                             imageVector = if (isStreamPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                            contentDescription = if (isStreamPaused) "Resume Stream" else "Freeze Stream",
+                            contentDescription = "Freeze Stream",
                             tint = if (isStreamPaused) ForgeGreen else ForgeAmber,
                             modifier = Modifier.size(18.dp)
                         )
@@ -673,20 +668,6 @@ fun OpenManusTelemetryDashboard(
  * Individual Sensor Metric Card with animated linear bar and pulsing live stream indicator
  */
 @Composable
-fun LiveStreamIndicator(
-    color: Color,
-    pulseAlpha: Float,
-    size: androidx.compose.ui.unit.Dp = 6.dp,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(color.copy(alpha = pulseAlpha))
-    )
-}
-@Composable
 fun SensorGaugeCard(
     title: String,
     valueText: String,
@@ -752,7 +733,12 @@ fun SensorGaugeCard(
                 )
 
                 if (isLiveStreaming) {
-                    LiveStreamIndicator(color = accentColor, pulseAlpha = pulseAlpha)
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(accentColor.copy(alpha = pulseAlpha))
+                    )
                 }
             }
 
@@ -877,7 +863,12 @@ fun BiDirectionalTrimCard(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     if (isLiveStreaming) {
-                        LiveStreamIndicator(color = trimColor, pulseAlpha = pulseAlpha, size = 5.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(5.dp)
+                                .clip(CircleShape)
+                                .background(trimColor.copy(alpha = pulseAlpha))
+                        )
                     }
                     Text(
                         text = pidCode,

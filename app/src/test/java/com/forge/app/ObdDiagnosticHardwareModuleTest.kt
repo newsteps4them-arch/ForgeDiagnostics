@@ -1,8 +1,3 @@
-// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
-// Proprietary and Confidential.
-// This file is part of Forge Agentic Diagnostics.
-// Unauthorized copying of this file, via any medium is strictly prohibited.
-
 package com.forge.app
 
 import com.forge.app.services.*
@@ -20,7 +15,6 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
-
 @OptIn(ExperimentalCoroutinesApi::class)
 class ObdDiagnosticHardwareModuleTest {
 
@@ -31,28 +25,18 @@ class ObdDiagnosticHardwareModuleTest {
     private lateinit var hardwareModule: ObdDiagnosticHardwareModule
     private val testDispatcher = StandardTestDispatcher()
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         telemetryService = ObdTelemetryService(testScope)
-        geminiService = object : GeminiService() {
-            override suspend fun generateDiagnosticAnalysis(prompt: String): String {
-                return "Primary Root Cause: Verified Intake Vacuum Infiltration on Bank 1."
-            }
-        }
-        openManusService = OpenManusAgentService(geminiService, Dispatchers.Unconfined)
-
-
+        geminiService = GeminiService()
+        openManusService = OpenManusAgentService(geminiService)
         hardwareModule = ObdDiagnosticHardwareModule(
             scope = testScope,
             usbHardwareService = null,
             telemetryService = telemetryService,
             openManusService = openManusService,
-            ioDispatcher = Dispatchers.Unconfined,
-            mainDispatcher = Dispatchers.Unconfined
         )
-
     }
 
     @After
@@ -71,32 +55,24 @@ class ObdDiagnosticHardwareModuleTest {
 
     @Test
     fun testFetchLiveDtcCodesAndOpenManusAutoTrigger() = runBlocking {
-        hardwareModule.setHardwareInterface(ObdHardwareInterface.SIMULATED)
-
         hardwareModule.fetchLiveDiagnosticTroubleCodes(
             vehicleName = "2021 Audi S5 Sportback",
             autoTriggerOpenManus = true,
         )
-
-        var attempts = 0
-        while (attempts < 50 && (hardwareModule.hardwareState.value.isFetchingDtcs || openManusService.state.value.finalReport == null)) {
-            delay(100)
-            attempts++
-        }
+        delay(600.milliseconds)
 
         val state = hardwareModule.hardwareState.value
         assertFalse(state.isFetchingDtcs)
-        assertNotNull(state.activeDtcs)
+        assertTrue(state.activeDtcs.isNotEmpty())
 
         val dtcCodes = state.activeDtcs.map { it.code }
         assertTrue(dtcCodes.contains("P0300") || dtcCodes.contains("P0171"))
 
+        // Verify OpenManus received active DTCs and generated diagnosis
         val agentState = openManusService.state.value
         assertNotNull(agentState.finalReport)
         assertTrue(agentState.finalReport?.primaryRootCause?.isNotBlank() == true)
     }
-
-
 
     @Test
     fun testClearHardwareFaultCodes() = runBlocking {

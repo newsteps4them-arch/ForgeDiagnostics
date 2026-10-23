@@ -1,15 +1,9 @@
-// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
-// Proprietary and Confidential.
-// This file is part of Forge Agentic Diagnostics.
-// Unauthorized copying of this file, via any medium is strictly prohibited.
-
 package com.forge.app.services
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.util.Log
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,11 +63,8 @@ class ObdDiagnosticHardwareModule(
     private val scope: CoroutineScope,
     private val usbHardwareService: UsbHardwareCommunicationService? = null,
     private val telemetryService: ObdTelemetryService? = null,
-    private val openManusService: OpenManusAgentService? = null,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val openManusService: OpenManusAgentService? = null
 ) {
-
     private val _hardwareState = MutableStateFlow(ObdHardwareDiagnosticState())
     val hardwareState: StateFlow<ObdHardwareDiagnosticState> = _hardwareState.asStateFlow()
 
@@ -107,20 +98,20 @@ class ObdDiagnosticHardwareModule(
      * ATZ -> ATE0 -> ATL0 -> ATH1 -> ATSP0 -> 0100 -> 010C
      */
     fun connectHardwareDongle(onResult: ((Boolean, String) -> Unit)? = null) {
-        scope.launch(ioDispatcher) {
+        scope.launch(Dispatchers.IO) {
             _hardwareState.value = _hardwareState.value.copy(isScanning = true)
             when (_hardwareState.value.selectedInterface) {
                 ObdHardwareInterface.USB_OTG -> {
                     val usbSuccess = initUsbOtgDongle()
                     _hardwareState.value = _hardwareState.value.copy(isScanning = false)
-                    withContext(mainDispatcher) {
+                    withContext(Dispatchers.Main) {
                         onResult?.invoke(usbSuccess, if (usbSuccess) "USB OBD-II Interface Initialized" else "Failed to initialize USB OBD device")
                     }
                 }
                 ObdHardwareInterface.BLUETOOTH_SPP -> {
                     val btSuccess = initBluetoothDongle()
                     _hardwareState.value = _hardwareState.value.copy(isScanning = false)
-                    withContext(mainDispatcher) {
+                    withContext(Dispatchers.Main) {
                         onResult?.invoke(btSuccess, if (btSuccess) "Bluetooth OBD-II Interface Connected" else "Failed to pair/connect Bluetooth OBD dongle")
                     }
                 }
@@ -130,14 +121,13 @@ class ObdDiagnosticHardwareModule(
                         isConnected = true,
                         connectedDeviceName = "Virtual Diagnostic Bridge"
                     )
-                    withContext(mainDispatcher) {
+                    withContext(Dispatchers.Main) {
                         onResult?.invoke(true, "Virtual OBD Interface Connected")
                     }
                 }
             }
         }
     }
-
 
     private suspend fun initUsbOtgDongle(): Boolean {
         return try {
@@ -191,7 +181,7 @@ class ObdDiagnosticHardwareModule(
 
             val buffer = ByteArray(512)
             val bytes = inputStream.read(buffer)
-            val response = decodeStream(buffer, bytes)
+            val response = String(buffer, 0, bytes)
 
             _hardwareState.value = _hardwareState.value.copy(
                 isConnected = true,
@@ -215,9 +205,8 @@ class ObdDiagnosticHardwareModule(
         vehicleName: String = "Connected Vehicle",
         autoTriggerOpenManus: Boolean = true
     ) {
-        scope.launch(ioDispatcher) {
+        scope.launch(Dispatchers.IO) {
             _hardwareState.value = _hardwareState.value.copy(isFetchingDtcs = true)
-
 
             val parsedDtcs = mutableListOf<LiveDtcRecord>()
 
@@ -307,16 +296,15 @@ class ObdDiagnosticHardwareModule(
      * Clears diagnostic fault codes using Mode 04 and resets MIL check engine light
      */
     fun clearHardwareFaultCodes(onCompleted: (() -> Unit)? = null) {
-        scope.launch(ioDispatcher) {
+        scope.launch(Dispatchers.IO) {
             sendObdCommand("04")
             telemetryService?.clearDtcs()
             _hardwareState.value = _hardwareState.value.copy(activeDtcs = emptyList())
-            withContext(mainDispatcher) {
+            withContext(Dispatchers.Main) {
                 onCompleted?.invoke()
             }
         }
     }
-
 
     private suspend fun sendObdCommand(command: String): String {
         return try {
@@ -331,7 +319,7 @@ class ObdDiagnosticHardwareModule(
                     out.flush()
                     val buf = ByteArray(512)
                     val read = input.read(buf)
-                    decodeStream(buf, read, true)
+                    if (read > 0) String(buf, 0, read).trim() else ""
                 }
                 else -> ""
             }
@@ -440,8 +428,7 @@ class ObdDiagnosticHardwareModule(
     private fun startPeriodicSensorPolling() {
         if (isLoopActive) return
         isLoopActive = true
-        scope.launch(ioDispatcher) {
-
+        scope.launch(Dispatchers.IO) {
             while (isLoopActive && _hardwareState.value.isConnected) {
                 // Poll live RPM (010C)
                 val rpmRaw = sendObdCommand("010C")
@@ -471,13 +458,4 @@ class ObdDiagnosticHardwareModule(
             connectedDeviceName = "Disconnected"
         )
     }
-    private fun decodeStream(buffer: ByteArray, bytesRead: Int, trim: Boolean = false): String {
-        return if (bytesRead > 0) {
-            val result = String(buffer, 0, bytesRead)
-            if (trim) result.trim() else result
-        } else {
-            ""
-        }
-    }
-
 }

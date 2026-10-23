@@ -1,8 +1,3 @@
-// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
-// Proprietary and Confidential.
-// This file is part of Forge Agentic Diagnostics.
-// Unauthorized copying of this file, via any medium is strictly prohibited.
-
 package com.forge.app.ui.components
 
 import androidx.compose.animation.*
@@ -690,7 +685,7 @@ private fun TaskCardItem(
                                 "In Progress" -> Icons.Default.Pending
                                 else -> Icons.Default.RadioButtonUnchecked
                             },
-                            contentDescription = "Toggle status for task: ${task.title}",
+                            contentDescription = "Toggle Status",
                             tint = iconTint,
                             modifier = Modifier.scale(iconScale)
                         )
@@ -790,7 +785,7 @@ private fun TaskCardItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.DeleteOutline,
-                    contentDescription = "Delete task: ${task.title}",
+                    contentDescription = "Delete Task",
                     tint = ForgeOnSurfaceVariant,
                     modifier = Modifier.size(16.dp)
                 )
