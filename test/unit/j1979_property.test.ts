@@ -1,7 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { decodeMode01Response } from '../../src/protocols/j1979_decoder';
+import {
+  decodeMode01Response,
+  decodeMode03Response,
+  decodeMode07Response,
+  decodeMode0AResponse,
+} from '../../src/protocols/j1979_decoder';
 
 describe('SAE J1979 randomized accuracy and corruption coverage', () => {
+  it('decodes identical DTC payloads consistently across Mode 03, Mode 07, and Mode 0A', () => {
+    const payloads = [
+      '01330300',
+      '0000',
+      '41710100',
+      '80010000',
+      'C0120000',
+    ];
+
+    for (const payload of payloads) {
+      const mode03 = decodeMode03Response(`43 ${payload}`);
+      const mode07 = decodeMode07Response(`47 ${payload}`);
+      const mode0A = decodeMode0AResponse(`4A ${payload}`);
+
+      expect(mode03).toEqual(mode07);
+      expect(mode03).toEqual(mode0A);
+    }
+  });
+
   it('decodes every single-byte speed value exactly', () => {
     for (let speed = 0; speed <= 255; speed += 1) {
       const response = `41 0D ${speed.toString(16).padStart(2, '0')}`;
