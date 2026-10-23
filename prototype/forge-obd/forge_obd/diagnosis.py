@@ -1,9 +1,13 @@
 """Plain-English diagnosis layer.
 
-Built-in explanations cover common codes and work with no API key. An
-optional LLM key (env FORGE_OBD_LLM_KEY) can enrich wording, but the
-built-in layer is always the fallback and the output always says which
-layer produced it.
+Built-in explanations cover common codes and work with no API key. With a
+Claude API key set (env FORGE_OBD_LLM_KEY) AND the user's consent (see
+consent.py — nothing is sent before the user says yes), each code also
+gets a plain-English explanation from Claude (see llm.py), cost-capped
+per call.
+The built-in layer is always the fallback, every failure is reported
+honestly with which side failed, and the output always says which layer
+produced the text.
 
 Safety rule: this layer explains codes and suggests checks. It never
 claims a repair is safe or guaranteed.
@@ -13,6 +17,7 @@ from __future__ import annotations
 import os
 from typing import Dict, List
 
+from . import consent, llm
 from .adapter import FaultReading
 
 DISCLAIMER = (
@@ -71,23 +76,143 @@ def _generic_explanation(code: str) -> str:
     )
 
 
-def explain_code(code: str) -> Dict[str, str]:
-    """Explain one code. Always honest about which layer produced the text."""
+def explain_code(code: str, source: str = "vehicle") -> Dict:
+    """Explain one code. Always honest about which layer produced the text.
+
+    With FORGE_OBD_LLM_KEY set and consent granted, Claude writes the
+    explanation (cost-capped, see llm.py). Any model-side failure falls back to the built-in text and
+    the result's "llm" field says exactly what failed — nothing is invented.
+    With no key, the built-in text is used and "llm" reports explanations
+    as disabled until the key is set.
+    """
     code = code.strip().upper()
-    llm_key = os.environ.get("FORGE_OBD_LLM_KEY")
-    if llm_key:
-        # Pluggable enrichment point: with a key set, a provider call would go
-        # here. The built-in text remains the grounded fallback either way.
+    builtin = BUILTIN_EXPLANATIONS.get(code, _generic_explanation(code))
+    if not os.environ.get("FORGE_OBD_LLM_KEY"):
         return {
             "code": code,
-            "explanation": BUILTIN_EXPLANATIONS.get(code, _generic_explanation(code)),
-            "layer": "builtin+llm-key-present",
-            "note": "LLM enrichment hook is stubbed in this prototype; built-in explanation shown.",
+            "explanation": builtin,
+            "layer": "builtin",
+            "llm": {
+                "status": "disabled",
+                "detail": (
+                    "Plain-English explanations from Claude are off — "
+                    "FORGE_OBD_LLM_KEY is not set. Built-in explanation shown."
+                ),
+            },
+        }
+    # Consent gate: the key being set is not permission. Until the user
+    # has granted consent (see consent.py), nothing is sent to Claude.
+    consent_status = consent.get_consent()
+    if consent_status == "declined":
+        return {
+            "code": code,
+            "explanation": builtin,
+            "layer": "builtin",
+            "llm": {
+                "status": "declined",
+                "detail": (
+                    "You declined Claude explanations, so nothing was sent "
+                    "to Claude. Built-in explanation shown; the app works "
+                    "the same without them."
+                ),
+            },
+        }
+    if consent_status != "granted":
+        return {
+            "code": code,
+            "explanation": builtin,
+            "layer": "builtin",
+            "llm": {
+                "status": "consent_required",
+                "detail": (
+                    "Claude explanations need your permission first, so "
+                    "nothing was sent to Claude. Built-in explanation "
+                    "shown. Run the tool interactively to be asked, or set "
+                    "FORGE_OBD_LLM_CONSENT=granted to allow them."
+                ),
+            },
+        }
+    try:
+        enriched = llm.explain_with_claude(code, builtin, source)
+    except llm.LlmUnavailable as exc:
+        return {
+            "code": code,
+            "explanation": builtin,
+            "layer": "builtin",
+            "llm": {
+                "status": "unavailable",
+                "detail": (
+                    f"Claude explanation unavailable: {exc}. "
+                    "Built-in explanation shown; nothing was invented."
+                ),
+            },
         }
     return {
         "code": code,
-        "explanation": BUILTIN_EXPLANATIONS.get(code, _generic_explanation(code)),
-        "layer": "builtin",
+        "explanation": enriched.text,
+        "layer": "builtin+llm",
+        "llm": {
+            "status": "ok",
+            "model": enriched.model,
+            "cost_usd": round(enriched.cost_usd, 6),
+            "cost_cap_usd": llm.MAX_CALL_COST_USD,
+            "input_tokens": enriched.input_tokens,
+            "output_tokens": enriched.output_tokens,
+        },
+    }
+
+
+def _llm_summary(results: List[Dict]) -> Dict:
+    """One honest status line for the whole report's explanation layer."""
+    if not results:
+        if not os.environ.get("FORGE_OBD_LLM_KEY"):
+            return {
+                "status": "disabled",
+                "detail": (
+                    "Claude explanations are disabled until FORGE_OBD_LLM_KEY "
+                    "is set."
+                ),
+            }
+        return {"status": "ok", "detail": "No fault codes to explain."}
+    statuses = [r.get("llm", {}).get("status") for r in results]
+    if statuses and all(s == "disabled" for s in statuses):
+        return {
+            "status": "disabled",
+            "detail": (
+                "Claude explanations are disabled until FORGE_OBD_LLM_KEY "
+                "is set; built-in explanations were used."
+            ),
+        }
+    if any(s == "ok" for s in statuses):
+        total = sum(r["llm"].get("cost_usd", 0.0) for r in results)
+        return {
+            "status": "ok",
+            "detail": "Claude wrote the explanations; built-ins grounded them.",
+            "total_cost_usd": round(total, 6),
+        }
+    if any(s == "consent_required" for s in statuses):
+        return {
+            "status": "consent_required",
+            "detail": (
+                "Claude explanations were not used because your permission "
+                "has not been given; nothing was sent to Claude and "
+                "built-in explanations were used."
+            ),
+        }
+    if statuses and all(s == "declined" for s in statuses):
+        return {
+            "status": "declined",
+            "detail": (
+                "You declined Claude explanations; nothing was sent to "
+                "Claude and built-in explanations were used."
+            ),
+        }
+    return {
+        "status": "unavailable",
+        "detail": (
+            "The explanation model could not be reached; built-in "
+            "explanations were used and no explanation was invented."
+        ),
     }
 
 
@@ -102,9 +227,14 @@ def diagnose_codes(readings: List[FaultReading]) -> Dict:
                 "That means no codes right now — not that the vehicle is fault-free."
             ),
             "results": [],
+            "llm": _llm_summary([]),
             "disclaimer": DISCLAIMER,
         }
     sources = {r.source for r in readings}
+    results = [
+        {**explain_code(r.code, source=r.source), "provenance": r.source}
+        for r in readings
+    ]
     return {
         "source": "simulator" if sources == {"simulator"} else "vehicle",
         "source_detail": (
@@ -113,8 +243,7 @@ def diagnose_codes(readings: List[FaultReading]) -> Dict:
             else "Read from a live vehicle adapter."
         ),
         "fault_count": len(readings),
-        "results": [
-            {**explain_code(r.code), "provenance": r.source} for r in readings
-        ],
+        "results": results,
+        "llm": _llm_summary(results),
         "disclaimer": DISCLAIMER,
     }
