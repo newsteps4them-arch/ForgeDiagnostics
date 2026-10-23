@@ -173,7 +173,7 @@ object DtcExplanationService {
                 rawGeminiAnalysis = geminiText
             )
 
-            "P0301", "P0302", "P0303", "P0304" -> {
+            "P0301", "P0302", "P0303", "P0304", "P0305", "P0306", "P0307", "P0308" -> {
                 val cylNum = code.last()
                 DtcExplanation(
                     code = code,
@@ -306,37 +306,100 @@ object DtcExplanationService {
                 rawGeminiAnalysis = geminiText
             )
 
-            "P0420" -> DtcExplanation(
-                code = "P0420",
-                standardTitle = "Catalyst System Efficiency Below Threshold (Bank 1)",
-                severity = DtcSeverity.MODERATE,
-                systemCategory = getSaeJ2012Category("P0420"),
-                laymanSummary = "The catalytic converter on Bank 1 is not cleaning the exhaust gases as efficiently as designed by the manufacturer. The secondary oxygen sensor behind the converter is seeing too much fluctuation, meaning the precious metal catalyst bed is worn or fouled.",
-                isSafeToDrive = "YES — Safe for Normal Driving (Fix Before State Emissions Inspection)",
-                safeToDriveReason = "This is strictly an exhaust emissions efficiency fault. The car will drive normally in most cases, but it will fail state smog inspections and may cause mild exhaust odor.",
+            "P0420", "P0430" -> {
+                val bank = if (code == "P0420") "Bank 1" else "Bank 2"
+                DtcExplanation(
+                    code = code,
+                    standardTitle = "Catalyst System Efficiency Below Threshold ($bank)",
+                    severity = DtcSeverity.MODERATE,
+                    systemCategory = getSaeJ2012Category(code),
+                    laymanSummary = "The catalytic converter on $bank is not cleaning the exhaust gases as efficiently as designed by the manufacturer. The secondary oxygen sensor behind the converter is seeing too much fluctuation, meaning the precious metal catalyst bed is worn or fouled.",
+                    isSafeToDrive = "YES — Safe for Normal Driving (Fix Before State Emissions Inspection)",
+                    safeToDriveReason = "This is strictly an exhaust emissions efficiency fault. The car will drive normally in most cases, but it will fail state smog inspections and may cause mild exhaust odor.",
+                    commonSymptoms = listOf(
+                        "Steady Check Engine Light illuminated",
+                        "Slight sulfur or rotten egg smell from tailpipe",
+                        "Failed state vehicle emissions / smog test",
+                        "Reduced engine top-end power if converter is physically clogged",
+                        "Slight decrease in highway fuel efficiency"
+                    ),
+                    probableCauses = listOf(
+                        DtcProbableCause("Aged or Degraded Catalytic Converter Bed", 50, "Loss of cerium oxygen storage capacity from high mileage (>100k miles)."),
+                        DtcProbableCause("Contamination from Prior Engine Misfires or Oil Burning", 25, "Unburned fuel or phosphorus/silicone poisoned the internal platinum/palladium washcoat."),
+                        DtcProbableCause("Faulty Downstream Oxygen Sensor ($bank Sensor 2)", 15, "Lazy or drifted O2 sensor reporting inaccurate exhaust oxygen fluctuation."),
+                        DtcProbableCause("Exhaust Pipe Leak Near Converter", 10, "Cracked flex pipe or gasket drawing fresh air into post-cat exhaust stream.")
+                    ),
+                    diagnosticSteps = listOf(
+                        "Check for active misfire (P0300) or fuel trim (P0171/P0172) codes first — fix upstream issues before replacing cat.",
+                        "Graph upstream vs. downstream O2 sensor voltages on oscilloscope: Downstream should remain flat (~0.65V to 0.75V) under steady cruise.",
+                        "Use infrared thermometer to measure inlet vs. outlet converter temp: Outlet should be 50 degrees F - 100 degrees F hotter.",
+                        "Inspect exhaust manifold and flex pipe for pinhole cracks or black soot leaks."
+                    ),
+                    estimatedRepairCostRange = "$120 - $250 (Downstream O2 Sensor / Gasket) / $600 - $1,800 (OEM Direct-Fit Catalytic Converter)",
+                    diyDifficulty = "Moderate (Sensor) / Professional Required (Welding / Exhaust Drop)",
+                    verifiedOemSource = "EPA OBD-II Catalyst Monitoring Protocol & SAE J1979 Standards",
+                    technicalDetails = "Downstream O2 sensor switch ratio compared against upstream sensor exceeds 0.70 limit on $bank, indicating total oxygen storage capacity depletion in catalytic core.",
+                    rawGeminiAnalysis = geminiText
+                )
+            }
+
+            "P0442" -> DtcExplanation(
+                code = "P0442",
+                standardTitle = "Evaporative Emission Control System Leak Detected (Small Leak)",
+                severity = DtcSeverity.LOW,
+                systemCategory = getSaeJ2012Category("P0442"),
+                laymanSummary = "The vehicle's Evaporative Emission (EVAP) system detected a very small fuel vapor leak (typically less than 0.04 inches in diameter). Gasoline vapors are escaping into the atmosphere instead of being routed to the engine to burn.",
+                isSafeToDrive = "YES — Safe to Drive Normally",
+                safeToDriveReason = "A small EVAP leak will not affect engine performance, reliability, or safety, but it will prevent passing state emissions tests.",
                 commonSymptoms = listOf(
-                    "Steady Check Engine Light illuminated",
-                    "Slight sulfur or rotten egg smell from tailpipe",
-                    "Failed state vehicle emissions / smog test",
-                    "Reduced engine top-end power if converter is physically clogged",
-                    "Slight decrease in highway fuel efficiency"
+                    "Illuminated Check Engine Light",
+                    "Faint gasoline odor near the fuel filler door",
+                    "Failed emissions inspection"
                 ),
                 probableCauses = listOf(
-                    DtcProbableCause("Aged or Degraded Catalytic Converter Bed", 50, "Loss of cerium oxygen storage capacity from high mileage (>100k miles)."),
-                    DtcProbableCause("Contamination from Prior Engine Misfires or Oil Burning", 25, "Unburned fuel or phosphorus/silicone poisoned the internal platinum/palladium washcoat."),
-                    DtcProbableCause("Faulty Downstream Oxygen Sensor (Bank 1 Sensor 2)", 15, "Lazy or drifted O2 sensor reporting inaccurate exhaust oxygen fluctuation."),
-                    DtcProbableCause("Exhaust Pipe Leak Near Converter", 10, "Cracked flex pipe or gasket drawing fresh air into post-cat exhaust stream.")
+                    DtcProbableCause("Loose, Cracked, or Missing Gas Cap", 50, "Gas cap seal rubber dried out, cracked, or cap not tightened fully."),
+                    DtcProbableCause("Deteriorated EVAP Rubber Hose / Line", 30, "Small dry-rot pinhole crack in fuel vapor purge line."),
+                    DtcProbableCause("Failing EVAP Vent Valve O-Ring Seal", 20, "Charcoal canister vent valve seal leak.")
                 ),
                 diagnosticSteps = listOf(
-                    "Check for active misfire (P0300) or fuel trim (P0171/P0172) codes first — fix upstream issues before replacing cat.",
-                    "Graph upstream vs. downstream O2 sensor voltages on oscilloscope: Downstream should remain flat (~0.65V to 0.75V) under steady cruise.",
-                    "Use infrared thermometer to measure inlet vs. outlet converter temp: Outlet should be 50 degrees F - 100 degrees F hotter.",
-                    "Inspect exhaust manifold and flex pipe for pinhole cracks or black soot leaks."
+                    "Inspect gas cap rubber gasket for cracks, grit, or corrosion on fuel neck.",
+                    "Tighten gas cap until it clicks 3 times, clear codes, and test.",
+                    "Perform low-pressure EVAP smoke test (0.5 PSI) on purge port to locate leak point."
                 ),
-                estimatedRepairCostRange = "$120 - $250 (Downstream O2 Sensor / Gasket) / $600 - $1,800 (OEM Direct-Fit Catalytic Converter)",
-                diyDifficulty = "Moderate (Sensor) / Professional Required (Welding / Exhaust Drop)",
-                verifiedOemSource = "EPA OBD-II Catalyst Monitoring Protocol & SAE J1979 Standards",
-                technicalDetails = "Downstream O2 sensor switch ratio compared against upstream sensor exceeds 0.70 limit, indicating total oxygen storage capacity depletion in catalytic core.",
+                estimatedRepairCostRange = "$15 - $30 (Gas Cap) / $100 - $250 (EVAP Hose or Vent Valve)",
+                diyDifficulty = "Beginner (DIY Friendly)",
+                verifiedOemSource = "SAE J1979 EVAP Leak Testing Protocol",
+                technicalDetails = "Engine computer pulled engine vacuum on sealed fuel tank; vacuum decay rate exceeded 0.040 inch leak threshold over 30-second monitor window.",
+                rawGeminiAnalysis = geminiText
+            )
+
+            "P0455" -> DtcExplanation(
+                code = "P0455",
+                standardTitle = "Evaporative Emission Control System Leak Detected (Gross Leak / No Flow)",
+                severity = DtcSeverity.MODERATE,
+                systemCategory = getSaeJ2012Category("P0455"),
+                laymanSummary = "A major fuel vapor leak was detected in the EVAP system, or the gas cap was left completely off. The ECU could not build any vacuum inside the fuel tank during its diagnostic test.",
+                isSafeToDrive = "YES — Safe for Driving, Check Gas Cap Immediately",
+                safeToDriveReason = "Gross EVAP leaks do not cause engine damage, but raw fuel vapors are venting continuously.",
+                commonSymptoms = listOf(
+                    "Check Engine Light on",
+                    "Noticeable fuel vapor smell around car after parking",
+                    "Gas cap light / warning on dashboard instrument cluster"
+                ),
+                probableCauses = listOf(
+                    DtcProbableCause("Gas Cap Unclicked or Missing", 60, "Gas cap left loose after refueling or seal missing."),
+                    DtcProbableCause("Disconnected EVAP Purge Hose", 25, "Purge line popped off intake manifold or charcoal canister."),
+                    DtcProbableCause("Stuck-Open EVAP Vent Solenoid Valve", 15, "Vent valve failed mechanically open.")
+                ),
+                diagnosticSteps = listOf(
+                    "Check if gas cap is securely tightened or missing.",
+                    "Visually check underhood EVAP purge lines for disconnected or broken quick-connect fittings.",
+                    "Smoke-test EVAP system at filler neck to verify canister and vent valve seating."
+                ),
+                estimatedRepairCostRange = "$0 - $30 (Tighten / Replace Gas Cap) / $120 - $280 (Purge/Vent Valve)",
+                diyDifficulty = "Beginner (DIY Friendly)",
+                verifiedOemSource = "SAE J2012 / EPA OBD-II Standards",
+                technicalDetails = "EVAP monitor detected zero vacuum buildup rate during tank drawdown sequence, indicating an open orifice > 0.090 inches.",
                 rawGeminiAnalysis = geminiText
             )
 
