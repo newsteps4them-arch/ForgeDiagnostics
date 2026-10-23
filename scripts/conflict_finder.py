@@ -17,6 +17,13 @@ from typing import List, Dict, Any, Optional
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
 REPO_FULL = os.getenv("GITHUB_REPOSITORY", "newsteps4them-arch/ForgeDiagnostics")
 
+# Cap how many resolver runs a single finder pass may dispatch. On 2026-10-21
+# one finder pass dispatched 41 resolver runs inside four minutes; they all
+# raced each other (and all failed). Oldest PRs are handled first; the rest
+# are picked up by the next scheduled pass.
+MAX_DISPATCHES_PER_RUN = int(os.getenv("BOT1_MAX_DISPATCHES", "3"))
+CONFLICT_LABEL = "has-merge-conflict"
+
 def run_command(cmd: List[str], cwd: Optional[str] = None, check: bool = False) -> tuple[int, str, str]:
     """Runs a subprocess command and returns (returncode, stdout, stderr)."""
     try:
@@ -67,8 +74,20 @@ def check_local_merge_conflict(base_branch: str, head_branch: str) -> tuple[bool
     Dry-runs a git merge locally to verify if conflicts exist between base and head.
     Returns (has_conflict, list_of_conflicting_files).
     """
-    run_command(["git", "fetch", "origin", f"{base_branch}:{base_branch}"], check=False)
-    run_command(["git", "fetch", "origin", f"{head_branch}:{head_branch}"], check=False)
+    # Update the remote-tracking refs only. Fetching into local branch names
+    # (origin/{base}:{base}) fails for the branch the workflow has checked out
+    # and can clobber local state.
+    run_command(["git", "fetch", "origin", base_branch], check=False)
+    run_command(["git", "fetch", "origin", head_branch], check=False)
+
+    # If either ref cannot be resolved, the local check cannot run. That is
+    # "unknown", not "conflict" — previously a failed merge-tree (e.g. missing
+    # ref) was misread as a conflict and triggered a resolver dispatch.
+    for ref in (f"origin/{base_branch}", f"origin/{head_branch}"):
+        code, _, _ = run_command(["git", "rev-parse", "--verify", "--quiet", ref])
+        if code != 0:
+            print(f"[WARN] Local merge check skipped: cannot resolve {ref}.")
+            return False, []
 
     code, stdout, stderr = run_command(["git", "merge-tree", f"origin/{base_branch}", f"origin/{head_branch}"])
 
@@ -141,8 +160,10 @@ def inspect_and_process_prs(repo: str) -> List[Dict[str, Any]]:
 
     ensure_label_exists(repo)
     conflicting_prs = []
+    dispatches = 0
 
-    for pr in open_prs:
+    # Oldest PRs first, so the dispatch cap below drains the backlog in order.
+    for pr in sorted(open_prs, key=lambda p: p.get("number") or 0):
         pr_number = pr.get("number")
         head_branch = pr.get("head", {}).get("ref")
         base_branch = pr.get("base", {}).get("ref")
@@ -177,9 +198,27 @@ def inspect_and_process_prs(repo: str) -> List[Dict[str, Any]]:
                 "conflicting_files": conflicting_files
             })
 
+            # Dedupe: a PR already carrying the conflict label was found by an
+            # earlier pass — it already has its diagnostic comment and a
+            # resolver dispatch. Re-commenting and re-dispatching every
+            # 15 minutes spams the PR and stampedes the resolver.
+            existing_labels = [l.get("name") for l in pr.get("labels", []) if isinstance(l, dict)]
+            if CONFLICT_LABEL in existing_labels:
+                print(f"[SKIP] PR #{pr_number} already labelled '{CONFLICT_LABEL}'; not re-commenting or re-dispatching. "
+                      f"(Removing the label re-queues the PR for the resolver.)")
+                continue
+
+            # Cap check comes BEFORE labelling: a labelled PR is treated as
+            # already-queued by the dedupe above, so a PR deferred by the cap
+            # must stay unlabelled or it would never be dispatched at all.
+            if dispatches >= MAX_DISPATCHES_PER_RUN:
+                print(f"[SKIP] Dispatch cap ({MAX_DISPATCHES_PER_RUN}/run) reached; PR #{pr_number} deferred to the next pass.")
+                continue
+
             label_pr_with_conflict(repo, pr_number)
             post_pr_conflict_comment(repo, pr_number, conflicting_files)
             dispatch_conflict_resolver_bot(repo, pr_number, head_branch, base_branch)
+            dispatches += 1
         else:
             print(f"[OK] PR #{pr_number} is clean and mergeable without conflicts.")
 

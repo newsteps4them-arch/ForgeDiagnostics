@@ -24,6 +24,13 @@ permissions:
   issues: write
   actions: read
 
+# Never run two resolver jobs for the same PR at once (they would race on
+# push/merge). Different PRs may still run in parallel; Bot 1 caps how many
+# it dispatches per pass.
+concurrency:
+  group: conflict-resolver-pr-${{ github.event.inputs.pr_number || github.event.client_payload.pr_number || github.run_id }}
+  cancel-in-progress: false
+
 jobs:
   resolve-and-merge:
     runs-on: ubuntu-latest
