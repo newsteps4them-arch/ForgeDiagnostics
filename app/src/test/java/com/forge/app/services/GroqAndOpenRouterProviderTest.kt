@@ -1,9 +1,10 @@
-﻿// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
 // Proprietary and Confidential.
 // This file is part of Forge Agentic Diagnostics.
 
 package com.forge.app.services
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -38,7 +39,7 @@ class GroqAndOpenRouterProviderTest {
             .connectTimeout(3, TimeUnit.SECONDS)
             .readTimeout(5, TimeUnit.SECONDS)
             .build()
-        agentService = OpenManusAgentService(httpClient = testClient)
+        agentService = OpenManusAgentService(ioDispatcher = Dispatchers.Unconfined, httpClient = testClient)
     }
 
     @After
@@ -143,8 +144,9 @@ class GroqAndOpenRouterProviderTest {
             userPrompt = "Diagnose P0171."
         )
         assertEquals(expected, result)
-        val req = mockServer.takeRequest()
-        assertEquals("POST", req.method)
+        val req = mockServer.takeRequest(5, TimeUnit.SECONDS)
+        assertNotNull(req)
+        assertEquals("POST", req!!.method)
         assertTrue(req.getHeader("Authorization")!!.startsWith("Bearer "))
         assertTrue(req.body.readUtf8().contains("llama-3.3-70b-versatile"))
     }
@@ -196,8 +198,9 @@ class GroqAndOpenRouterProviderTest {
                 "X-Title" to "Forge Agentic Diagnostics"
             )
         )
-        val req = mockServer.takeRequest()
-        assertEquals("https://github.com/newsteps4them-arch/ForgeDiagnostics", req.getHeader("HTTP-Referer"))
+        val req = mockServer.takeRequest(5, TimeUnit.SECONDS)
+        assertNotNull(req)
+        assertEquals("https://github.com/newsteps4them-arch/ForgeDiagnostics", req!!.getHeader("HTTP-Referer"))
         assertEquals("Forge Agentic Diagnostics", req.getHeader("X-Title"))
     }
 
@@ -214,7 +217,9 @@ class GroqAndOpenRouterProviderTest {
             model = "deepseek/deepseek-r1:free",
             systemPrompt = "Sys", userPrompt = "User"
         )
-        val bodyText = mockServer.takeRequest().body.readUtf8()
+        val req = mockServer.takeRequest(5, TimeUnit.SECONDS)
+        assertNotNull(req)
+        val bodyText = req!!.body.readUtf8()
         assertTrue(bodyText.contains("deepseek/deepseek-r1:free"))
         assertTrue(bodyText.contains("messages"))
     }

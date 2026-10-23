@@ -24,7 +24,10 @@ SERVICES = [
     {"id": 0x01, "description": "Show current data", "response": lambda: None,
      "pids": [
          {"id": 0x05, "description": "Engine coolant temperature", "response": lambda: responses.get_engine_temperature()},
+         {"id": 0x0B, "description": "Intake manifold absolute pressure", "response": lambda: responses.get_map_pressure()},
          {"id": 0x0D, "description": "Vehicle speed", "response": lambda: responses.get_vehicle_speed()},
+         {"id": 0x0E, "description": "Timing advance", "response": lambda: responses.get_timing_advance()},
+         {"id": 0x10, "description": "MAF air flow rate", "response": lambda: responses.get_maf_air_flow()},
          {"id": 0x2F, "description": "Fuel tank level input", "response": lambda: responses.get_fuel_level()},
          {"id": 0x51, "description": "Fuel type", "response": lambda: FUEL_TYPE}
      ]},

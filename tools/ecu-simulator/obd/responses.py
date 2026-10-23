@@ -50,6 +50,22 @@ def get_engine_temperature():
     return random.randrange(ENGINE_TEMP_MIN, ENGINE_TEMP_MAX).to_bytes(1, BIG_ENDIAN)
 
 
+def get_map_pressure():
+    # 30 to 100 kPa
+    return random.randrange(30, 101).to_bytes(1, BIG_ENDIAN)
+
+
+def get_timing_advance():
+    # Timing advance formula: (A / 2) - 64. Target ~15 deg -> A = 158
+    return random.randrange(140, 180).to_bytes(1, BIG_ENDIAN)
+
+
+def get_maf_air_flow():
+    # MAF formula: ((A * 256) + B) / 100. Target ~25.00 g/s -> 2500 -> 0x09C4
+    val = random.randrange(1500, 3500)
+    return val.to_bytes(2, BIG_ENDIAN)
+
+
 def get_fuel_level():
     # the OBD device calculates the fuel level: (100/255) * fuel level
     # therefore, fuel level is multiplied by (255/100)

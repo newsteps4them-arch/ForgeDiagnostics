@@ -12,3 +12,6 @@ app/build/
 .vscode/
 powershell.exe.config
 
+.kotlin/
+__pycache__/
+*.pyc

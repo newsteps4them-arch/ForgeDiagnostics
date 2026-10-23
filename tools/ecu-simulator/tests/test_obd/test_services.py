@@ -19,7 +19,7 @@ class TestServices(unittest.TestCase):
     def test_process_service_0x01_pid_0x00(self):
         response = services.process_service_request(requested_sid=0x01, requested_pid=0x00)
         self.assertIsNotNone(response)
-        self.assertEqual("410008080001", response.hex())
+        self.assertEqual("4100082d0001", response.hex())
 
     def test_process_service_0x01_pid_0x20(self):
         response = services.process_service_request(requested_sid=0x01, requested_pid=0x20)

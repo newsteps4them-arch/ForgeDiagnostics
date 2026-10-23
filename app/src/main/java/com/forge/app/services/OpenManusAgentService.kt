@@ -17,6 +17,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -331,7 +334,7 @@ class OpenManusAgentService(
                     phase = "Physics & Recall Cross-Ref",
                     thought = "Calculating circuit voltage drop tolerances and checking manufacturer TSB safety recall records.",
                     toolInvocations = toolInvocationsStep3,
-                    observation = "Verified sensor 5V reference rail integrity and correlated known OEM technical service bulletin patterns.",
+                    observation = "Demo-mode electrical reference values displayed (not measured from a vehicle); no live TSB registry was queried.",
                     timestamp = dateFormat.format(Date())
                 )
             )
@@ -385,6 +388,21 @@ class OpenManusAgentService(
     // =========================================================================
     // Open-Source Specialized Tool Implementations
     // =========================================================================
+    //
+    // HONESTY CONTRACT: every tool below returns CANNED DEMONSTRATION output.
+    // None of these values are read from a vehicle, an adapter, or any live
+    // measurement. wrapDemoOutput() stamps that fact onto every result so the
+    // strings can never be presented — in the UI, in reports, or to an LLM —
+    // as live readings.
+
+    private fun wrapDemoOutput(toolDisplayName: String, body: String): String = buildString {
+        appendLine("!!! DEMO OUTPUT — NOT FROM A LIVE VEHICLE !!!")
+        appendLine("Tool '$toolDisplayName' returned canned demonstration data.")
+        appendLine("No adapter, ECU, sensor, camera, or web query was involved.")
+        appendLine("Do not diagnose a real vehicle from the values below.")
+        appendLine()
+        append(body.trim())
+    }
 
     private fun executeObdPidTool(activeDtcs: List<String>, telemetrySummary: String): OpenManusToolInvocation {
         val start = System.currentTimeMillis()
@@ -405,9 +423,9 @@ class OpenManusAgentService(
 
         return OpenManusToolInvocation(
             toolName = "AutoOBD_PID_Decoder",
-            description = "Decodes Mode 01 Live Sensor & Mode 02 Freeze Frame PIDs",
+            description = "[DEMO] Canned PID values for UI/testing — not live sensor data",
             inputParams = "DTCs: [$dtcStr], Telemetry: $telemetrySummary",
-            outputData = decodedData,
+            outputData = wrapDemoOutput("AutoOBD_PID_Decoder", decodedData),
             durationMs = System.currentTimeMillis() - start,
             isSuccess = true
         )
@@ -428,9 +446,9 @@ class OpenManusAgentService(
 
         return OpenManusToolInvocation(
             toolName = "CAN_UDS_Protocol_Analyzer",
-            description = "Decodes ISO 15765-4 transport layer and ISO 14229 UDS diagnostic frames",
+            description = "[DEMO] Canned UDS frames for UI/testing — not from a CAN bus",
             inputParams = "ECU: 0x7E0/0x7E8, Protocol: ISO 15765-4 CAN 11-bit 500k",
-            outputData = canBusPayload,
+            outputData = wrapDemoOutput("CAN_UDS_Protocol_Analyzer", canBusPayload),
             durationMs = System.currentTimeMillis() - start,
             isSuccess = true
         )
@@ -450,9 +468,9 @@ class OpenManusAgentService(
 
         return OpenManusToolInvocation(
             toolName = "Electrical_Circuit_Solver",
-            description = "Ohm's Law, harness resistance, reference voltage, and parasitic draw calculator",
+            description = "[DEMO] Canned electrical values for UI/testing — not measured",
             inputParams = "Goal: '$goal', DTCs: ${activeDtcs.joinToString()}",
-            outputData = electricalResult,
+            outputData = wrapDemoOutput("Electrical_Circuit_Solver", electricalResult),
             durationMs = System.currentTimeMillis() - start,
             isSuccess = true
         )
@@ -471,9 +489,9 @@ class OpenManusAgentService(
 
         return OpenManusToolInvocation(
             toolName = "Python_Physics_Simulation_Sandbox",
-            description = "Calculates Volumetric Efficiency, Air-Fuel Mass ratio, and Fuel Delivery Deviations",
+            description = "[DEMO] Canned physics numbers for UI/testing — illustrative only",
             inputParams = "Formulas: [VolumetricEfficiency, AFR_Deficit_Model]",
-            outputData = mathResult,
+            outputData = wrapDemoOutput("Python_Physics_Simulation_Sandbox", mathResult),
             durationMs = System.currentTimeMillis() - start,
             isSuccess = true
         )
@@ -491,9 +509,9 @@ class OpenManusAgentService(
 
         return OpenManusToolInvocation(
             toolName = "NHTSA_TSB_Safety_CrossReferencer",
-            description = "Searches government safety bulletins and OEM technical service bulletin repositories",
+            description = "[DEMO] Canned TSB text for UI/testing — not a live registry lookup",
             inputParams = "Vehicle: $vehicleContext, DTCs: ${activeDtcs.joinToString()}",
-            outputData = tsbResult,
+            outputData = wrapDemoOutput("NHTSA_TSB_Safety_CrossReferencer", tsbResult),
             durationMs = System.currentTimeMillis() - start,
             isSuccess = true
         )
@@ -520,9 +538,9 @@ class OpenManusAgentService(
 
         return OpenManusToolInvocation(
             toolName = "Acoustic_FFT_Harmonic_Analyzer",
-            description = "Decomposes engine acoustic audio into frequency bins to isolate valvetrain vs bottom-end mechanical knocks",
+            description = "[DEMO] Illustrative acoustic math — not from a real recording",
             inputParams = "Engine RPM: $effectiveRpm, Frequency Points: ${frequencyData?.size ?: 512}",
-            outputData = acousticOutput,
+            outputData = wrapDemoOutput("Acoustic_FFT_Harmonic_Analyzer", acousticOutput),
             durationMs = System.currentTimeMillis() - start,
             isSuccess = true
         )
@@ -542,9 +560,9 @@ class OpenManusAgentService(
 
         return OpenManusToolInvocation(
             toolName = "Multimodal_Vision_Wear_Classifier",
-            description = "Extracts optical wear characteristics, carbon fouling, and mechanical tolerances from component imagery",
+            description = "[DEMO] Canned vision description — no image was analyzed",
             inputParams = "Inspection Context: $componentImageContext",
-            outputData = visionOutput,
+            outputData = wrapDemoOutput("Multimodal_Vision_Wear_Classifier", visionOutput),
             durationMs = System.currentTimeMillis() - start,
             isSuccess = true
         )
@@ -567,9 +585,9 @@ class OpenManusAgentService(
 
         return OpenManusToolInvocation(
             toolName = "Supply_Chain_Part_Estimator",
-            description = "Cross-references OEM part numbers, Tier-1 aftermarket alternatives, availability, and standard labor guides",
+            description = "[DEMO] Illustrative part numbers/prices — not live inventory",
             inputParams = "Vehicle: $vehicleContext, DTCs: ${activeDtcs.joinToString()}",
-            outputData = supplyOutput,
+            outputData = wrapDemoOutput("Supply_Chain_Part_Estimator", supplyOutput),
             durationMs = System.currentTimeMillis() - start,
             isSuccess = true
         )
@@ -911,6 +929,16 @@ class OpenManusAgentService(
      * Works with Groq (api.groq.com), OpenRouter (openrouter.ai), and any OpenAI-spec endpoint.
      * Returns the first assistant message content string.
      */
+    private fun escapeJsonString(str: String): String {
+        return str.replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\b", "\\b")
+            .replace("\u000C", "\\f")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")
+    }
+
     internal fun callOpenAiCompatibleEndpoint(
         url: String,
         apiKey: String,
@@ -921,44 +949,31 @@ class OpenManusAgentService(
     ): String {
         if (apiKey.isBlank() || apiKey.length < 8) return ""
 
-        val messagesArray = JSONArray().apply {
-            put(JSONObject().apply {
-                put("role", "system")
-                put("content", systemPrompt)
-            })
-            put(JSONObject().apply {
-                put("role", "user")
-                put("content", userPrompt)
-            })
-        }
-
-        val body = JSONObject().apply {
-            put("model", model)
-            put("messages", messagesArray)
-            put("max_tokens", 2048)
-            put("temperature", 0.3)
-        }
-
-        var reqBuilder = Request.Builder()
-            .url(url)
-            .addHeader("Authorization", "Bearer $apiKey")
-            .addHeader("Content-Type", "application/json")
-            .post(body.toString().toRequestBody("application/json".toMediaType()))
-
-        extraHeaders.forEach { (k, v) -> reqBuilder = reqBuilder.addHeader(k, v) }
-
-        val response = httpClient.newCall(reqBuilder.build()).execute()
-        val responseBody = response.body?.string() ?: ""
-        if (!response.isSuccessful || responseBody.isBlank()) return ""
-
         return try {
-            val root = JSONObject(responseBody)
-            root.getJSONArray("choices")
-                .getJSONObject(0)
-                .getJSONObject("message")
-                .getString("content")
+            val bodyJson = """{"model":"${escapeJsonString(model)}","messages":[{"role":"system","content":"${escapeJsonString(systemPrompt)}"},{"role":"user","content":"${escapeJsonString(userPrompt)}"}],"max_tokens":2048,"temperature":0.3}"""
+
+            var reqBuilder = Request.Builder()
+                .url(url)
+                .addHeader("Authorization", "Bearer $apiKey")
+                .addHeader("Content-Type", "application/json")
+                .post(bodyJson.toRequestBody("application/json".toMediaType()))
+
+            extraHeaders.forEach { (k, v) -> reqBuilder = reqBuilder.addHeader(k, v) }
+
+            val response = httpClient.newCall(reqBuilder.build()).execute()
+            val responseBody = response.body?.string() ?: ""
+            if (!response.isSuccessful || responseBody.isBlank()) return ""
+
+            val element = json.parseToJsonElement(responseBody)
+            val choices = element.jsonObject["choices"]?.jsonArray
+            val firstChoice = choices?.firstOrNull()?.jsonObject
+            val message = firstChoice?.get("message")?.jsonObject
+            val content = message?.get("content")?.jsonPrimitive?.content
+            content ?: ""
         } catch (e: Exception) {
-            Log.w("OpenManus", "Failed to parse OpenAI-compatible response: ${e.message}")
+            try {
+                Log.w("OpenManus", "Failed to parse OpenAI-compatible response: ${e.message}")
+            } catch (_: Throwable) {}
             ""
         }
     }

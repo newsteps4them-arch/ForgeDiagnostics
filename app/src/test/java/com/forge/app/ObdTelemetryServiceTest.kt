@@ -63,5 +63,6 @@ class ObdTelemetryServiceTest(
 
         val actualRpm = service.parseRpmResponse(rawResponse)
         assertEquals("Failed test case: $description", expectedRpm, actualRpm)
+        service.stopTelemetryLoop()
     }
 }

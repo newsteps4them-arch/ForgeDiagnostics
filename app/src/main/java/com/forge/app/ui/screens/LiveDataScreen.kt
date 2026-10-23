@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.forge.app.services.DiagnosticDataSource
 import com.forge.app.services.ObdTelemetryData
 import com.forge.app.ui.components.CoolantTempGauge
 import com.forge.app.ui.components.DiagnosticReportDialog
@@ -121,6 +122,37 @@ fun LiveDataScreen(
                             fontFamily = FontFamily.Monospace,
                             color = ForgeOnSurfaceVariant
                         )
+                        // Provenance banner: simulated data must never look like a live CAN feed.
+                        when (telemetry.dataSource) {
+                            DiagnosticDataSource.SIMULATED -> {
+                                Surface(
+                                    color = ForgeAmber.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(6.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, ForgeAmber.copy(alpha = 0.5f)),
+                                    modifier = Modifier.padding(top = 6.dp)
+                                ) {
+                                    Text(
+                                        text = "⚠ SIMULATION MODE — these gauges are driven by simulated data, NOT a live vehicle.",
+                                        fontSize = 10.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ForgeAmber,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                                    )
+                                }
+                            }
+                            DiagnosticDataSource.UNKNOWN -> {
+                                Text(
+                                    text = "DATA SOURCE UNKNOWN — not verified as a live vehicle feed.",
+                                    fontSize = 9.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ForgeAmber,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                            DiagnosticDataSource.LIVE_HARDWARE -> { /* live data: no banner needed */ }
+                        }
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
