@@ -65,7 +65,7 @@ class NexpartApiServiceTest {
             apiKeyOverride = "real-api-key"
         )
 
-        val request = mockWebServer.takeRequest()
+        val request = mockWebServer.takeRequest(5, java.util.concurrent.TimeUnit.SECONDS)!!
         assertEquals("/v2/b2b/inventory/search", request.path)
 
         assertNotNull(result)
@@ -103,7 +103,7 @@ class NexpartApiServiceTest {
             apiKeyOverride = "real-api-key"
         )
 
-        val request = mockWebServer.takeRequest()
+        val request = mockWebServer.takeRequest(5, java.util.concurrent.TimeUnit.SECONDS)!!
         assertEquals("/v2/b2b/orders/create", request.path)
 
         assertNotNull(result)
