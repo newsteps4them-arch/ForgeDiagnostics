@@ -18,12 +18,12 @@ if (localPropertiesFile.exists()) {
 
 android {
     namespace = "com.forge.app"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.forgediagnostics.app"
+        applicationId = "com.aistudio.teamforge.a1b2c"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -37,46 +37,16 @@ android {
             keyAlias = localProperties.getProperty("DEBUG_KEY_ALIAS") ?: System.getenv("DEBUG_KEY_ALIAS") ?: "androiddebugkey"
             keyPassword = localProperties.getProperty("DEBUG_KEY_PASSWORD") ?: System.getenv("DEBUG_KEY_PASSWORD") ?: "android"
         }
-        // Release signing comes from the upload keystore, which is NEVER
-        // committed to the repo. Generate it once (see PLAYSTORE_RELEASE.md)
-        // and provide these via environment variables or local.properties.
-        // A release build without them fails fast with a clear message
-        // instead of silently signing with the debug key.
-        create("release") {
-            val releaseStoreFile = localProperties.getProperty("RELEASE_STORE_FILE")
-                ?: System.getenv("FORGE_RELEASE_STORE_FILE")
-            val releaseStorePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
-                ?: System.getenv("FORGE_RELEASE_STORE_PASSWORD")
-            val releaseKeyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
-                ?: System.getenv("FORGE_RELEASE_KEY_ALIAS")
-            val releaseKeyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
-                ?: System.getenv("FORGE_RELEASE_KEY_PASSWORD")
-            if (releaseStoreFile.isNullOrBlank() || releaseStorePassword.isNullOrBlank()
-                || releaseKeyAlias.isNullOrBlank() || releaseKeyPassword.isNullOrBlank()
-            ) {
-                throw GradleException(
-                    "Release signing is not configured. Generate an upload keystore " +
-                        "(see PLAYSTORE_RELEASE.md) and set FORGE_RELEASE_STORE_FILE, " +
-                        "FORGE_RELEASE_STORE_PASSWORD, FORGE_RELEASE_KEY_ALIAS and " +
-                        "FORGE_RELEASE_KEY_PASSWORD."
-                )
-            }
-            storeFile = file(releaseStoreFile)
-            storePassword = releaseStorePassword
-            keyAlias = releaseKeyAlias
-            keyPassword = releaseKeyPassword
-        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             signingConfig = signingConfigs.getByName("debug")
