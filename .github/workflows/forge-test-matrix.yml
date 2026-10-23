@@ -8,6 +8,12 @@ on:
   schedule:
     - cron: "17 */6 * * *"
   workflow_dispatch:
+    inputs:
+      test_filter:
+        description: "Optional: space-separated Gradle --tests patterns to run a subset (e.g. 'com.forge.app.services.*'). Empty runs the full suite."
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -57,7 +63,13 @@ jobs:
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v4
       - name: Run Android JVM unit tests
-        run: ./gradlew :app:testDebugUnitTest --no-daemon
+        run: |
+          FILTER_ARGS=""
+          for pattern in ${{ inputs.test_filter }}; do
+            FILTER_ARGS="$FILTER_ARGS --tests \"$pattern\""
+          done
+          # shellcheck disable=SC2086
+          eval ./gradlew :app:testDebugUnitTest --no-daemon $FILTER_ARGS
       - name: Assemble debug APK
         run: ./gradlew :app:assembleDebug --no-daemon
       - name: Upload debug APK
