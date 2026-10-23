@@ -3,4 +3,7 @@
     <cache-path name="reports_cache" path="reports/" />
     <files-path name="reports_files" path="reports/" />
     <external-files-path name="external_reports" path="reports/" />
+    <cache-path name="apk_cache" path="apks/" />
+    <external-cache-path name="external_apk_cache" path="apks/" />
+    <external-files-path name="external_apk_files" path="apks/" />
 </paths>

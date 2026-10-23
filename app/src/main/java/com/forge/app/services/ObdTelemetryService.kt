@@ -1,3 +1,8 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app.services
 
 import android.bluetooth.BluetoothAdapter
@@ -7,6 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -16,34 +22,37 @@ import java.util.UUID
 import kotlin.random.Random
 
 data class ObdTelemetryData(
-    val rpm: Int = 850,
+    val rpm: Int = 0,
     val speedKmh: Int = 0,
-    val coolantTempC: Int = 90,
-    val intakeAirTempC: Int = 24,
-    val throttlePosPct: Int = 14,
-    val batteryVoltage: Float = 14.2f,
+    val coolantTempC: Int = 0,
+    val intakeAirTempC: Int = 0,
+    val throttlePosPct: Int = 0,
+    val batteryVoltage: Float = 0.0f,
     val boostPressurePsi: Float = 0.0f,
     val fuelTrimShortPct: Float = 1.2f,
     val fuelTrimLongPct: Float = -0.8f,
-    val oilPressurePsi: Float = 38.5f,
-    val isConnected: Boolean = true,
-    val connectionType: String = "SIMULATED", // BLUETOOTH, USB_OTG, OBD_SCANNER_WIFI, TORQUE_PRO, ALFA_OBD, REPAIR2SOLUTIONS, SIMULATED
-    val connectionStatusText: String = "Connected (Simulation)",
-    val activeDtcCodes: List<DtcInfo> = listOf(
-        DtcInfo("P0300", "Random/Multiple Cylinder Misfire Detected", "Stored"),
-        DtcInfo("P0171", "System Too Lean (Bank 1)", "Pending")
-    )
+    val oilPressurePsi: Float = 0.0f,
+    val isConnected: Boolean = false,
+    val connectionType: String = "SIMULATED",
+    val connectionStatusText: String = "Disconnected",
+    val activeDtcCodes: List<DtcInfo> = emptyList(),
+    /**
+     * Provenance of the values in this snapshot. SIMULATED snapshots must be
+     * visibly labeled in the UI and must never be presented as live vehicle data.
+     */
+    val dataSource: DiagnosticDataSource = DiagnosticDataSource.UNKNOWN
 )
 
 data class DtcInfo(
     val code: String,
     val description: String,
-    val status: String // Stored, Pending, Permanent
+    val status: String
 )
 
 class ObdTelemetryService(
     private val scope: CoroutineScope,
-    private val usbHardwareService: UsbHardwareCommunicationService? = null
+    private val usbHardwareService: UsbHardwareCommunicationService? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     private val _telemetry = MutableStateFlow(ObdTelemetryData())
     val telemetry: StateFlow<ObdTelemetryData> = _telemetry.asStateFlow()
@@ -51,22 +60,28 @@ class ObdTelemetryService(
     private var isRunning = false
     private val sppUuid: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
     private var bluetoothSocket: BluetoothSocket? = null
+    private var simulationTick = 0
 
     init {
         startTelemetryLoop()
     }
 
+    private var telemetryJob: kotlinx.coroutines.Job? = null
+
     fun startTelemetryLoop() {
         if (isRunning) return
         isRunning = true
-        scope.launch(Dispatchers.IO) {
-            var tick = 0
+        telemetryJob = scope.launch(ioDispatcher) {
             while (isRunning) {
-                tick++
                 val current = _telemetry.value
 
                 if (current.isConnected) {
                     val success = when (current.connectionType) {
+                        "SIMULATED" -> {
+                            simulationTick += 1
+                            updateLiveDataStream(current, simulationTick)
+                            true
+                        }
                         "BLUETOOTH" -> tryConnectAndReadBluetoothObd()
                         "USB_OTG" -> tryConnectAndReadUsbOtgObd()
                         "OBD_SCANNER_WIFI" -> tryConnectAndReadWifiObdScanner()
@@ -76,11 +91,10 @@ class ObdTelemetryService(
                         else -> false
                     }
                     if (!success) {
-                        // Fallback to live stream updates if physical adapter is not sending telemetry in current tick
-                        updateLiveDataStream(current, tick)
+                        _telemetry.value = current.copy(
+                            connectionStatusText = "No valid telemetry response received"
+                        )
                     }
-                } else {
-                    updateLiveDataStream(current, tick)
                 }
 
                 delay(300)
@@ -88,8 +102,13 @@ class ObdTelemetryService(
         }
     }
 
+    fun stopTelemetryLoop() {
+        isRunning = false
+        telemetryJob?.cancel()
+        telemetryJob = null
+    }
+
     private suspend fun tryConnectAndReadUsbOtgObd(): Boolean {
-        // USB OTG to Serial adapter driver (FTDI / Prolific / CH340 / CP2102)
         return try {
             val usbState = usbHardwareService?.hardwareState?.value
             val statusMsg = usbState?.statusMessage ?: "USB OTG Hardware Bridge Active (115200 Baud)"
@@ -100,67 +119,66 @@ class ObdTelemetryService(
                 if (parsedRpm != null) {
                     _telemetry.value = _telemetry.value.copy(
                         rpm = parsedRpm,
-                        connectionStatusText = statusMsg
+                        connectionStatusText = statusMsg,
+                        dataSource = DiagnosticDataSource.LIVE_HARDWARE
                     )
                     return true
                 }
             }
+            // No usable response: the adapter is detached, not paired, or the ECU
+            // did not answer. This is a failed poll — NOT a zero-RPM reading.
             _telemetry.value = _telemetry.value.copy(
-                connectionStatusText = statusMsg
+                connectionStatusText = "USB OBD-II adapter not connected or not responding"
             )
-            true
+            false
         } catch (e: Exception) {
             false
         }
     }
 
     private fun tryConnectAndReadWifiObdScanner(): Boolean {
-        // TCP Network Socket driver for Standalone OBD Scanners & Wi-Fi Adapters (192.168.0.10:35000 / 127.0.0.1:35000)
         return try {
             _telemetry.value = _telemetry.value.copy(
                 connectionStatusText = "OBD Scanner Wi-Fi Socket (192.168.0.10:35000)"
             )
-            true
+            false
         } catch (e: Exception) {
             false
         }
     }
 
     private fun tryConnectTorqueProBridge(): Boolean {
-        // Broadcast Intent & PID Listener for Torque Pro App (org.prowl.torque)
         return try {
             _telemetry.value = _telemetry.value.copy(
                 connectionStatusText = "Torque Pro Intent Bridge (org.prowl.torque Active)"
             )
-            true
+            false
         } catch (e: Exception) {
             false
         }
     }
 
-    private fun tryConnectAlfaOBDBridge(): Boolean { // Alias wrapper
+    private fun tryConnectAlfaOBDBridge(): Boolean {
         return tryConnectAlfaObdBridge()
     }
 
     private fun tryConnectAlfaObdBridge(): Boolean {
-        // Stellantis/FCA Diagnostics Log & PID Bridge for AlfaOBD (com.AlfaOBD.AlfaOBD)
         return try {
             _telemetry.value = _telemetry.value.copy(
                 connectionStatusText = "AlfaOBD FCA Diagnostic Bridge Active"
             )
-            true
+            false
         } catch (e: Exception) {
             false
         }
     }
 
     private fun tryConnectRepairSolutions2Bridge(): Boolean {
-        // Innova OBD2 Scanner & Live Telemetry Sync for RepairSolutions2
         return try {
             _telemetry.value = _telemetry.value.copy(
                 connectionStatusText = "RepairSolutions2 Innova Dongle Bridge Active"
             )
-            true
+            false
         } catch (e: Exception) {
             false
         }
@@ -185,7 +203,10 @@ class ObdTelemetryService(
             boostPressurePsi = boost,
             batteryVoltage = (voltage * 10).toInt() / 10.0f,
             fuelTrimShortPct = ((Random.nextFloat() * 4 - 2) * 10).toInt() / 10.0f,
-            oilPressurePsi = (35.0f + (newRpm / 200.0f) + Random.nextFloat()).coerceIn(25f, 75f)
+            oilPressurePsi = (35.0f + (newRpm / 200.0f) + Random.nextFloat()).coerceIn(25f, 75f),
+            // This generator is the explicit simulation path: label every snapshot
+            // it produces so demo data can never be mistaken for a live vehicle.
+            dataSource = DiagnosticDataSource.SIMULATED
         )
     }
 
@@ -210,8 +231,6 @@ class ObdTelemetryService(
 
             val inputStream: InputStream = bluetoothSocket?.inputStream ?: return false
             val outputStream: OutputStream = bluetoothSocket?.outputStream ?: return false
-
-            // Query RPM command (010C)
             outputStream.write("010C\r".toByteArray())
             outputStream.flush()
 
@@ -221,7 +240,10 @@ class ObdTelemetryService(
                 val response = String(buffer, 0, bytesRead).trim()
                 val parsedRpm = parseRpmResponse(response)
                 if (parsedRpm != null) {
-                    _telemetry.value = _telemetry.value.copy(rpm = parsedRpm)
+                    _telemetry.value = _telemetry.value.copy(
+                        rpm = parsedRpm,
+                        dataSource = DiagnosticDataSource.LIVE_HARDWARE
+                    )
                     return true
                 }
             }
@@ -235,11 +257,18 @@ class ObdTelemetryService(
         }
     }
 
-    private fun parseRpmResponse(response: String): Int? {
+    internal fun parseRpmResponse(response: String): Int? {
+        if (response.contains("NO DATA", ignoreCase = true) || response.contains("ERROR", ignoreCase = true)) {
+            return null
+        }
         return try {
+            if (response.contains("NO DATA", ignoreCase = true) || response.contains("ERROR", ignoreCase = true)) {
+                return null
+            }
             val clean = response.replace(" ", "").replace("\r", "").replace("\n", "")
-            if (clean.contains("410C")) {
-                val hexStr = clean.substringAfter("410C").take(4)
+            val index = clean.indexOf("410C", ignoreCase = true)
+            if (index != -1) {
+                val hexStr = clean.substring(index + 4).take(4)
                 if (hexStr.length == 4) {
                     val a = hexStr.substring(0, 2).toInt(16)
                     val b = hexStr.substring(2, 4).toInt(16)
@@ -254,6 +283,18 @@ class ObdTelemetryService(
 
     fun setSpeed(speed: Int) {
         _telemetry.value = _telemetry.value.copy(speedKmh = speed.coerceIn(0, 240))
+    }
+
+    /**
+     * Records an RPM value decoded from a real adapter response.
+     * Never call this with fabricated or derived numbers (e.g. RPM-derived
+     * speed estimates) — unsupported PIDs must stay unavailable, not invented.
+     */
+    fun setRpm(rpm: Int) {
+        _telemetry.value = _telemetry.value.copy(
+            rpm = rpm.coerceIn(0, 12000),
+            dataSource = DiagnosticDataSource.LIVE_HARDWARE
+        )
     }
 
     fun clearDtcs() {
@@ -272,7 +313,17 @@ class ObdTelemetryService(
 
     fun toggleConnection() {
         val cur = _telemetry.value.isConnected
-        _telemetry.value = _telemetry.value.copy(isConnected = !cur)
+        _telemetry.value = if (cur) {
+            _telemetry.value.copy(
+                isConnected = false,
+                connectionStatusText = "Disconnected"
+            )
+        } else {
+            val statusText = if (_telemetry.value.connectionType == "SIMULATED") "Simulated Telemetry Active" else "Connected"
+            _telemetry.value.copy(
+                isConnected = true,
+                connectionStatusText = statusText
+            )
+        }
     }
 }
-

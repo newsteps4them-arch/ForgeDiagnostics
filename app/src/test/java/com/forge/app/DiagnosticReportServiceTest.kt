@@ -1,3 +1,8 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app
 
 import com.forge.app.services.DiagnosticReportData
@@ -44,6 +49,23 @@ class DiagnosticReportServiceTest {
         )
 
         val textReport = DiagnosticReportService.generateFormattedTextReport(reportData)
+
+        // The report must carry an explicit data-provenance stamp so test/demo
+        // content can never be mistaken for a live vehicle scan.
+        assertTrue(textReport.contains("DATA SOURCE"))
+        assertTrue(textReport.contains("UNVERIFIED DATA SOURCE"))
+
+        // A report built from live hardware must say so explicitly.
+        val liveReport = DiagnosticReportService.generateFormattedTextReport(
+            reportData.copy(dataSource = com.forge.app.services.DiagnosticDataSource.LIVE_HARDWARE)
+        )
+        assertTrue(liveReport.contains("LIVE VEHICLE DATA"))
+
+        // A report built from simulated data must be stamped as demo.
+        val demoReport = DiagnosticReportService.generateFormattedTextReport(
+            reportData.copy(dataSource = com.forge.app.services.DiagnosticDataSource.SIMULATED)
+        )
+        assertTrue(demoReport.contains("DEMO DATA"))
 
         // Assert report headers
         assertTrue(textReport.contains("TEAM FORGE MOTORSPORTS & ADVANCED DIAGNOSTICS"))

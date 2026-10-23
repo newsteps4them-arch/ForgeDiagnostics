@@ -1,5 +1,7 @@
 name: Forge Autonomous Guardian v2
 on:
+  schedule:
+    - cron: '0 */6 * * *' # Run automatically every 6 hours
   push:
     branches: [main, develop, master]
   workflow_dispatch:

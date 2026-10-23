@@ -1,15 +1,25 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app.services
 
 import android.util.Log
 import com.forge.app.BuildConfig
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -32,15 +42,17 @@ import kotlin.math.roundToInt
  * 4. NHTSA Safety Recalls & TSB Cross-Referencer
  * 5. Python Math & Volumetric Efficiency Simulation Engine
  * 
- * Backends: Gemini API, Local Ollama (http://localhost:11434), OpenRouter, or Hugging Face.
+ * Backends: Gemini API, Groq (fastest free inference), OpenRouter (user-key multi-model),
+ * Local Ollama (http://localhost:11434), or Hugging Face.
  */
 
 enum class AgentModelProvider(val displayName: String, val endpointDescription: String) {
     GEMINI_FLASH("Gemini 2.5 Flash", "Cloud-native Google AI Studio API"),
     GEMINI_PRO("Gemini Pro Deep Reasoner", "High-tier multi-step reasoning"),
+    GROQ("Groq Ultrafast Inference", "https://api.groq.com/openai/v1/chat/completions — Llama 3.3 / DeepSeek-R1 at 500+ tok/s"),
+    OPEN_ROUTER("OpenRouter Free Tier", "https://openrouter.ai/api/v1/chat/completions — 500+ models, user-pays"),
     LOCAL_OLLAMA("Local Ollama (DeepSeek / Llama 3)", "http://localhost:11434/api/generate"),
-    HUGGING_FACE("Hugging Face Inference", "Free-tier open models (Qwen / Mistral)"),
-    OPEN_ROUTER("OpenRouter Free Tier", "Multi-model open access hub")
+    HUGGING_FACE("Hugging Face Inference", "Free-tier open models (Qwen / Mistral)")
 }
 
 enum class AgentExecutionPhase {
@@ -85,6 +97,9 @@ data class OpenManusDiagnosticReport(
     val recommendedParts: List<String> = emptyList(),
     val estimatedLaborHours: Double = 1.5,
     val safetyCautions: List<String> = emptyList(),
+    val deepSeekReasoning: String = "",
+    val volumetricEfficiencyPct: Double = 82.4,
+    val acousticHarmonicClassification: String = "Normal Baseline",
     val fullLogSummary: String = ""
 )
 
@@ -96,7 +111,15 @@ data class OpenManusState(
     val selectedProvider: AgentModelProvider = AgentModelProvider.GEMINI_FLASH,
     val customEndpointUrl: String = "http://localhost:11434",
     val customModelName: String = "deepseek-r1:8b",
-    val activeTools: Set<String> = setOf("obd_pid", "can_uds", "electrical_circuit", "nhtsa_tsb", "python_math"),
+    // Groq free-tier API key — no copyleft, commercial OK
+    val groqApiKey: String = "",
+    // Groq model: llama-3.3-70b-versatile (fastest free) or deepseek-r1-distill-llama-70b
+    val groqModel: String = "llama-3.3-70b-versatile",
+    // OpenRouter API key — user supplies their own key (user-pays, no AGPL)
+    val openRouterApiKey: String = "",
+    // OpenRouter model: supports 500+ including deepseek/deepseek-r1:free for zero-cost
+    val openRouterModel: String = "deepseek/deepseek-r1:free",
+    val activeTools: Set<String> = setOf("obd_pid", "can_uds", "electrical_circuit", "nhtsa_tsb", "python_math", "acoustic_fft", "vision_wear", "supply_chain"),
     val steps: List<OpenManusStep> = emptyList(),
     val currentThought: String = "Autonomous OpenManus background agent ready.",
     val finalReport: OpenManusDiagnosticReport? = null,
@@ -105,16 +128,18 @@ data class OpenManusState(
     val error: String? = null
 )
 
-class OpenManusAgentService(
-    private val geminiService: GeminiService? = null
-) {
-    private val _state = MutableStateFlow(OpenManusState())
-    val state: StateFlow<OpenManusState> = _state.asStateFlow()
 
-    private val httpClient = OkHttpClient.Builder()
+class OpenManusAgentService(
+    private val geminiService: GeminiService? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    internal val httpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(45, TimeUnit.SECONDS)
         .build()
+) {
+
+    private val _state = MutableStateFlow(OpenManusState())
+    val state: StateFlow<OpenManusState> = _state.asStateFlow()
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -148,6 +173,26 @@ class OpenManusAgentService(
     }
 
     /**
+     * Configure Groq free-tier credentials.
+     * Get a free key at https://console.groq.com — no credit card, commercial-OK.
+     * Default model: llama-3.3-70b-versatile (fastest free inference, ~500 tok/s).
+     * Alternate: deepseek-r1-distill-llama-70b for chain-of-thought <think> reasoning.
+     */
+    fun setGroqCredentials(apiKey: String, model: String = "llama-3.3-70b-versatile") {
+        _state.value = _state.value.copy(groqApiKey = apiKey, groqModel = model)
+    }
+
+    /**
+     * Configure OpenRouter user-key credentials (user-pays model — no developer billing).
+     * Get a key at https://openrouter.ai — commercial-OK, 500+ models.
+     * Default model: deepseek/deepseek-r1:free (zero-cost, chain-of-thought reasoning).
+     */
+    fun setOpenRouterCredentials(apiKey: String, model: String = "deepseek/deepseek-r1:free") {
+        _state.value = _state.value.copy(openRouterApiKey = apiKey, openRouterModel = model)
+    }
+
+
+    /**
      * Automatically triggers diagnosis in background if idle or if no final output is generated yet
      */
     suspend fun autoDiagnoseIfIdle(
@@ -179,7 +224,8 @@ class OpenManusAgentService(
         vehicleContext: String,
         activeDtcs: List<String> = emptyList(),
         telemetrySummary: String = ""
-    ) = withContext(Dispatchers.IO) {
+    ) = withContext(ioDispatcher) {
+
         if (_state.value.isRunning) return@withContext
 
         val startTime = System.currentTimeMillis()
@@ -265,14 +311,30 @@ class OpenManusAgentService(
                 toolInvocationsStep3.add(nhtsaResult)
             }
 
+            if (_state.value.activeTools.contains("acoustic_fft")) {
+                val acousticResult = executeAcousticFftTool(750, null)
+                toolInvocationsStep3.add(acousticResult)
+            }
+
+            if (_state.value.activeTools.contains("vision_wear")) {
+                val visionResult = executeVisionWearTool("Spark Plug & Direct Injector Tip Inspection")
+                toolInvocationsStep3.add(visionResult)
+            }
+
+            if (_state.value.activeTools.contains("supply_chain")) {
+                val supplyResult = executeSupplyChainEstimatorTool(vehicleContext, activeDtcs)
+                toolInvocationsStep3.add(supplyResult)
+            }
+
             stepList.add(
                 OpenManusStep(
                     stepNumber = 3,
-                    agentName = "Electrical & Math Simulation Agent",
+                    agentName = "Electrical, Acoustic & Vision Swarm",
+
                     phase = "Physics & Recall Cross-Ref",
                     thought = "Calculating circuit voltage drop tolerances and checking manufacturer TSB safety recall records.",
                     toolInvocations = toolInvocationsStep3,
-                    observation = "Verified sensor 5V reference rail integrity and correlated known OEM technical service bulletin patterns.",
+                    observation = "Demo-mode electrical reference values displayed (not measured from a vehicle); no live TSB registry was queried.",
                     timestamp = dateFormat.format(Date())
                 )
             )
@@ -326,6 +388,21 @@ class OpenManusAgentService(
     // =========================================================================
     // Open-Source Specialized Tool Implementations
     // =========================================================================
+    //
+    // HONESTY CONTRACT: every tool below returns CANNED DEMONSTRATION output.
+    // None of these values are read from a vehicle, an adapter, or any live
+    // measurement. wrapDemoOutput() stamps that fact onto every result so the
+    // strings can never be presented — in the UI, in reports, or to an LLM —
+    // as live readings.
+
+    private fun wrapDemoOutput(toolDisplayName: String, body: String): String = buildString {
+        appendLine("!!! DEMO OUTPUT — NOT FROM A LIVE VEHICLE !!!")
+        appendLine("Tool '$toolDisplayName' returned canned demonstration data.")
+        appendLine("No adapter, ECU, sensor, camera, or web query was involved.")
+        appendLine("Do not diagnose a real vehicle from the values below.")
+        appendLine()
+        append(body.trim())
+    }
 
     private fun executeObdPidTool(activeDtcs: List<String>, telemetrySummary: String): OpenManusToolInvocation {
         val start = System.currentTimeMillis()
@@ -346,9 +423,9 @@ class OpenManusAgentService(
 
         return OpenManusToolInvocation(
             toolName = "AutoOBD_PID_Decoder",
-            description = "Decodes Mode 01 Live Sensor & Mode 02 Freeze Frame PIDs",
+            description = "[DEMO] Canned PID values for UI/testing — not live sensor data",
             inputParams = "DTCs: [$dtcStr], Telemetry: $telemetrySummary",
-            outputData = decodedData,
+            outputData = wrapDemoOutput("AutoOBD_PID_Decoder", decodedData),
             durationMs = System.currentTimeMillis() - start,
             isSuccess = true
         )
@@ -369,9 +446,9 @@ class OpenManusAgentService(
 
         return OpenManusToolInvocation(
             toolName = "CAN_UDS_Protocol_Analyzer",
-            description = "Decodes ISO 15765-4 transport layer and ISO 14229 UDS diagnostic frames",
+            description = "[DEMO] Canned UDS frames for UI/testing — not from a CAN bus",
             inputParams = "ECU: 0x7E0/0x7E8, Protocol: ISO 15765-4 CAN 11-bit 500k",
-            outputData = canBusPayload,
+            outputData = wrapDemoOutput("CAN_UDS_Protocol_Analyzer", canBusPayload),
             durationMs = System.currentTimeMillis() - start,
             isSuccess = true
         )
@@ -391,9 +468,9 @@ class OpenManusAgentService(
 
         return OpenManusToolInvocation(
             toolName = "Electrical_Circuit_Solver",
-            description = "Ohm's Law, harness resistance, reference voltage, and parasitic draw calculator",
+            description = "[DEMO] Canned electrical values for UI/testing — not measured",
             inputParams = "Goal: '$goal', DTCs: ${activeDtcs.joinToString()}",
-            outputData = electricalResult,
+            outputData = wrapDemoOutput("Electrical_Circuit_Solver", electricalResult),
             durationMs = System.currentTimeMillis() - start,
             isSuccess = true
         )
@@ -412,9 +489,9 @@ class OpenManusAgentService(
 
         return OpenManusToolInvocation(
             toolName = "Python_Physics_Simulation_Sandbox",
-            description = "Calculates Volumetric Efficiency, Air-Fuel Mass ratio, and Fuel Delivery Deviations",
+            description = "[DEMO] Canned physics numbers for UI/testing — illustrative only",
             inputParams = "Formulas: [VolumetricEfficiency, AFR_Deficit_Model]",
-            outputData = mathResult,
+            outputData = wrapDemoOutput("Python_Physics_Simulation_Sandbox", mathResult),
             durationMs = System.currentTimeMillis() - start,
             isSuccess = true
         )
@@ -432,12 +509,142 @@ class OpenManusAgentService(
 
         return OpenManusToolInvocation(
             toolName = "NHTSA_TSB_Safety_CrossReferencer",
-            description = "Searches government safety bulletins and OEM technical service bulletin repositories",
+            description = "[DEMO] Canned TSB text for UI/testing — not a live registry lookup",
             inputParams = "Vehicle: $vehicleContext, DTCs: ${activeDtcs.joinToString()}",
-            outputData = tsbResult,
+            outputData = wrapDemoOutput("NHTSA_TSB_Safety_CrossReferencer", tsbResult),
             durationMs = System.currentTimeMillis() - start,
             isSuccess = true
         )
+    }
+
+    private fun executeAcousticFftTool(rpm: Int, frequencyData: List<Float>?): OpenManusToolInvocation {
+        val start = System.currentTimeMillis()
+        val effectiveRpm = if (rpm > 0) rpm else 750
+        val crankshaftFreq = effectiveRpm / 60.0
+        val camshaftFreq = crankshaftFreq * 0.5
+        val dominantFreq = frequencyData?.maxOrNull()?.toDouble() ?: (camshaftFreq * 1.0)
+        val harmonicClassification = calculateAcousticDominantHarmonic(effectiveRpm, dominantFreq)
+
+        val acousticOutput = buildString {
+            appendLine("=== OpenManus Acoustic Fast Fourier Transform (FFT) Engine ===")
+            appendLine("Engine Speed: $effectiveRpm RPM")
+            appendLine("Fundamental Crankshaft Rotational Frequency (1.0x): ${String.format(Locale.US, "%.2f", crankshaftFreq)} Hz")
+            appendLine("Valvetrain / Camshaft Rotational Frequency (0.5x): ${String.format(Locale.US, "%.2f", camshaftFreq)} Hz")
+            appendLine("Dominant Acoustic Peak: ${String.format(Locale.US, "%.2f", dominantFreq)} Hz")
+            appendLine("Acoustic Harmonic Classification: $harmonicClassification")
+            appendLine("Signal-to-Noise Ratio (SNR): 24.6 dB [High Confidence]")
+            appendLine("Diagnosis: Primary acoustic signature matches periodic mechanical frequency without erratic transient bearing shock.")
+        }
+
+        return OpenManusToolInvocation(
+            toolName = "Acoustic_FFT_Harmonic_Analyzer",
+            description = "[DEMO] Illustrative acoustic math — not from a real recording",
+            inputParams = "Engine RPM: $effectiveRpm, Frequency Points: ${frequencyData?.size ?: 512}",
+            outputData = wrapDemoOutput("Acoustic_FFT_Harmonic_Analyzer", acousticOutput),
+            durationMs = System.currentTimeMillis() - start,
+            isSuccess = true
+        )
+    }
+
+    private fun executeVisionWearTool(componentImageContext: String): OpenManusToolInvocation {
+        val start = System.currentTimeMillis()
+        val visionOutput = buildString {
+            appendLine("=== OpenManus Multimodal Computer Vision Wear Analyzer ===")
+            appendLine("Target Inspection: $componentImageContext")
+            appendLine("Colorimetry Profile: Dark carbon soot deposition detected on outer ground electrode (RGB Delta: -34% Luminance).")
+            appendLine("Electrode Erosion Index: 0.042 in gap (Nominal: 0.032 in) -> 31.2% gap widening.")
+            appendLine("Thermal Insulator Glaze: Light tan ceramic core with micro-deposit tracking.")
+            appendLine("Wear Classification: Stage 2 Normal Carbon Soot / Rich Mixture Accumulation (No blistered electrode meltdown).")
+            appendLine("Recommendation: Replace spark plugs as a set; verify injector spray pattern.")
+        }
+
+        return OpenManusToolInvocation(
+            toolName = "Multimodal_Vision_Wear_Classifier",
+            description = "[DEMO] Canned vision description — no image was analyzed",
+            inputParams = "Inspection Context: $componentImageContext",
+            outputData = wrapDemoOutput("Multimodal_Vision_Wear_Classifier", visionOutput),
+            durationMs = System.currentTimeMillis() - start,
+            isSuccess = true
+        )
+    }
+
+    private fun executeSupplyChainEstimatorTool(vehicleContext: String, activeDtcs: List<String>): OpenManusToolInvocation {
+        val start = System.currentTimeMillis()
+        val supplyOutput = buildString {
+            appendLine("=== OpenManus OEM & Aftermarket Supply Chain Estimator ===")
+            appendLine("Vehicle Context: $vehicleContext")
+            appendLine("Primary Recommended Part: PCV Diaphragm / Oil Separator Assembly")
+            appendLine("  -> OEM Part Number: 06M-103-515-H (Dealer Stock: Available 24-48h, MSRP: \$184.50)")
+            appendLine("  -> Tier-1 OEM Equivalent: Mahle / Bosch Aftermarket (In Stock, \$92.00)")
+            appendLine("Secondary Recommended Part: Intake Manifold Gasket Set")
+            appendLine("  -> OEM Part Number: 06E-129-717-B (In Stock, \$28.00)")
+            appendLine("Estimated Total Parts Cost: \$120.00 - \$212.50")
+            appendLine("Standard Labor Guide (Mitchell1 / ALLDATA): 1.5 - 2.0 Hours @ \$145.00/hr = \$217.50 - \$290.00")
+            appendLine("Total Estimated Repair Cost: \$337.50 - \$502.50")
+        }
+
+        return OpenManusToolInvocation(
+            toolName = "Supply_Chain_Part_Estimator",
+            description = "[DEMO] Illustrative part numbers/prices — not live inventory",
+            inputParams = "Vehicle: $vehicleContext, DTCs: ${activeDtcs.joinToString()}",
+            outputData = wrapDemoOutput("Supply_Chain_Part_Estimator", supplyOutput),
+            durationMs = System.currentTimeMillis() - start,
+            isSuccess = true
+        )
+    }
+
+    /**
+     * Calculates Volumetric Efficiency (VE) using the SAE standard air-fuel density formula:
+     * VE (%) = (MAF * 60 * 22.4 * (273.15 + IAT)) / (RPM * (Displacement / 2) * 1.184 * 273.15) * 100
+     */
+    fun calculateVolumetricEfficiency(
+        mafGps: Double,
+        rpm: Int,
+        displacementLiters: Double,
+        iatCelsius: Double
+    ): Double {
+        if (rpm <= 0 || displacementLiters <= 0.0) return 0.0
+        val theoreticalAirGps = (rpm / 120.0) * displacementLiters * (1.184 * (273.15 / (273.15 + iatCelsius)))
+        if (theoreticalAirGps <= 0.0) return 0.0
+        val ve = (mafGps / theoreticalAirGps) * 100.0
+        return (ve * 10.0).roundToInt() / 10.0
+    }
+
+    /**
+     * Identifies the dominant acoustic harmonic order based on crankshaft rotational speed.
+     */
+    fun calculateAcousticDominantHarmonic(engineRpm: Int, dominantFrequencyHz: Double): String {
+        if (engineRpm <= 0 || dominantFrequencyHz <= 0.0) return "Unknown Harmonic"
+        val crankshaftFreq = engineRpm / 60.0
+        val ratio = dominantFrequencyHz / crankshaftFreq
+
+        return when {
+            ratio in 0.35..0.65 -> "0.5x Camshaft / Valvetrain Order (Hydraulic Lifter Tick or Valve Lash)"
+            ratio in 0.85..1.15 -> "1.0x Crankshaft Order (Main Bearing / Connecting Rod Knock)"
+            ratio in 1.85..2.15 -> "2.0x 2nd Order Harmonic (4-Cylinder Firing Pulse or Piston Slap)"
+            ratio in 2.85..3.15 -> "3.0x 3rd Order Harmonic (6-Cylinder Firing Pulse or Alternator Pulley)"
+            ratio in 3.85..4.15 -> "4.0x 4th Order Harmonic (8-Cylinder Firing Pulse or Accessory Ripple)"
+            else -> "${String.format(Locale.US, "%.2f", ratio)}x Harmonic Order (Uncorrelated Vibration)"
+        }
+    }
+
+    /**
+     * Extracts DeepSeek-R1 chain-of-thought `<think>` tags from raw model responses.
+     */
+    fun extractDeepSeekThinking(rawText: String): Pair<String, String> {
+        val thinkStartTag = "<think>"
+        val thinkEndTag = "</think>"
+
+        val startIndex = rawText.indexOf(thinkStartTag)
+        val endIndex = rawText.indexOf(thinkEndTag)
+
+        return if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
+            val thinking = rawText.substring(startIndex + thinkStartTag.length, endIndex).trim()
+            val finalAnswer = rawText.substring(endIndex + thinkEndTag.length).trim()
+            Pair(thinking, finalAnswer)
+        } else {
+            Pair("", rawText.trim())
+        }
     }
 
     // =========================================================================
@@ -483,6 +690,58 @@ class OpenManusAgentService(
             if (aiResponse.isNotBlank() && !aiResponse.contains("Unavailable", ignoreCase = true)) {
                 return parseAiReportToStructured(aiResponse, goal, vehicleContext)
             }
+        } else if (provider == AgentModelProvider.GROQ) {
+            // Groq ultrafast inference — OpenAI-compatible REST, commercial OK, no copyleft
+            val key = _state.value.groqApiKey
+            if (key.isNotBlank()) {
+                try {
+                    val text = callOpenAiCompatibleEndpoint(
+                        url = "https://api.groq.com/openai/v1/chat/completions",
+                        apiKey = key,
+                        model = _state.value.groqModel,
+                        systemPrompt = buildDiagnosticSystemPrompt(),
+                        userPrompt = buildDiagnosticUserPrompt(goal, vehicleContext, activeDtcs, telemetrySummary, stepHistory)
+                    )
+                    if (text.isNotBlank()) {
+                        val (thinking, answer) = extractDeepSeekThinking(text)
+                        val finalText = if (answer.isNotBlank()) answer else text
+                        return parseAiReportToStructured(finalText, goal, vehicleContext)
+                            .copy(deepSeekReasoning = thinking)
+                    }
+                } catch (e: Exception) {
+                    Log.w("OpenManus", "Groq provider failed, falling back: ${e.message}")
+                }
+            } else {
+                Log.w("OpenManus", "Groq API key not set — falling through to deterministic engine")
+            }
+        } else if (provider == AgentModelProvider.OPEN_ROUTER) {
+            // OpenRouter user-pays model — user supplies their own key, no developer billing
+            val key = _state.value.openRouterApiKey
+            if (key.isNotBlank()) {
+                try {
+                    val text = callOpenAiCompatibleEndpoint(
+                        url = "https://openrouter.ai/api/v1/chat/completions",
+                        apiKey = key,
+                        model = _state.value.openRouterModel,
+                        systemPrompt = buildDiagnosticSystemPrompt(),
+                        userPrompt = buildDiagnosticUserPrompt(goal, vehicleContext, activeDtcs, telemetrySummary, stepHistory),
+                        extraHeaders = mapOf(
+                            "HTTP-Referer" to "https://github.com/newsteps4them-arch/ForgeDiagnostics",
+                            "X-Title" to "Forge Agentic Diagnostics"
+                        )
+                    )
+                    if (text.isNotBlank()) {
+                        val (thinking, answer) = extractDeepSeekThinking(text)
+                        val finalText = if (answer.isNotBlank()) answer else text
+                        return parseAiReportToStructured(finalText, goal, vehicleContext)
+                            .copy(deepSeekReasoning = thinking)
+                    }
+                } catch (e: Exception) {
+                    Log.w("OpenManus", "OpenRouter provider failed, falling back: ${e.message}")
+                }
+            } else {
+                Log.w("OpenManus", "OpenRouter API key not set — falling through to deterministic engine")
+            }
         } else if (provider == AgentModelProvider.LOCAL_OLLAMA) {
             // Attempt Local Ollama Endpoint (http://localhost:11434/api/generate)
             try {
@@ -503,14 +762,15 @@ class OpenManusAgentService(
                 if (resp.isSuccessful && bodyStr.isNotBlank()) {
                     val jsonResp = JSONObject(bodyStr)
                     val generatedText = jsonResp.optString("response", "")
-                    if (generatedText.isNotBlank()) {
-                        return parseAiReportToStructured(generatedText, goal, vehicleContext)
-                    }
+                    if (generatedText.isBlank()) throw Exception("Blank generated text")
+
+                    return parseAiReportToStructured(generatedText, goal, vehicleContext)
                 }
             } catch (e: Exception) {
                 Log.w("OpenManus", "Local Ollama fallback to deterministic engine: ${e.message}")
             }
         }
+
 
         // Deterministic High-Precision Fallback Synthesis tailored to DTCs and Symptoms
         val hasMisfire = activeDtcs.any { it.startsWith("P03") } || goal.contains("misfire", ignoreCase = true)
@@ -662,6 +922,99 @@ class OpenManusAgentService(
                 fullLogSummary = "OpenManus autonomous multi-agent pipeline analyzed OBD PIDs, CAN frames, Ohm's law circuit resistance, and TSB safety bulletins to isolate the root cause."
             )
         }
+    }
+
+    /**
+     * Shared OpenAI-compatible HTTP POST helper.
+     * Works with Groq (api.groq.com), OpenRouter (openrouter.ai), and any OpenAI-spec endpoint.
+     * Returns the first assistant message content string.
+     */
+    private fun escapeJsonString(str: String): String {
+        return str.replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\b", "\\b")
+            .replace("\u000C", "\\f")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")
+    }
+
+    internal fun callOpenAiCompatibleEndpoint(
+        url: String,
+        apiKey: String,
+        model: String,
+        systemPrompt: String,
+        userPrompt: String,
+        extraHeaders: Map<String, String> = emptyMap()
+    ): String {
+        if (apiKey.isBlank() || apiKey.length < 8) return ""
+
+        return try {
+            val bodyJson = """{"model":"${escapeJsonString(model)}","messages":[{"role":"system","content":"${escapeJsonString(systemPrompt)}"},{"role":"user","content":"${escapeJsonString(userPrompt)}"}],"max_tokens":2048,"temperature":0.3}"""
+
+            var reqBuilder = Request.Builder()
+                .url(url)
+                .addHeader("Authorization", "Bearer $apiKey")
+                .addHeader("Content-Type", "application/json")
+                .post(bodyJson.toRequestBody("application/json".toMediaType()))
+
+            extraHeaders.forEach { (k, v) -> reqBuilder = reqBuilder.addHeader(k, v) }
+
+            val response = httpClient.newCall(reqBuilder.build()).execute()
+            val responseBody = response.body?.string() ?: ""
+            if (!response.isSuccessful || responseBody.isBlank()) return ""
+
+            val element = json.parseToJsonElement(responseBody)
+            val choices = element.jsonObject["choices"]?.jsonArray
+            val firstChoice = choices?.firstOrNull()?.jsonObject
+            val message = firstChoice?.get("message")?.jsonObject
+            val content = message?.get("content")?.jsonPrimitive?.content
+            content ?: ""
+        } catch (e: Exception) {
+            try {
+                Log.w("OpenManus", "Failed to parse OpenAI-compatible response: ${e.message}")
+            } catch (_: Throwable) {}
+            ""
+        }
+    }
+
+    private fun buildDiagnosticSystemPrompt(): String = buildString {
+        appendLine("You are the OpenManus Master Automotive Diagnostic AI Agent.")
+        appendLine("You are an expert automotive engineer with deep knowledge of:")
+        appendLine("- SAE J1979 OBD-II PID decoding and freeze-frame analysis")
+        appendLine("- ISO 14229 UDS diagnostic protocol and CAN bus signal analysis")
+        appendLine("- Volumetric efficiency, fuel trim, and engine management physics")
+        appendLine("- NHTSA safety recalls, OEM TSBs, and factory diagnostic procedures")
+        appendLine("Always give precise, actionable, professional-grade diagnostic answers.")
+        appendLine("Format your response clearly with numbered steps a mechanic can follow.")
+    }
+
+    private fun buildDiagnosticUserPrompt(
+        goal: String,
+        vehicleContext: String,
+        activeDtcs: List<String>,
+        telemetrySummary: String,
+        stepHistory: List<OpenManusStep>
+    ): String = buildString {
+        appendLine("DIAGNOSTIC TARGET: $goal")
+        appendLine("VEHICLE: $vehicleContext")
+        appendLine("ACTIVE DTCs: ${activeDtcs.joinToString(", ").ifEmpty { "None" }}")
+        appendLine("LIVE TELEMETRY: $telemetrySummary")
+        appendLine()
+        appendLine("AGENT TOOL RESULTS:")
+        stepHistory.forEach { step ->
+            step.toolInvocations.forEach { tool ->
+                appendLine("[${tool.toolName}]: ${tool.outputData.take(400)}")
+            }
+        }
+        appendLine()
+        appendLine("Provide:")
+        appendLine("1. Primary Root Cause")
+        appendLine("2. Secondary Possibilities")
+        appendLine("3. Step-by-Step Inspection Procedure")
+        appendLine("4. Recommended Parts (OEM part numbers if known)")
+        appendLine("5. Estimated Labor Hours")
+        appendLine("6. Safety Warnings")
     }
 
     private fun parseAiReportToStructured(aiText: String, goal: String, vehicleContext: String): OpenManusDiagnosticReport {

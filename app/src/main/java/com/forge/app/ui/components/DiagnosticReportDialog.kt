@@ -1,3 +1,8 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app.ui.components
 
 import android.widget.Toast
@@ -165,7 +170,7 @@ fun DiagnosticReportDialog(
                                     Text(text = msg, fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = ForgeGreen)
                                 }
                                 IconButton(onClick = { saveStatusMsg = null }, modifier = Modifier.size(20.dp)) {
-                                    Icon(imageVector = Icons.Default.Close, contentDescription = null, tint = ForgeGreen, modifier = Modifier.size(14.dp))
+                                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close status message", tint = ForgeGreen, modifier = Modifier.size(14.dp))
                                 }
                             }
                         }

@@ -1,14 +1,26 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app
 
 import com.forge.app.services.*
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ObdDiagnosticHardwareModuleTest {
 
     private val testScope = CoroutineScope(Dispatchers.Unconfined)
@@ -16,61 +28,100 @@ class ObdDiagnosticHardwareModuleTest {
     private lateinit var geminiService: GeminiService
     private lateinit var openManusService: OpenManusAgentService
     private lateinit var hardwareModule: ObdDiagnosticHardwareModule
+    private val testDispatcher = StandardTestDispatcher()
 
     @Before
     fun setup() {
+        Dispatchers.setMain(testDispatcher)
         telemetryService = ObdTelemetryService(testScope)
-        geminiService = GeminiService()
-        openManusService = OpenManusAgentService(geminiService)
+        geminiService = object : GeminiService() {
+            override suspend fun generateDiagnosticAnalysis(prompt: String): String {
+                return "Primary Root Cause: Verified Intake Vacuum Infiltration on Bank 1."
+            }
+        }
+        openManusService = OpenManusAgentService(geminiService, Dispatchers.Unconfined)
         hardwareModule = ObdDiagnosticHardwareModule(
             scope = testScope,
             usbHardwareService = null,
             telemetryService = telemetryService,
-            openManusService = openManusService
+            openManusService = openManusService,
+            ioDispatcher = Dispatchers.Unconfined,
+            mainDispatcher = Dispatchers.Unconfined
         )
+    }
+
+    @After
+    fun tearDown() {
+        hardwareModule.disconnect()
+        telemetryService.stopTelemetryLoop()
+        Dispatchers.resetMain()
     }
 
     @Test
     fun testInterfaceSwitching() {
         hardwareModule.setHardwareInterface(ObdHardwareInterface.BLUETOOTH_SPP)
         assertEquals(ObdHardwareInterface.BLUETOOTH_SPP, hardwareModule.hardwareState.value.selectedInterface)
-
         hardwareModule.setHardwareInterface(ObdHardwareInterface.USB_OTG)
         assertEquals(ObdHardwareInterface.USB_OTG, hardwareModule.hardwareState.value.selectedInterface)
     }
 
     @Test
     fun testFetchLiveDtcCodesAndOpenManusAutoTrigger() = runBlocking {
+        hardwareModule.setHardwareInterface(ObdHardwareInterface.SIMULATED)
         hardwareModule.fetchLiveDiagnosticTroubleCodes(
             vehicleName = "2021 Audi S5 Sportback",
-            autoTriggerOpenManus = true
+            autoTriggerOpenManus = true,
         )
-        delay(600)
+
+        var attempts = 0
+        while (attempts < 50 && (hardwareModule.hardwareState.value.isFetchingDtcs || openManusService.state.value.finalReport == null)) {
+            delay(100)
+            attempts++
+        }
 
         val state = hardwareModule.hardwareState.value
         assertFalse(state.isFetchingDtcs)
         assertTrue(state.activeDtcs.isNotEmpty())
-
         val dtcCodes = state.activeDtcs.map { it.code }
-        assertTrue(dtcCodes.contains("P0300") || dtcCodes.contains("P0171"))
+        assertTrue(dtcCodes.contains("P0300"))
+        assertTrue(dtcCodes.contains("P0171"))
+        // Demo-mode DTCs must be unmistakably tagged as simulated.
+        assertTrue(state.activeDtcs.all { it.dataSource == DiagnosticDataSource.SIMULATED })
+        assertEquals(DiagnosticDataSource.SIMULATED, state.dtcDataSource)
+        assertNull(state.dtcFetchError)
+        assertNotNull(openManusService.state.value.finalReport)
+    }
 
-        // Verify OpenManus received active DTCs and generated diagnosis
-        val agentState = openManusService.state.value
-        assertNotNull(agentState.finalReport)
-        assertTrue(agentState.finalReport?.primaryRootCause?.isNotBlank() == true)
+    @Test
+    fun testFetchDtcsWithNoAdapterReportsTransportErrorNotFakeCodes() = runBlocking {
+        // Hardware mode with no adapter connected: the scan must report a
+        // transport failure and return ZERO DTCs — never invented codes.
+        hardwareModule.setHardwareInterface(ObdHardwareInterface.USB_OTG)
+        hardwareModule.fetchLiveDiagnosticTroubleCodes(
+            vehicleName = "2021 Audi S5 Sportback",
+            autoTriggerOpenManus = false,
+        )
+
+        var attempts = 0
+        while (attempts < 50 && hardwareModule.hardwareState.value.isFetchingDtcs) {
+            delay(100)
+            attempts++
+        }
+
+        val state = hardwareModule.hardwareState.value
+        assertFalse(state.isFetchingDtcs)
+        assertTrue(state.activeDtcs.isEmpty())
+        assertNotNull(state.dtcFetchError)
+        assertEquals(DiagnosticDataSource.LIVE_HARDWARE, state.dtcDataSource)
     }
 
     @Test
     fun testClearHardwareFaultCodes() = runBlocking {
-        // First add DTC
+        hardwareModule.setHardwareInterface(ObdHardwareInterface.SIMULATED)
         telemetryService.addDtc("P0300", "Random Misfire")
-        assertTrue(telemetryService.telemetry.value.activeDtcCodes.isNotEmpty())
-
-        // Clear codes
         hardwareModule.clearHardwareFaultCodes()
-        delay(300)
-
-        assertEquals(0, telemetryService.telemetry.value.activeDtcCodes.size)
-        assertEquals(0, hardwareModule.hardwareState.value.activeDtcs.size)
+        delay(300.milliseconds)
+        assertTrue(telemetryService.telemetry.value.activeDtcCodes.isEmpty())
+        assertTrue(hardwareModule.hardwareState.value.activeDtcs.isEmpty())
     }
 }

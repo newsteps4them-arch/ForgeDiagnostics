@@ -1,0 +1,31 @@
+name: Forge Autonomous Guardian v2
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  auto-heal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Clean Dependency Installation
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run Complete Automated Diagnostic & Portable Test Suite
+        run: npm run test:all:portable

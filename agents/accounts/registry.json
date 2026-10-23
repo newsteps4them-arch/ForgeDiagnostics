@@ -1,0 +1,16 @@
+{
+  "organization": "Forge Diagnostics Collective",
+  "repository": "newsteps4them-arch/team.forge",
+  "bots": [
+    { "id": "bot_01", "name": "Orchestrator-Prime", "codename": "Aegis-1", "role": "CEO & Sprint Orchestrator", "email": "aegis.orchestrator@forgediagnostics.com", "workspace": "agents/aegis_orchestrator" },
+    { "id": "bot_02", "name": "Nexus-Arch", "codename": "Nexus", "role": "Lead Systems Architect", "email": "nexus.architect@forgediagnostics.com", "workspace": "agents/nexus_architect" },
+    { "id": "bot_03", "name": "OBD-Sage", "codename": "Sage", "role": "VP Automotive Protocols", "email": "sage.protocols@forgediagnostics.com", "workspace": "agents/sage_protocols" },
+    { "id": "bot_04", "name": "BusMaster-Driver", "codename": "Vector", "role": "HAL & Hardware Interface Lead", "email": "vector.hal@forgediagnostics.com", "workspace": "agents/vector_hal" },
+    { "id": "bot_05", "name": "DataForge-Curator", "codename": "Lexicon", "role": "DTC & PID Knowledgebase Lead", "email": "lexicon.database@forgediagnostics.com", "workspace": "agents/lexicon_database" },
+    { "id": "bot_06", "name": "MechMind-AI", "codename": "Cortex", "role": "Neural Repair & Analytics Specialist", "email": "cortex.ai@forgediagnostics.com", "workspace": "agents/cortex_ai" },
+    { "id": "bot_07", "name": "ForgeCoder-Dev", "codename": "Vulcan", "role": "Autonomous Implementation Lead", "email": "vulcan.coder@forgediagnostics.com", "workspace": "agents/vulcan_coder" },
+    { "id": "bot_08", "name": "Guardian-QA", "codename": "Guardian-v2", "role": "Verification & Auto-Heal Lead", "email": "guardian.qa@forgediagnostics.com", "workspace": "agents/guardian_qa" },
+    { "id": "bot_09", "name": "Sentinel-Sec", "codename": "Sentinel", "role": "Security & Safety Compliance", "email": "sentinel.security@forgediagnostics.com", "workspace": "agents/sentinel_security" },
+    { "id": "bot_10", "name": "Deployer-Ops", "codename": "Hermes", "role": "Release Manager & DevOps Automation", "email": "hermes.release@forgediagnostics.com", "workspace": "agents/hermes_ops" }
+  ]
+}

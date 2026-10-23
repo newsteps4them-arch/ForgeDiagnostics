@@ -1,3 +1,8 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app.ui.components
 
 import androidx.compose.animation.*
@@ -77,6 +82,21 @@ fun RadialGauge(
         animationSpec = tween(durationMillis = 250),
         label = "active_color_morph"
     )
+
+    // Pre-calculated tick mark trigonometric unit vectors to avoid allocations and trig inside Canvas DrawScope
+    val tickData = remember(minValue, maxValue, majorTickStep, minorTickDivisions, startAngle, sweepAngle) {
+        val totalTicks = ((maxValue - minValue) / majorTickStep).toInt()
+        val totalSubTicks = totalTicks * minorTickDivisions
+        List(totalSubTicks + 1) { i ->
+            val tickFraction = i.toFloat() / totalSubTicks
+            val angleDeg = startAngle + (tickFraction * sweepAngle)
+            val angleRad = Math.toRadians(angleDeg.toDouble())
+            val isMajor = (i % minorTickDivisions) == 0
+            val cosVal = cos(angleRad).toFloat()
+            val sinVal = sin(angleRad).toFloat()
+            TickMark(isMajor, cosVal, sinVal)
+        }
+    }
 
     // Warning / Redline Infinite Pulsing Animation
     val infiniteTransition = rememberInfiniteTransition(label = "warning_pulse")
@@ -200,27 +220,19 @@ fun RadialGauge(
                         )
                     }
 
-                    // Tick Marks
-                    val totalTicks = ((maxValue - minValue) / majorTickStep).toInt()
-                    val totalSubTicks = totalTicks * minorTickDivisions
-
-                    for (i in 0..totalSubTicks) {
-                        val tickFraction = i.toFloat() / totalSubTicks
-                        val angleDeg = startAngle + (tickFraction * sweepAngle)
-                        val angleRad = Math.toRadians(angleDeg.toDouble())
-
-                        val isMajor = (i % minorTickDivisions) == 0
-                        val tickLength = if (isMajor) 10.dp.toPx() else 5.dp.toPx()
-                        val tickColor = if (isMajor) Color(0xFF8C93A8) else Color(0xFF4A5168)
-                        val strokeWidth = if (isMajor) 2.dp.toPx() else 1.dp.toPx()
+                    // Pre-calculated Tick Marks rendering using cached trigonometry
+                    for (tick in tickData) {
+                        val tickLength = if (tick.isMajor) 10.dp.toPx() else 5.dp.toPx()
+                        val tickColor = if (tick.isMajor) Color(0xFF8C93A8) else Color(0xFF4A5168)
+                        val strokeWidth = if (tick.isMajor) 2.dp.toPx() else 1.dp.toPx()
 
                         val outerRadius = radius - 8.dp.toPx()
                         val innerRadius = outerRadius - tickLength
 
-                        val startX = (center.x + outerRadius * cos(angleRad)).toFloat()
-                        val startY = (center.y + outerRadius * sin(angleRad)).toFloat()
-                        val endX = (center.x + innerRadius * cos(angleRad)).toFloat()
-                        val endY = (center.y + innerRadius * sin(angleRad)).toFloat()
+                        val startX = center.x + outerRadius * tick.cosVal
+                        val startY = center.y + outerRadius * tick.sinVal
+                        val endX = center.x + innerRadius * tick.cosVal
+                        val endY = center.y + innerRadius * tick.sinVal
 
                         drawLine(
                             color = tickColor,
@@ -297,6 +309,12 @@ fun RadialGauge(
     }
 }
 
+private data class TickMark(
+    val isMajor: Boolean,
+    val cosVal: Float,
+    val sinVal: Float
+)
+
 /**
  * Semi-circular / Arc Bar Gauge for Coolant Temp with smooth thermal transitions and overheating alert animations
  */
@@ -372,7 +390,7 @@ fun CoolantTempGauge(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Thermostat,
-                        contentDescription = "Coolant Temp",
+                        contentDescription = null,
                         tint = statusColor,
                         modifier = Modifier.size(18.dp)
                     )
@@ -628,7 +646,7 @@ fun ObdInstrumentCluster(
                         }
                         Icon(
                             imageVector = Icons.Default.ElectricBolt,
-                            contentDescription = "Battery",
+                            contentDescription = null,
                             tint = if (telemetry.batteryVoltage < 12.0f) ForgeRed else ForgeGreen,
                             modifier = Modifier.size(20.dp)
                         )
@@ -663,7 +681,7 @@ fun ObdInstrumentCluster(
                         }
                         Icon(
                             imageVector = Icons.Default.Speed,
-                            contentDescription = "Throttle",
+                            contentDescription = null,
                             tint = ForgeAmber,
                             modifier = Modifier.size(20.dp)
                         )

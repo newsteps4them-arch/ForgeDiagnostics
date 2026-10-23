@@ -1,5 +1,11 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app.services
 
+import androidx.annotation.VisibleForTesting
 import com.forge.app.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -80,9 +86,9 @@ interface AlldataApi {
 
 object AlldataClient {
     private const val BASE_URL = "https://api.alldata.com/"
-    private val json = Json { ignoreUnknownKeys = true }
+    val json = Json { ignoreUnknownKeys = true }
 
-    private val okHttpClient = OkHttpClient.Builder()
+    val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
         .addInterceptor(HttpLoggingInterceptor().apply {
@@ -90,13 +96,28 @@ object AlldataClient {
         })
         .build()
 
-    private val retrofit = Retrofit.Builder()
+    var retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(okHttpClient)
         .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
         .build()
 
-    private val api: AlldataApi = retrofit.create(AlldataApi::class.java)
+    internal var api: AlldataApi = retrofit.create(AlldataApi::class.java)
+
+    fun setBaseUrl(url: String) {
+        retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+        api = retrofit.create(AlldataApi::class.java)
+    }
+
+    fun resetApi() {
+        setBaseUrl(BASE_URL)
+    }
+
+
 
     suspend fun fetchRepairProcedures(
         vin: String = "WAUZZZF58MA019284",
@@ -109,7 +130,7 @@ object AlldataClient {
         }
 
         try {
-            val response = api.getProcedures("Bearer $key", vin, category)
+            val response = api.getProcedures("Bearer \$key", vin, category)
             if (response.data.isNotEmpty()) response.data else getVerifiedOemProceduresFallback(vin, category)
         } catch (e: Exception) {
             getVerifiedOemProceduresFallback(vin, category)
@@ -127,7 +148,7 @@ object AlldataClient {
         }
 
         try {
-            val response = api.getDiagrams("Bearer $key", vin, system)
+            val response = api.getDiagrams("Bearer \$key", vin, system)
             if (response.data.isNotEmpty()) response.data else getVerifiedOemWiringFallback(vin, system)
         } catch (e: Exception) {
             getVerifiedOemWiringFallback(vin, system)
@@ -144,7 +165,7 @@ object AlldataClient {
         }
 
         try {
-            val response = api.getTsbs("Bearer $key", vin)
+            val response = api.getTsbs("Bearer \$key", vin)
             if (response.data.isNotEmpty()) response.data else getVerifiedOemTsbsFallback(vin)
         } catch (e: Exception) {
             getVerifiedOemTsbsFallback(vin)

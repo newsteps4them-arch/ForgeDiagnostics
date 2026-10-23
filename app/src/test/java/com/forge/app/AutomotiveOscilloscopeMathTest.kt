@@ -1,3 +1,8 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app
 
 import org.junit.Assert.*
@@ -62,14 +67,15 @@ class AutomotiveOscilloscopeMathTest {
             var maxGapLength = 0
 
             for (i in samples.indices) {
-                if (kotlin.math.abs(samples[i]) < 0.1f) {
-                    consecutiveZeros++
-                    if (consecutiveZeros > maxGapLength) {
-                        maxGapLength = consecutiveZeros
-                        maxGapIndex = i - consecutiveZeros + 1
-                    }
-                } else {
+                if (kotlin.math.abs(samples[i]) >= 0.1f) {
                     consecutiveZeros = 0
+                    continue
+                }
+
+                consecutiveZeros++
+                if (consecutiveZeros > maxGapLength) {
+                    maxGapLength = consecutiveZeros
+                    maxGapIndex = i - consecutiveZeros + 1
                 }
             }
             return maxGapIndex

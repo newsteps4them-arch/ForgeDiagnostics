@@ -1,3 +1,8 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app.ui.screens
 
 import androidx.compose.animation.*
@@ -300,6 +305,25 @@ fun OpenManusScreen(
                         )
                     }
                 }
+            }
+        }
+
+        // Honest DTC fetch status: failures are surfaced, never hidden or papered over.
+        hardwareState?.dtcFetchError?.let { fetchError ->
+            Surface(
+                color = ForgeRed.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, ForgeRed.copy(alpha = 0.4f)),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = "DTC SCAN: $fetchError",
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    color = ForgeRed,
+                    modifier = Modifier.padding(10.dp)
+                )
             }
         }
 
@@ -685,9 +709,10 @@ fun OpenManusScreen(
                                             text = when (provider) {
                                                 AgentModelProvider.GEMINI_FLASH -> "Gemini 2.5"
                                                 AgentModelProvider.GEMINI_PRO -> "Gemini Pro"
+                                                AgentModelProvider.GROQ -> "Groq"
+                                                AgentModelProvider.OPEN_ROUTER -> "OpenRouter"
                                                 AgentModelProvider.LOCAL_OLLAMA -> "Ollama"
                                                 AgentModelProvider.HUGGING_FACE -> "HuggingFace"
-                                                AgentModelProvider.OPEN_ROUTER -> "OpenRouter"
                                             },
                                             fontSize = 9.sp,
                                             fontFamily = FontFamily.Monospace,

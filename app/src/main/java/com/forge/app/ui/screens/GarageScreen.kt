@@ -1,3 +1,8 @@
+// Copyright (c) 2026 Michael Mario Johnson. All Rights Reserved.
+// Proprietary and Confidential.
+// This file is part of Forge Agentic Diagnostics.
+// Unauthorized copying of this file, via any medium is strictly prohibited.
+
 package com.forge.app.ui.screens
 
 import androidx.compose.foundation.background
@@ -86,7 +91,16 @@ fun GarageScreen(
                     Icon(imageVector = Icons.Default.DirectionsCar, contentDescription = null, tint = ForgeAmber, modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.height(12.dp))
                     Text("No vehicles saved in garage yet.", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ForgeOnSurface)
-                    Text("Tap ADD VEHICLE to store a profile.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { showAddModal = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForgeAmber, contentColor = Color.Black),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("ADD VEHICLE", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         } else {

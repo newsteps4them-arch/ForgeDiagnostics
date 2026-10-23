@@ -1,0 +1,15 @@
+🧪 Add tests for ObdTelemetryService
+
+🎯 **What:** The testing gap addressed
+The `ObdTelemetryService.kt` class was lacking unit tests. Tests have been written to ensure correct behavior of state management and initialization.
+
+📊 **Coverage:** What scenarios are now tested
+- Initial state verification
+- RPM response parsing (valid, invalid, malformed data)
+- Coercion logic in `setSpeed` (clamping values)
+- Modification of Active DTC lists (`clearDtcs`, `addDtc`)
+- UI trigger methods (`setConnectionType`, `toggleConnection`)
+- Simulated loop execution validation by advancing virtual time through `StandardTestDispatcher`
+
+✨ **Result:** The improvement in test coverage
+Higher reliability and less surface area for regressions to creep into ObdTelemetryService coroutine loops and logic handlers.
