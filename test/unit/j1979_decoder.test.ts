@@ -252,4 +252,44 @@ describe('SAE J1979 Protocol Decoder', () => {
     expect(res?.value).toBe(100);
     expect(res?.unit).toBe('°C');
   });
+
+  it('should decode Run Time Since Engine Start (PID 1F)', () => {
+    const res = decodeMode01Response('41 1F 0E 10');
+    expect(res?.pid).toBe('1F');
+    expect(res?.name).toBe('Run Time Since Engine Start');
+    expect(res?.value).toBe(3600);
+    expect(res?.unit).toBe('s');
+  });
+
+  it('should decode Commanded EGR (PID 2C)', () => {
+    const res = decodeMode01Response('41 2C 80');
+    expect(res?.pid).toBe('2C');
+    expect(res?.name).toBe('Commanded EGR');
+    expect(res?.value).toBeCloseTo(50.196, 3);
+    expect(res?.unit).toBe('%');
+  });
+
+  it('should decode Commanded Evaporative Purge (PID 2E)', () => {
+    const res = decodeMode01Response('41 2E 40');
+    expect(res?.pid).toBe('2E');
+    expect(res?.name).toBe('Commanded Evaporative Purge');
+    expect(res?.value).toBeCloseTo(25.098, 3);
+    expect(res?.unit).toBe('%');
+  });
+
+  it('should decode Commanded Equivalence Ratio (PID 44)', () => {
+    const res = decodeMode01Response('41 44 80 00');
+    expect(res?.pid).toBe('44');
+    expect(res?.name).toBe('Commanded Equivalence Ratio');
+    expect(res?.value).toBe(1.0);
+    expect(res?.unit).toBe('ratio');
+  });
+
+  it('should decode Engine Fuel Rate (PID 5E)', () => {
+    const res = decodeMode01Response('41 5E 01 2C');
+    expect(res?.pid).toBe('5E');
+    expect(res?.name).toBe('Engine Fuel Rate');
+    expect(res?.value).toBe(15.0);
+    expect(res?.unit).toBe('L/h');
+  });
 });
