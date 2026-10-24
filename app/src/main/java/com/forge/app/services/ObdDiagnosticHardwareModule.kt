@@ -539,6 +539,12 @@ class ObdDiagnosticHardwareModule(
                         val b = clean.substring(2, 4).toIntOrNull(16) ?: 0
                         val liveRpm = ((a * 256) + b) / 4
                         telemetryService?.setRpm(liveRpm)
+                // Poll live RPM (010C) using zero-allocation RPM parser
+                val rpmRaw = sendObdCommand("010C")
+                if (rpmRaw.isNotEmpty()) {
+                    val liveRpm = telemetryService?.parseRpmResponse(rpmRaw)
+                    if (liveRpm != null) {
+                        telemetryService.setSpeed((liveRpm / 35).coerceIn(0, 200))
                     }
                 }
                 kotlinx.coroutines.delay(250)

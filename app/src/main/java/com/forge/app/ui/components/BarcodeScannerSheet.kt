@@ -297,7 +297,7 @@ fun BarcodeScannerSheet(
                         ) {
                             Icon(
                                 imageVector = if (isFlashOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
-                                contentDescription = "Toggle Torch",
+                                contentDescription = if (isFlashOn) "Turn Torch Off" else "Turn Torch On",
                                 tint = if (isFlashOn) ForgeAmber else Color.White,
                                 modifier = Modifier.size(18.dp)
                             )

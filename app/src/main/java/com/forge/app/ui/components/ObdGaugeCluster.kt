@@ -35,6 +35,12 @@ import com.forge.app.services.ObdTelemetryData
 import com.forge.app.ui.theme.*
 import kotlin.math.*
 
+private data class TickMarkGeometry(
+    val isMajor: Boolean,
+    val cosVal: Float,
+    val sinVal: Float
+)
+
 /**
  * High-performance, hardware-styled Automotive Radial Gauge Composable
  * with physical spring needle damping, smooth numerical roll transitions, and warning aura pulsing.
@@ -70,6 +76,24 @@ fun RadialGauge(
     val isCritical = criticalThreshold != null && animatedValue >= criticalThreshold
     val isWarning = warningThreshold != null && animatedValue >= warningThreshold
 
+    // Performance Optimization: Cache static tick mark geometry/trigonometry to avoid
+    // repeated Math.toRadians, cos, sin, and modulo allocations on every 60 FPS Canvas draw frame.
+    val tickGeometries = remember(minValue, maxValue, majorTickStep, minorTickDivisions, startAngle, sweepAngle) {
+        val totalTicks = ((maxValue - minValue) / majorTickStep).toInt()
+        val totalSubTicks = totalTicks * minorTickDivisions
+        List(totalSubTicks + 1) { i ->
+            val tickFraction = i.toFloat() / totalSubTicks
+            val angleDeg = startAngle + (tickFraction * sweepAngle)
+            val angleRad = Math.toRadians(angleDeg.toDouble())
+            val isMajor = (i % minorTickDivisions) == 0
+            TickMarkGeometry(
+                isMajor = isMajor,
+                cosVal = cos(angleRad).toFloat(),
+                sinVal = sin(angleRad).toFloat()
+            )
+        }
+    }
+
     // Smooth animated color morphing
     val targetActiveColor = when {
         isCritical -> ForgeRed
@@ -82,21 +106,6 @@ fun RadialGauge(
         animationSpec = tween(durationMillis = 250),
         label = "active_color_morph"
     )
-
-    // Pre-calculated tick mark trigonometric unit vectors to avoid allocations and trig inside Canvas DrawScope
-    val tickData = remember(minValue, maxValue, majorTickStep, minorTickDivisions, startAngle, sweepAngle) {
-        val totalTicks = ((maxValue - minValue) / majorTickStep).toInt()
-        val totalSubTicks = totalTicks * minorTickDivisions
-        List(totalSubTicks + 1) { i ->
-            val tickFraction = i.toFloat() / totalSubTicks
-            val angleDeg = startAngle + (tickFraction * sweepAngle)
-            val angleRad = Math.toRadians(angleDeg.toDouble())
-            val isMajor = (i % minorTickDivisions) == 0
-            val cosVal = cos(angleRad).toFloat()
-            val sinVal = sin(angleRad).toFloat()
-            TickMark(isMajor, cosVal, sinVal)
-        }
-    }
 
     // Warning / Redline Infinite Pulsing Animation
     val infiniteTransition = rememberInfiniteTransition(label = "warning_pulse")
@@ -220,13 +229,21 @@ fun RadialGauge(
                         )
                     }
 
-                    // Pre-calculated Tick Marks rendering using cached trigonometry
-                    for (tick in tickData) {
-                        val tickLength = if (tick.isMajor) 10.dp.toPx() else 5.dp.toPx()
-                        val tickColor = if (tick.isMajor) Color(0xFF8C93A8) else Color(0xFF4A5168)
-                        val strokeWidth = if (tick.isMajor) 2.dp.toPx() else 1.dp.toPx()
+                    // Performance Optimization: Iterate over pre-calculated tick geometries
+                    // to eliminate 100% of trigonometric operations and modulo checks during 60 FPS animation frames
+                    val majorTickLenPx = 10.dp.toPx()
+                    val minorTickLenPx = 5.dp.toPx()
+                    val outerRadius = radius - 8.dp.toPx()
+                    val majorColor = Color(0xFF8C93A8)
+                    val minorColor = Color(0xFF4A5168)
+                    val majorStrokeWidth = 2.dp.toPx()
+                    val minorStrokeWidth = 1.dp.toPx()
 
-                        val outerRadius = radius - 8.dp.toPx()
+                    for (tick in tickGeometries) {
+                        val tickLength = if (tick.isMajor) majorTickLenPx else minorTickLenPx
+                        val tickColor = if (tick.isMajor) majorColor else minorColor
+                        val strokeWidth = if (tick.isMajor) majorStrokeWidth else minorStrokeWidth
+
                         val innerRadius = outerRadius - tickLength
 
                         val startX = center.x + outerRadius * tick.cosVal
@@ -309,12 +326,6 @@ fun RadialGauge(
     }
 }
 
-private data class TickMark(
-    val isMajor: Boolean,
-    val cosVal: Float,
-    val sinVal: Float
-)
-
 /**
  * Semi-circular / Arc Bar Gauge for Coolant Temp with smooth thermal transitions and overheating alert animations
  */
@@ -334,7 +345,6 @@ fun CoolantTempGauge(
 
     val isOverheat = animatedTemp >= 105f
     val isCold = animatedTemp < 70f
-    val isOptimal = !isOverheat && !isCold
 
     val targetStatusText = when {
         animatedTemp >= 115f -> "OVERHEATING"

@@ -43,7 +43,6 @@ class AuthAndSyncServiceTest {
     fun testInitialStateIsUnauthenticatedGuest() = runTest {
         val service = AuthAndSyncService(scope = CoroutineScope(testDispatcher))
 
-        // Honest default: nobody is signed in, nothing is synced.
         val user = service.currentUser.value
         assertEquals("", user.uid)
         assertEquals("Guest Tech", user.displayName)
@@ -77,8 +76,6 @@ class AuthAndSyncServiceTest {
 
         authService.signInWithGoogle("testuser@example.com", "Test User")
 
-        // MUST stay unauthenticated: Firebase Auth is not integrated, so success
-        // must not be invented.
         val currentUser = authService.currentUser.value
         assertFalse(currentUser.isAuthenticated)
         assertEquals("", currentUser.uid)
@@ -94,7 +91,6 @@ class AuthAndSyncServiceTest {
         service.triggerFirestoreSync()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // MUST NOT claim a sync happened: no Firestore SDK is integrated.
         val sync = service.syncStatus.value
         assertFalse(sync.isConnectedToFirestore)
         assertEquals(0, sync.syncedItemsCount)
