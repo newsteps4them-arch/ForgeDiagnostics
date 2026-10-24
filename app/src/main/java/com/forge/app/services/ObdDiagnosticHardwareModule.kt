@@ -522,29 +522,12 @@ class ObdDiagnosticHardwareModule(
         if (isLoopActive) return
         isLoopActive = true
         scope.launch(ioDispatcher) {
-
             while (isLoopActive && _hardwareState.value.isConnected) {
-                // Poll live RPM (010C) — currently the only PID decoded from real
-                // hardware. RPM is reported as-is via telemetryService.setRpm().
-                //
-                // Vehicle speed is NOT derived from RPM (the old `liveRpm / 35`
-                // mapping was fabricated). Unsupported/unavailable PIDs keep
-                // their previous value in hardware mode — they are never filled
-                // with simulated numbers.
-                val rpmRaw = sendObdCommand("010C")
-                if (rpmRaw.contains("410C") || rpmRaw.contains("41 0C")) {
-                    val clean = rpmRaw.replace(" ", "").substringAfter("410C")
-                    if (clean.length >= 4) {
-                        val a = clean.substring(0, 2).toIntOrNull(16) ?: 0
-                        val b = clean.substring(2, 4).toIntOrNull(16) ?: 0
-                        val liveRpm = ((a * 256) + b) / 4
-                        telemetryService?.setRpm(liveRpm)
-                // Poll live RPM (010C) using zero-allocation RPM parser
                 val rpmRaw = sendObdCommand("010C")
                 if (rpmRaw.isNotEmpty()) {
                     val liveRpm = telemetryService?.parseRpmResponse(rpmRaw)
                     if (liveRpm != null) {
-                        telemetryService.setSpeed((liveRpm / 35).coerceIn(0, 200))
+                        telemetryService.setRpm(liveRpm)
                     }
                 }
                 kotlinx.coroutines.delay(250)
@@ -564,6 +547,7 @@ class ObdDiagnosticHardwareModule(
             connectedDeviceName = "Disconnected"
         )
     }
+
     private fun decodeStream(buffer: ByteArray, bytesRead: Int, trim: Boolean = false): String {
         return if (bytesRead > 0) {
             val result = String(buffer, 0, bytesRead)
@@ -572,5 +556,4 @@ class ObdDiagnosticHardwareModule(
             ""
         }
     }
-
 }

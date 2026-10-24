@@ -262,23 +262,9 @@ class ObdTelemetryService(
      * Avoids regexes and string allocations (.replace, .substring) to eliminate GC churn during live telemetry streaming.
      */
     internal fun parseRpmResponse(response: String): Int? {
-        if (response.contains("NO DATA", ignoreCase = true) || response.contains("ERROR", ignoreCase = true)) {
+        if (response.contains("NO DATA", ignoreCase = true) || response.contains("ERROR", ignoreCase = true) || response.isEmpty()) {
             return null
         }
-        return try {
-            if (response.contains("NO DATA", ignoreCase = true) || response.contains("ERROR", ignoreCase = true)) {
-                return null
-            }
-            val clean = response.replace(" ", "").replace("\r", "").replace("\n", "")
-            val index = clean.indexOf("410C", ignoreCase = true)
-            if (index != -1) {
-                val hexStr = clean.substring(index + 4).take(4)
-                if (hexStr.length == 4) {
-                    val a = hexStr.substring(0, 2).toInt(16)
-                    val b = hexStr.substring(2, 4).toInt(16)
-                    return ((a * 256) + b) / 4
-                }
-        if (response.isEmpty()) return null
 
         val len = response.length
         var headerIdx = 0
