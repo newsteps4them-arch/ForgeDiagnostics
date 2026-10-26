@@ -245,11 +245,35 @@ describe('SAE J1979 Protocol Decoder', () => {
     expect(res?.unit).toBe('V');
   });
 
+  it('should decode Run Time Since Engine Start (PID 1F)', () => {
+    const res = decodeMode01Response('41 1F 01 2C');
+    expect(res?.pid).toBe('1F');
+    expect(res?.name).toBe('Run Time Since Engine Start');
+    expect(res?.value).toBe(300);
+    expect(res?.unit).toBe('s');
+  });
+
+  it('should decode Ambient Air Temperature (PID 46)', () => {
+    const res = decodeMode01Response('41 46 5A');
+    expect(res?.pid).toBe('46');
+    expect(res?.name).toBe('Ambient Air Temp');
+    expect(res?.value).toBe(50);
+    expect(res?.unit).toBe('°C');
+  });
+
   it('should decode Engine Oil Temperature (PID 5C)', () => {
     const res = decodeMode01Response('41 5C 8C');
     expect(res?.pid).toBe('5C');
     expect(res?.name).toBe('Engine Oil Temp');
     expect(res?.value).toBe(100);
     expect(res?.unit).toBe('°C');
+  });
+
+  it('should decode Engine Fuel Rate (PID 5E)', () => {
+    const res = decodeMode01Response('41 5E 00 C8');
+    expect(res?.pid).toBe('5E');
+    expect(res?.name).toBe('Engine Fuel Rate');
+    expect(res?.value).toBe(10);
+    expect(res?.unit).toBe('L/h');
   });
 });
