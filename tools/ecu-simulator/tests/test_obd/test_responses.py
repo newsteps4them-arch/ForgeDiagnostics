@@ -34,6 +34,9 @@ class TestServiceResponses(unittest.TestCase):
     def test_get_engine_temperature_is_one_byte(self):
         self.assertEqual(1, len(responses.get_engine_temperature()))
 
+    def test_get_engine_rpm_has_two_bytes(self):
+        self.assertEqual(2, len(responses.get_engine_rpm()))
+
     def test_get_engine_temperature(self):
         self.assertAlmostEqual(ENGINE_TEMP_MIN, int(responses.get_engine_temperature().hex(), 16), delta=(
                 ENGINE_TEMP_MAX - ENGINE_TEMP_MIN))

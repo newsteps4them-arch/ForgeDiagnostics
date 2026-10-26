@@ -129,6 +129,9 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
       return { pid: '11', name: 'Throttle Position', value: (byteA * 100) / 255, unit: '%' };
     case '14': // O2 Sensor 1 Voltage
       return { pid: '14', name: 'O2 Sensor 1 Voltage', value: byteA / 200, unit: 'V' };
+    case '1F': // Run Time Since Engine Start
+      if (bytes.length < 4) return null;
+      return { pid: '1F', name: 'Run Time Since Engine Start', value: (byteA * 256) + byteB, unit: 's' };
     case '21': // Distance Traveled with MIL on
       if (bytes.length < 4) return null;
       return { pid: '21', name: 'Distance Traveled with MIL', value: (byteA * 256) + byteB, unit: 'km' };
@@ -139,8 +142,13 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
     case '42': // Control Module Voltage
       if (bytes.length < 4) return null;
       return { pid: '42', name: 'Control Module Voltage', value: ((byteA * 256) + byteB) / 1000, unit: 'V' };
+    case '46': // Ambient Air Temperature
+      return { pid: '46', name: 'Ambient Air Temp', value: byteA - 40, unit: '°C' };
     case '5C': // Engine Oil Temp
       return { pid: '5C', name: 'Engine Oil Temp', value: byteA - 40, unit: '°C' };
+    case '5E': // Engine Fuel Rate
+      if (bytes.length < 4) return null;
+      return { pid: '5E', name: 'Engine Fuel Rate', value: ((byteA * 256) + byteB) / 20, unit: 'L/h' };
     default:
       return { pid, name: `PID_${pid}`, value: byteA, unit: 'raw' };
   }
