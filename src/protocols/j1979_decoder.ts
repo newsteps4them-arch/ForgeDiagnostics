@@ -46,100 +46,97 @@ for (let i = 0; i < 6; i++) {
   HEX_CHAR_VAL[97 + i] = 10 + i; // 'a'-'f'
 }
 
+// Reusable Uint8Array buffer to eliminate per-call heap array allocations during high-frequency telemetry decoding.
+let parseHexBytesBuffer = new Uint8Array(512);
+
 /**
- * Fast zero-regex lookup table helper to extract raw hex bytes from OBD-II responses.
+ * Fast zero-regex lookup table helper to extract raw hex bytes from OBD-II responses into a pre-allocated buffer.
  * Ignores whitespace (\s, \r, \n, \t) and prompt character (>).
- * Returns null if non-hex characters are present or if digit count is odd.
+ * Returns the parsed byte count, or -1 if non-hex characters are present or if digit count is odd.
  */
-function parseHexBytes(hexString: string): number[] | null {
+function parseHexBytes(hexString: string): number {
   const len = hexString.length;
-  const bytes: number[] = [];
+  let byteCount = 0;
   let highNibble = -1;
 
   for (let i = 0; i < len; i++) {
     const code = hexString.charCodeAt(i);
-    if (code >= 128) return null;
+    if (code >= 128) return -1;
     const val = HEX_CHAR_VAL[code]!;
 
     if (val === -2) continue; // Fast skip whitespace & delimiter
-    if (val === -1) return null; // Invalid character
+    if (val === -1) return -1; // Invalid character
 
     if (highNibble === -1) {
       highNibble = val;
     } else {
-      bytes.push((highNibble << 4) | val);
+      if (byteCount >= parseHexBytesBuffer.length) {
+        const newBuf = new Uint8Array(parseHexBytesBuffer.length * 2);
+        newBuf.set(parseHexBytesBuffer);
+        parseHexBytesBuffer = newBuf;
+      }
+      parseHexBytesBuffer[byteCount++] = (highNibble << 4) | val;
       highNibble = -1;
     }
   }
 
-  if (highNibble !== -1) return null;
-  return bytes;
-}
-
-function decodeAsciiPayload(bytes: number[]): string {
-  let result = '';
-  for (let i = 0; i < bytes.length; i++) {
-    const val = bytes[i]!;
-    if (val !== 0) {
-      result += String.fromCharCode(val);
-    }
-  }
-  return result;
+  if (highNibble !== -1) return -1;
+  return byteCount;
 }
 
 /**
  * High-performance SAE J1979 Mode 01 response decoder using lookup table optimization.
  */
 export function decodeMode01Response(hexString: string): DecodedPid | null {
-  const bytes = parseHexBytes(hexString);
-  if (!bytes || bytes.length < 3 || bytes[0] !== 0x41) return null;
+  const byteCount = parseHexBytes(hexString);
+  if (byteCount < 3 || parseHexBytesBuffer[0] !== 0x41) return null;
 
-  const pidByte = bytes[1]!;
+  const pidByte = parseHexBytesBuffer[1]!;
   const pid = HEX_BYTE_TABLE[pidByte]!;
 
-  const byteA = bytes[2]!;
-  const byteB = bytes[3] ?? 0;
+  const byteA = parseHexBytesBuffer[2]!;
+  const byteB = parseHexBytesBuffer[3] ?? 0;
 
-  switch (pid) {
-    case '04': // Calculated Load
+  switch (pidByte) {
+    case 0x04: // Calculated Load
       return { pid: '04', name: 'Engine Load', value: (byteA * 100) / 255, unit: '%' };
-    case '05': // Coolant Temp
+    case 0x05: // Coolant Temp
       return { pid: '05', name: 'Coolant Temperature', value: byteA - 40, unit: '°C' };
-    case '06': // Short Term Fuel Trim - Bank 1
+    case 0x06: // Short Term Fuel Trim - Bank 1
       return { pid: '06', name: 'Short Term Fuel Trim', value: ((byteA - 128) * 100) / 128, unit: '%' };
-    case '07': // Long Term Fuel Trim - Bank 1
+    case 0x07: // Long Term Fuel Trim - Bank 1
       return { pid: '07', name: 'Long Term Fuel Trim', value: ((byteA - 128) * 100) / 128, unit: '%' };
-    case '0A': // Fuel Pressure
+    case 0x0A: // Fuel Pressure
       return { pid: '0A', name: 'Fuel Pressure', value: byteA * 3, unit: 'kPa' };
-    case '0B': // Intake Manifold Absolute Pressure (MAP)
+    case 0x0B: // Intake Manifold Absolute Pressure (MAP)
       return { pid: '0B', name: 'Intake Manifold Pressure', value: byteA, unit: 'kPa' };
-    case '0C': // Engine RPM
-      if (bytes.length < 4) return null;
+    case 0x0C: // Engine RPM
+      if (byteCount < 4) return null;
       return { pid: '0C', name: 'Engine RPM', value: ((byteA * 256) + byteB) / 4, unit: 'RPM' };
-    case '0D': // Vehicle Speed
+    case 0x0D: // Vehicle Speed
       return { pid: '0D', name: 'Vehicle Speed', value: byteA, unit: 'km/h' };
-    case '0E': // Timing Advance
+    case 0x0E: // Timing Advance
       return { pid: '0E', name: 'Timing Advance', value: (byteA / 2) - 64, unit: '°' };
-    case '0F': // Intake Air Temp
+    case 0x0F: // Intake Air Temp
       return { pid: '0F', name: 'Intake Air Temp', value: byteA - 40, unit: '°C' };
-    case '10': // MAF Air Flow Rate
-      if (bytes.length < 4) return null;
+    case 0x10: // MAF Air Flow Rate
+      if (byteCount < 4) return null;
       return { pid: '10', name: 'MAF Air Flow Rate', value: ((byteA * 256) + byteB) / 100, unit: 'g/s' };
-    case '11': // Throttle Position
+    case 0x11: // Throttle Position
       return { pid: '11', name: 'Throttle Position', value: (byteA * 100) / 255, unit: '%' };
-    case '14': // O2 Sensor 1 Voltage
+    case 0x14: // O2 Sensor 1 Voltage
       return { pid: '14', name: 'O2 Sensor 1 Voltage', value: byteA / 200, unit: 'V' };
-    case '21': // Distance Traveled with MIL on
-      if (bytes.length < 4) return null;
+    case 0x21: // Distance Traveled with MIL on
+      if (byteCount < 4) return null;
       return { pid: '21', name: 'Distance Traveled with MIL', value: (byteA * 256) + byteB, unit: 'km' };
-    case '2F': // Fuel Tank Level
+    case 0x2F: // Fuel Tank Level
       return { pid: '2F', name: 'Fuel Tank Level', value: (byteA * 100) / 255, unit: '%' };
-    case '33': // Absolute Barometric Pressure
+    case 0x33: // Absolute Barometric Pressure
       return { pid: '33', name: 'Barometric Pressure', value: byteA, unit: 'kPa' };
-    case '42': // Control Module Voltage
-      if (bytes.length < 4) return null;
+    case 0x42: // Control Module Voltage
+      if (byteCount < 4) return null;
       return { pid: '42', name: 'Control Module Voltage', value: ((byteA * 256) + byteB) / 1000, unit: 'V' };
-    case '5C': // Engine Oil Temp
+    case 0x5C: // Engine Oil Temp
       return { pid: '5C', name: 'Engine Oil Temp', value: byteA - 40, unit: '°C' };
     default:
       return { pid, name: `PID_${pid}`, value: byteA, unit: 'raw' };
@@ -147,19 +144,30 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
 }
 
 export function decodeMode09Response(hexString: string): DecodedPid | null {
-  const bytes = parseHexBytes(hexString);
-  if (!bytes || bytes.length < 2 || bytes[0] !== 0x49) return null;
+  const byteCount = parseHexBytes(hexString);
+  if (byteCount < 2 || parseHexBytesBuffer[0] !== 0x49) return null;
 
-  const pidByte = bytes[1]!;
+  const pidByte = parseHexBytesBuffer[1]!;
   const pid = HEX_BYTE_TABLE[pidByte]!;
 
-  const rawPayload = bytes.slice(2);
-  if (rawPayload.length === 0) return null;
+  const rawStart = 2;
+  let payloadStart = rawStart;
+  let payloadLen = byteCount - rawStart;
+  if (payloadLen <= 0) return null;
 
-  const payload = rawPayload[0] === 0x00 ? rawPayload.slice(1) : rawPayload;
-  if (payload.length === 0) return null;
+  if (parseHexBytesBuffer[payloadStart] === 0x00) {
+    payloadStart++;
+    payloadLen--;
+  }
+  if (payloadLen <= 0) return null;
 
-  const ascii = decodeAsciiPayload(payload);
+  let ascii = '';
+  for (let i = 0; i < payloadLen; i++) {
+    const val = parseHexBytesBuffer[payloadStart + i]!;
+    if (val !== 0) {
+      ascii += String.fromCharCode(val);
+    }
+  }
   if (!ascii) return null;
 
   switch (pid) {
@@ -173,14 +181,13 @@ export function decodeMode09Response(hexString: string): DecodedPid | null {
 }
 
 export function decodeSupportedPidMask(hexMask: string): string[] {
-  const bytes = parseHexBytes(hexMask);
-  if (!bytes || bytes.length === 0) return [];
+  const byteCount = parseHexBytes(hexMask);
+  if (byteCount <= 0) return [];
 
   const pids: string[] = [];
-  const numBytes = bytes.length;
 
-  for (let byteIndex = 0; byteIndex < numBytes; byteIndex++) {
-    const byte = bytes[byteIndex]!;
+  for (let byteIndex = 0; byteIndex < byteCount; byteIndex++) {
+    const byte = parseHexBytesBuffer[byteIndex]!;
     if (byte === 0) continue;
 
     for (let bitIndex = 7; bitIndex >= 0; bitIndex--) {
@@ -194,16 +201,16 @@ export function decodeSupportedPidMask(hexMask: string): string[] {
   return pids;
 }
 
-function decodeDtcPayload(bytes: number[] | null, expectedHeader: number): string[] {
-  if (!bytes || bytes.length === 0 || bytes[0] !== expectedHeader) return [];
+function decodeDtcPayload(byteCount: number, expectedHeader: number): string[] {
+  if (byteCount <= 0 || parseHexBytesBuffer[0] !== expectedHeader) return [];
 
-  const payloadLen = bytes.length - 1;
+  const payloadLen = byteCount - 1;
   if (payloadLen <= 0 || payloadLen % 2 !== 0) return [];
 
   const dtcs: string[] = [];
-  for (let i = 1; i < bytes.length; i += 2) {
-    const b1 = bytes[i]!;
-    const b2 = bytes[i + 1]!;
+  for (let i = 1; i < byteCount; i += 2) {
+    const b1 = parseHexBytesBuffer[i]!;
+    const b2 = parseHexBytesBuffer[i + 1]!;
     if (b1 === 0 && b2 === 0) continue;
 
     const firstByteGroup = b1 >> 6;
