@@ -5,12 +5,9 @@
 
 package com.forge.app
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.forge.app.navigation.DeepLinkDestination
-import com.forge.app.navigation.DeepLinkHandler
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -45,27 +42,6 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var repository: ForgeRepository
-    private var pendingDeepLink: DeepLinkDestination? = null
-    private var onDeepLinkResolved: ((DeepLinkDestination) -> Unit)? = null
-
-    private fun handleIntent(intent: Intent?) {
-        val uri = intent?.data ?: return
-        val destination = DeepLinkHandler.parse(uri)
-        if (destination != DeepLinkDestination.Unknown) {
-            val listener = onDeepLinkResolved
-            if (listener != null) {
-                listener(destination)
-            } else {
-                pendingDeepLink = destination
-            }
-        }
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        handleIntent(intent)
-    }
     private lateinit var usbHardwareService: UsbHardwareCommunicationService
     private lateinit var telemetryService: ObdTelemetryService
     private lateinit var authAndSyncService: com.forge.app.services.AuthAndSyncService
@@ -105,8 +81,6 @@ class MainActivity : ComponentActivity() {
             geminiService = geminiService,
             openManusService = openManusService
         )
-
-        handleIntent(intent)
 
         // Automatic update check on application startup
         lifecycleScope.launch {
@@ -186,32 +160,6 @@ class MainActivity : ComponentActivity() {
                 val activeVehicleName = vehicles.firstOrNull { it.isConnected }?.let {
                     "${it.year} ${it.make} ${it.model}"
                 } ?: "2021 Audi S5 Sportback"
-
-                LaunchedEffect(Unit) {
-                    onDeepLinkResolved = { dest ->
-                        when (dest) {
-                            is DeepLinkDestination.DtcDetail -> {
-                                currentRoute = "guided_diag"
-                                aiInitialPrompt = "Provide comprehensive diagnostic steps for DTC code: ${dest.dtcCode}"
-                                showAiChatSheet = true
-                            }
-                            is DeepLinkDestination.VehicleDetail -> {
-                                currentRoute = "garage"
-                            }
-                            is DeepLinkDestination.ProjectDetail -> {
-                                currentRoute = "dashboard"
-                            }
-                            is DeepLinkDestination.ScreenRoute -> {
-                                currentRoute = dest.route
-                            }
-                            DeepLinkDestination.Unknown -> {}
-                        }
-                    }
-                    pendingDeepLink?.let { dest ->
-                        onDeepLinkResolved?.invoke(dest)
-                        pendingDeepLink = null
-                    }
-                }
 
                 ModalNavigationDrawer(
                     drawerState = drawerState,

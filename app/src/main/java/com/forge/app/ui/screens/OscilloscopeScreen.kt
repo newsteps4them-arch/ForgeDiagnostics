@@ -154,11 +154,6 @@ fun OscilloscopeScreen() {
             }
         }
 
-        // Pre-allocated reusable Path objects to prevent allocations in 60 FPS DrawScope loop
-        val pathCH1 = remember { Path() }
-        val glowPathCH1 = remember { Path() }
-        val pathCH2 = remember { Path() }
-
         // Oscilloscope Screen CRT Canvas
         Surface(
             color = Color(0xFF07090E),
@@ -220,8 +215,8 @@ fun OscilloscopeScreen() {
 
                     // CH1 Waveform (Amber - Crank Sensor 60-2 Square Pulse with missing teeth pattern)
                     if (activeChannelTab == 0 || activeChannelTab == 1) {
-                        pathCH1.reset()
-                        glowPathCH1.reset()
+                        val pathCH1 = Path()
+                        val glowPathCH1 = Path()
                         val points = 240
 
                         for (p in 0 until points) {
@@ -261,7 +256,7 @@ fun OscilloscopeScreen() {
 
                     // CH2 Waveform (Cyan - Camshaft Sine / Hall pulse)
                     if (activeChannelTab == 0) {
-                        pathCH2.reset()
+                        val pathCH2 = Path()
                         val points = 240
 
                         for (p in 0 until points) {

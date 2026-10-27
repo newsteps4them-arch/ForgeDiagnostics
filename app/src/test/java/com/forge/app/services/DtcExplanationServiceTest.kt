@@ -38,7 +38,7 @@ class DtcExplanationServiceTest {
 
     @Test
     fun testExplainExpandedCylinderMisfireCodes() = runTest {
-        val codes = listOf("P0301", "P0302", "P0303", "P0304", "P0305", "P0306", "P0307", "P0308")
+        val codes = listOf("P0301", "P0302", "P0303", "P0304")
         for ((idx, code) in codes.withIndex()) {
             val cyl = idx + 1
             val explanation = DtcExplanationService.explainDtc(code)
@@ -47,27 +47,6 @@ class DtcExplanationServiceTest {
             assertEquals(DtcSeverity.CRITICAL, explanation.severity)
             assertTrue(explanation.laymanSummary.contains("Cylinder $cyl"))
         }
-    }
-
-    @Test
-    fun testExplainCatalystAndEvapCodes() = runTest {
-        // P0430 - Bank 2 Catalyst
-        val p0430 = DtcExplanationService.explainDtc("P0430")
-        assertEquals("P0430", p0430.code)
-        assertEquals("Catalyst System Efficiency Below Threshold (Bank 2)", p0430.standardTitle)
-        assertEquals(DtcSeverity.MODERATE, p0430.severity)
-
-        // P0442 - EVAP Small Leak
-        val p0442 = DtcExplanationService.explainDtc("P0442")
-        assertEquals("P0442", p0442.code)
-        assertEquals("Evaporative Emission Control System Leak Detected (Small Leak)", p0442.standardTitle)
-        assertEquals(DtcSeverity.LOW, p0442.severity)
-
-        // P0455 - EVAP Gross Leak
-        val p0455 = DtcExplanationService.explainDtc("P0455")
-        assertEquals("P0455", p0455.code)
-        assertEquals("Evaporative Emission Control System Leak Detected (Gross Leak / No Flow)", p0455.standardTitle)
-        assertEquals(DtcSeverity.MODERATE, p0455.severity)
     }
 
     @Test

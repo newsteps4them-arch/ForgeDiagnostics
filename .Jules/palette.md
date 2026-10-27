@@ -17,7 +17,3 @@
 ## 2026-09-08 - [Empty States] Actionable Empty States
 **Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
 **Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
-
-## 2026-10-25 - [Destructive Actions] Confirmation Dialogs for Deletion
-**Learning:** Found that deleting a task in `ProjectDashboard.kt` executed immediately without asking for confirmation. In Jetpack Compose interfaces, destructive actions should be wrapped in a confirmation dialog (or provide an explicit undo mechanism) to prevent accidental data loss.
-**Action:** Wrap destructive actions (like deleting items) in an `AlertDialog` to ask for user confirmation before executing the destructive function.
