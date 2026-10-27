@@ -24,6 +24,7 @@ class TestDtcUtils(unittest.TestCase):
         self.assertTrue(dtc_utils.is_dtc_valid("B1477"))
         self.assertTrue(dtc_utils.is_dtc_valid("C2123"))
         self.assertTrue(dtc_utils.is_dtc_valid("U3FFF"))
+        self.assertTrue(dtc_utils.is_dtc_valid("p0171"))
 
         # Invalid lengths
         self.assertFalse(dtc_utils.is_dtc_valid("P001"))
