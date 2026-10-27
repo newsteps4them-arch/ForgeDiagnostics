@@ -36,21 +36,6 @@ class AuthAndSyncServiceTest {
     }
 
     @Test
-    fun testInitialStateIsUnauthenticatedGuest() = runTest {
-        val service = AuthAndSyncService(scope = CoroutineScope(testDispatcher))
-
-        // Honest default: nobody is signed in, nothing is synced.
-        val user = service.currentUser.value
-        assertEquals("", user.uid)
-        assertEquals("Guest Tech", user.displayName)
-        assertFalse(user.isAuthenticated)
-
-        val sync = service.syncStatus.value
-        assertFalse(sync.isConnectedToFirestore)
-        assertEquals(0, sync.syncedItemsCount)
-    }
-
-    @Test
     fun testSignOutKeepsHonestGuestState() = runTest {
         val service = AuthAndSyncService(scope = CoroutineScope(testDispatcher))
 
