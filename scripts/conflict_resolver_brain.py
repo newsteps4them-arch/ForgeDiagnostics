@@ -117,7 +117,7 @@ def resolve_conflict_content_gemini(content: str, filename: str) -> Optional[str
         return None
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-1.5-flash")
 
         prompt = (
             f"You are Team Forge's Autonomous Git Conflict Resolution AI.\n"
@@ -166,13 +166,6 @@ CONFLICT_MARKER_RE = re.compile(r"^(<{7}|>{7})([ ].*)?$|^={7}$")
 def verify_no_conflict_markers(files: Optional[List[str]] = None) -> bool:
     """Verifies the merge is fully resolved: no unmerged index entries remain
     and none of the resolved files still contain real conflict markers.
-
-    The previous implementation ran `git grep -E "^(<<<<<<<|=======|>>>>>>>)"`
-    across the WHOLE repo. The `^=======` alternative matches any line of seven
-    or more '=' characters — e.g. the banner lines in
-    scripts/connect_workflows.ps1 — so verification failed on every PR even
-    when the resolution itself succeeded. That was the root cause of Bot 2
-    failing at this step on 2026-10-21 (41/41 runs).
     """
     code, stdout, _ = run_cmd(["git", "ls-files", "-u"])
     if code == 0 and stdout.strip():
@@ -214,9 +207,7 @@ def get_check_state(repo: str, sha: str) -> str:
     return "success"
 
 def wait_for_check_state(repo: str, sha: str, attempts: int = 4, delay_seconds: int = 30) -> str:
-    """Polls the check state briefly while it is 'pending' (new CI runs can be
-    triggered by the push when a PAT, rather than the default GITHUB_TOKEN,
-    is used). Returns the final observed state."""
+    """Polls the check state briefly while it is 'pending'. Returns the final observed state."""
     import time
     state = get_check_state(repo, sha)
     tries = 0
@@ -229,40 +220,25 @@ def wait_for_check_state(repo: str, sha: str, attempts: int = 4, delay_seconds: 
 
 def resolve_pr_conflicts(pr_number: str, head_branch: str, base_branch: str, repo: str,
                          details: List[str]) -> tuple[str, str]:
-    """Main execution loop for Bot 2.
-
-    Returns (outcome, reason) where outcome is one of:
-    - "merged":     conflicts resolved, pushed, checks OK, PR merged.
-    - "not_merged": conflicts resolved and pushed, but auto-merge was held
-                    (checks failing/pending, or the merge API refused).
-    - "failed":     the resolution itself failed.
-    Every step appends a human-readable line to `details` for the log artifact.
-    """
+    """Main execution loop for Bot 2."""
     def note(msg: str):
         print(msg)
         details.append(msg)
 
     note(f"[INFO] Initializing Conflict Resolver Bot for PR #{pr_number} ({head_branch} -> {base_branch})...")
 
-    # Commit authorship stays under the repo owner's account (project rule:
-    # no bot identities on commits).
     run_cmd(["git", "config", "user.name", "newsteps4them-arch"])
     run_cmd(["git", "config", "user.email", "newsteps4them@gmail.com"])
 
-    # Safely fetch origin refs
     run_cmd(["git", "fetch", "origin", base_branch])
     run_cmd(["git", "fetch", "origin", head_branch])
 
-    # Remember the PR branch tip before we touch it: its check state is the
-    # fallback signal for the merge gate (a GITHUB_TOKEN push does not trigger
-    # fresh CI runs, so the new tip may report no checks at all).
     _, pre_push_sha, _ = run_cmd(["git", "rev-parse", f"origin/{head_branch}"])
 
     code, _, err = run_cmd(["git", "checkout", "-B", head_branch, f"origin/{head_branch}"])
     if code != 0:
         return "failed", f"Failed to checkout head branch {head_branch}: {err}"
 
-    # Attempt Git merge with base branch
     code, stdout, stderr = run_cmd(["git", "merge", f"origin/{base_branch}", "-m", f"Merge origin/{base_branch} into {head_branch}"])
 
     resolution_methods: Dict[str, str] = {}
@@ -304,16 +280,13 @@ def resolve_pr_conflicts(pr_number: str, head_branch: str, base_branch: str, rep
             run_cmd(["git", "merge", "--abort"])
             return "failed", "Conflict markers still present in a resolved file, or unmerged entries remain in the index."
 
-        # Commit resolution
         run_cmd(["git", "commit", "-m", f"fix(conflict): auto-resolve merge conflicts with origin/{base_branch}", "--no-verify"])
 
     for fname, method in resolution_methods.items():
         details.append(f"- Resolved `{fname}` via `{method}`")
     if any(m == "smart-union" for m in resolution_methods.values()):
-        note("[WARN] At least one file used the union fallback (both sides kept). "
-             "The check gate below is the safety net: it will not merge on red checks.")
+        note("[WARN] At least one file used the union fallback (both sides kept).")
 
-    # Push resolved branch
     note(f"[INFO] Pushing resolved changes to origin/{head_branch}...")
     code, stdout, stderr = run_cmd(["git", "push", "origin", head_branch])
     if code != 0:
@@ -322,10 +295,8 @@ def resolve_pr_conflicts(pr_number: str, head_branch: str, base_branch: str, rep
     if not (pr_number and pr_number != "None"):
         return "not_merged", "No PR number supplied; resolution pushed only."
 
-    # Conflicts are gone from the branch: remove the conflict label.
     gh_api(f"repos/{repo}/issues/{pr_number}/labels/has-merge-conflict", method="DELETE")
 
-    # --- Merge gate: only auto-merge when checks are not red ---
     _, head_sha, _ = run_cmd(["git", "rev-parse", "HEAD"])
     check_state = wait_for_check_state(repo, head_sha)
     if check_state == "none" and pre_push_sha:
@@ -337,20 +308,17 @@ def resolve_pr_conflicts(pr_number: str, head_branch: str, base_branch: str, rep
         gh_api(f"repos/{repo}/issues/{pr_number}/comments", method="POST", data={"body": (
             f"### ✅ Merge Conflicts Resolved — Auto-Merge Held (Bot 2)\n\n"
             f"Conflicts between `{head_branch}` and `{base_branch}` were resolved and pushed, "
-            f"but the PR's checks are currently **failing**, so Bot 2 did not merge. "
-            f"Once the checks pass, this PR can be merged normally."
+            f"but the PR's checks are currently **failing**, so Bot 2 did not merge."
         )})
         return "not_merged", "Checks are failing on the PR; auto-merge held."
     if check_state == "pending":
         gh_api(f"repos/{repo}/issues/{pr_number}/comments", method="POST", data={"body": (
             f"### ✅ Merge Conflicts Resolved — Auto-Merge Held (Bot 2)\n\n"
             f"Conflicts between `{head_branch}` and `{base_branch}` were resolved and pushed, "
-            f"but the PR's checks were still **running** after a short wait, so Bot 2 did not merge. "
-            f"If the checks finish green, this PR can be merged normally."
+            f"but the PR's checks were still **running** after a short wait, so Bot 2 did not merge."
         )})
         return "not_merged", "Checks still pending after wait; auto-merge held."
 
-    # Auto-merge PR into base branch, and verify the API actually merged it.
     note(f"[INFO] Executing auto-merge for PR #{pr_number}...")
     merge_res = gh_api(f"repos/{repo}/pulls/{pr_number}/merge", method="PUT", data={
         "merge_method": "merge",
@@ -386,8 +354,7 @@ def main():
     try:
         if not args.pr or not args.head or not args.base or args.pr == "None":
             outcome, reason = "failed", (
-                f"Missing/empty dispatch inputs (pr={args.pr!r}, head={args.head!r}, base={args.base!r}). "
-                "For repository_dispatch, the client_payload must carry pr_number, head_branch and base_branch."
+                f"Missing/empty dispatch inputs (pr={args.pr!r}, head={args.head!r}, base={args.base!r})."
             )
         else:
             outcome, reason = resolve_pr_conflicts(args.pr, args.head, args.base, args.repo, details)

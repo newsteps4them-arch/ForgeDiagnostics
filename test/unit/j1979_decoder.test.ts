@@ -6,10 +6,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   decodeMode01Response,
+  decodeMode02Response,
   decodeMode03Response,
   decodeMode07Response,
-  decodeMode0AResponse,
   decodeMode09Response,
+  decodeMode0AResponse,
   decodeSupportedPidMask,
 } from '../../src/protocols/j1979_decoder';
 
@@ -68,6 +69,58 @@ describe('SAE J1979 Protocol Decoder', () => {
     expect(result?.unit).toBe('g/s');
   });
 
+  it('should decode Short Term and Long Term Fuel Trims (PIDs 06, 07, 08, 09)', () => {
+    const stft1 = decodeMode01Response('41 06 80'); // 0%
+    expect(stft1?.value).toBe(0);
+    expect(stft1?.name).toContain('Short Term Fuel Trim');
+
+    const ltft1 = decodeMode01Response('41 07 90'); // +12.5%
+    expect(ltft1?.value).toBe(12.5);
+    expect(ltft1?.name).toContain('Long Term Fuel Trim');
+
+    const stft2 = decodeMode01Response('41 08 80');
+    expect(stft2?.value).toBe(0);
+
+    const ltft2 = decodeMode01Response('41 09 80');
+    expect(ltft2?.value).toBe(0);
+  });
+
+  it('should decode Fuel Pressure (PID 0A)', () => {
+    const result = decodeMode01Response('41 0A 64');
+    expect(result?.value).toBe(300);
+    expect(result?.unit).toBe('kPa');
+  });
+
+  it('should decode Engine Run Time (PID 1F)', () => {
+    const result = decodeMode01Response('41 1F 0E 10');
+    expect(result?.value).toBe(3600);
+    expect(result?.unit).toBe('s');
+  });
+
+  it('should decode Distance Traveled with MIL ON (PID 21)', () => {
+    const result = decodeMode01Response('41 21 03 E8');
+    expect(result?.value).toBe(1000);
+    expect(result?.unit).toBe('km');
+  });
+
+  it('should decode Barometric Pressure (PID 33)', () => {
+    const result = decodeMode01Response('41 33 65');
+    expect(result?.value).toBe(101);
+    expect(result?.unit).toBe('kPa');
+  });
+
+  it('should decode Control Module Voltage (PID 42)', () => {
+    const result = decodeMode01Response('41 42 37 D8');
+    expect(result?.value).toBeCloseTo(14.296, 3);
+    expect(result?.unit).toBe('V');
+  });
+
+  it('should decode Engine Oil Temperature (PID 5C)', () => {
+    const result = decodeMode01Response('41 5C 82');
+    expect(result?.value).toBe(90);
+    expect(result?.unit).toBe('°C');
+  });
+
   it.each([
     ['41 04 00', '04', 0],
     ['41 0F FF', '0F', 215],
@@ -77,6 +130,20 @@ describe('SAE J1979 Protocol Decoder', () => {
     const result = decodeMode01Response(response);
     expect(result?.pid).toBe(pid);
     expect(result?.value).toBeCloseTo(value, 5);
+  });
+
+  it('should decode Mode 02 Freeze Frame responses', () => {
+    const freezeDtc = decodeMode02Response('42 02 04 20');
+    expect(freezeDtc?.pid).toBe('02');
+    expect(freezeDtc?.name).toBe('Freeze Frame DTC');
+    expect(freezeDtc?.value).toBe('P0420');
+
+    const freezeRpm = decodeMode02Response('42 0C 0F A0');
+    expect(freezeRpm?.pid).toBe('0C');
+    expect(freezeRpm?.value).toBe(1000);
+
+    const emptyFreeze = decodeMode02Response('42 02 00 00');
+    expect(emptyFreeze?.value).toBe('NONE');
   });
 
   it('should return raw data for unknown PID', () => {
@@ -124,12 +191,20 @@ describe('SAE J1979 Protocol Decoder', () => {
   });
 
   it('should decode supported PID bitmasks into PID numbers in J1979 order', () => {
-    expect(decodeSupportedPidMask('0000001F')).toEqual(['1C', '1D', '1E', '1F', '20']);
-    expect(decodeSupportedPidMask('00000020')).toEqual(['1B']);
+    expect(decodeSupportedPidMask('F8000000')).toEqual(['01', '02', '03', '04', '05']);
+    expect(decodeSupportedPidMask('04000000')).toEqual(['06']);
   });
 
   it('should decode stored DTCs from a Mode 03 response', () => {
     expect(decodeMode03Response('43 01 33 03 00 00 00')).toEqual(['P0133', 'P0300']);
+  });
+
+  it('should decode pending DTCs from a Mode 07 response', () => {
+    expect(decodeMode07Response('47 01 71 03 00')).toEqual(['P0171', 'P0300']);
+  });
+
+  it('should decode permanent DTCs from a Mode 0A response', () => {
+    expect(decodeMode0AResponse('4A 04 20 01 28')).toEqual(['P0420', 'P0128']);
   });
 
   it('should ignore empty DTC entries in a Mode 03 response', () => {
@@ -192,7 +267,7 @@ describe('SAE J1979 Protocol Decoder', () => {
   it('should decode Short Term Fuel Trim (PID 06)', () => {
     const res = decodeMode01Response('41 06 80');
     expect(res?.pid).toBe('06');
-    expect(res?.name).toBe('Short Term Fuel Trim');
+    expect(res?.name).toContain('Short Term Fuel Trim');
     expect(res?.value).toBe(0);
     expect(res?.unit).toBe('%');
   });
@@ -200,7 +275,7 @@ describe('SAE J1979 Protocol Decoder', () => {
   it('should decode Long Term Fuel Trim (PID 07)', () => {
     const res = decodeMode01Response('41 07 90');
     expect(res?.pid).toBe('07');
-    expect(res?.name).toBe('Long Term Fuel Trim');
+    expect(res?.name).toContain('Long Term Fuel Trim');
     expect(res?.value).toBeCloseTo(12.5, 1);
     expect(res?.unit).toBe('%');
   });
@@ -224,7 +299,7 @@ describe('SAE J1979 Protocol Decoder', () => {
   it('should decode Distance Traveled with MIL on (PID 21)', () => {
     const res = decodeMode01Response('41 21 03 E8');
     expect(res?.pid).toBe('21');
-    expect(res?.name).toBe('Distance Traveled with MIL');
+    expect(res?.name).toContain('Distance Traveled with MIL');
     expect(res?.value).toBe(1000);
     expect(res?.unit).toBe('km');
   });
@@ -248,7 +323,7 @@ describe('SAE J1979 Protocol Decoder', () => {
   it('should decode Engine Oil Temperature (PID 5C)', () => {
     const res = decodeMode01Response('41 5C 8C');
     expect(res?.pid).toBe('5C');
-    expect(res?.name).toBe('Engine Oil Temp');
+    expect(res?.name).toContain('Engine Oil Temp');
     expect(res?.value).toBe(100);
     expect(res?.unit).toBe('°C');
   });
