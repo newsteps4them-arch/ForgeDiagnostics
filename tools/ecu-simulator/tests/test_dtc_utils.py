@@ -46,11 +46,11 @@ class TestDtcUtils(unittest.TestCase):
     def test_get_dtc_first_byte(self):
         # P0001 -> P=00, 0=00 -> 0x00 | 0 = 0x00
         self.assertEqual(dtc_utils.get_dtc_first_byte("P0001"), bytes([0x00]))
-        # B1477 -> B=10, 1=01 -> 0x90 | 0x04 = 0x94
+        # B1477 -> B=10, 1=01 -> 0x80 | 0x14...
         self.assertEqual(dtc_utils.get_dtc_first_byte("B1477"), bytes([0x94]))
-        # C2123 -> C=01, 2=10 -> 0x60 | 0x01 = 0x61
+        # C2123 -> C=01, 2=10 -> 0x40 | 0x21...
         self.assertEqual(dtc_utils.get_dtc_first_byte("C2123"), bytes([0x61]))
-        # U3FFF -> U=11, 3=11 -> 0xF0 | 0x0F = 0xFF
+        # U3FFF -> U=11, 3=11 -> 0xC0 | 0x3F...
         self.assertEqual(dtc_utils.get_dtc_first_byte("U3FFF"), bytes([0xFF]))
 
     def test_get_dtc_second_byte(self):
