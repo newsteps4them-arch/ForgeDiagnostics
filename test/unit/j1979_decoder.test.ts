@@ -252,4 +252,66 @@ describe('SAE J1979 Protocol Decoder', () => {
     expect(res?.value).toBe(100);
     expect(res?.unit).toBe('°C');
   });
+
+  it('should decode Engine Run Time (PID 1F)', () => {
+    const res = decodeMode01Response('41 1F 01 2C');
+    expect(res?.pid).toBe('1F');
+    expect(res?.name).toBe('Engine Run Time');
+    expect(res?.value).toBe(300);
+    expect(res?.unit).toBe('s');
+  });
+
+  it('should decode Commanded EGR (PID 2C)', () => {
+    const res = decodeMode01Response('41 2C 80');
+    expect(res?.pid).toBe('2C');
+    expect(res?.name).toBe('Commanded EGR');
+    expect(res?.value).toBeCloseTo(50.196, 3);
+    expect(res?.unit).toBe('%');
+  });
+
+  it('should decode Commanded Evaporative Purge (PID 2E)', () => {
+    const res = decodeMode01Response('41 2E 40');
+    expect(res?.pid).toBe('2E');
+    expect(res?.name).toBe('Commanded Evaporative Purge');
+    expect(res?.value).toBeCloseTo(25.098, 3);
+    expect(res?.unit).toBe('%');
+  });
+
+  it('should decode Distance Since Codes Cleared (PID 31)', () => {
+    const res = decodeMode01Response('41 31 01 F4');
+    expect(res?.pid).toBe('31');
+    expect(res?.name).toBe('Distance Since Codes Cleared');
+    expect(res?.value).toBe(500);
+    expect(res?.unit).toBe('km');
+  });
+
+  it('should decode Relative Throttle Position (PID 45)', () => {
+    const res = decodeMode01Response('41 45 33');
+    expect(res?.pid).toBe('45');
+    expect(res?.name).toBe('Relative Throttle Position');
+    expect(res?.value).toBeCloseTo(20.0, 1);
+    expect(res?.unit).toBe('%');
+  });
+
+  it('should decode Ambient Air Temp (PID 46)', () => {
+    const res = decodeMode01Response('41 46 3C');
+    expect(res?.pid).toBe('46');
+    expect(res?.name).toBe('Ambient Air Temp');
+    expect(res?.value).toBe(20);
+    expect(res?.unit).toBe('°C');
+  });
+
+  it('should decode Engine Fuel Rate (PID 5E)', () => {
+    const res = decodeMode01Response('41 5E 00 FA');
+    expect(res?.pid).toBe('5E');
+    expect(res?.name).toBe('Engine Fuel Rate');
+    expect(res?.value).toBe(12.5);
+    expect(res?.unit).toBe('L/h');
+  });
+
+  it('should return null for truncated multi-byte PID responses (PIDs 1F, 31, 5E)', () => {
+    expect(decodeMode01Response('41 1F 01')).toBeNull();
+    expect(decodeMode01Response('41 31 01')).toBeNull();
+    expect(decodeMode01Response('41 5E 00')).toBeNull();
+  });
 });
