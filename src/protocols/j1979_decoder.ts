@@ -101,6 +101,17 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
   const byteB = bytes[3] ?? 0;
 
   switch (pid) {
+    case '01': { // Monitor status since DTCs cleared
+      const mil = (byteA & 0x80) !== 0 ? 'ON' : 'OFF';
+      const dtcCount = byteA & 0x7f;
+      return { pid: '01', name: 'Monitor Status', value: `MIL: ${mil}, DTCs: ${dtcCount}`, unit: 'status' };
+    }
+    case '03': { // Fuel System Status
+      if (bytes.length < 4) return null;
+      const sys1 = byteA;
+      const sys2 = byteB;
+      return { pid: '03', name: 'Fuel System Status', value: `Sys1: ${sys1}, Sys2: ${sys2}`, unit: 'status' };
+    }
     case '04': // Calculated Load
       return { pid: '04', name: 'Engine Load', value: (byteA * 100) / 255, unit: '%' };
     case '05': // Coolant Temp
@@ -129,9 +140,16 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
       return { pid: '11', name: 'Throttle Position', value: (byteA * 100) / 255, unit: '%' };
     case '14': // O2 Sensor 1 Voltage
       return { pid: '14', name: 'O2 Sensor 1 Voltage', value: byteA / 200, unit: 'V' };
+    case '1F': // Run time since engine start
+      if (bytes.length < 4) return null;
+      return { pid: '1F', name: 'Run Time Since Engine Start', value: (byteA * 256) + byteB, unit: 's' };
     case '21': // Distance Traveled with MIL on
       if (bytes.length < 4) return null;
       return { pid: '21', name: 'Distance Traveled with MIL', value: (byteA * 256) + byteB, unit: 'km' };
+    case '2C': // Commanded EGR
+      return { pid: '2C', name: 'Commanded EGR', value: (byteA * 100) / 255, unit: '%' };
+    case '2E': // Commanded Evaporative Purge
+      return { pid: '2E', name: 'Commanded Evaporative Purge', value: (byteA * 100) / 255, unit: '%' };
     case '2F': // Fuel Tank Level
       return { pid: '2F', name: 'Fuel Tank Level', value: (byteA * 100) / 255, unit: '%' };
     case '33': // Absolute Barometric Pressure
@@ -139,6 +157,19 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
     case '42': // Control Module Voltage
       if (bytes.length < 4) return null;
       return { pid: '42', name: 'Control Module Voltage', value: ((byteA * 256) + byteB) / 1000, unit: 'V' };
+    case '46': // Ambient Air Temperature
+      return { pid: '46', name: 'Ambient Air Temp', value: byteA - 40, unit: '°C' };
+    case '51': { // Fuel Type
+      const fuelTypes: Record<number, string> = {
+        1: 'Gasoline', 2: 'Methanol', 3: 'Ethanol', 4: 'Diesel', 5: 'LPG',
+        6: 'CNG', 7: 'Propane', 8: 'Electric', 9: 'Bifuel Gasoline', 10: 'Bifuel Methanol',
+        11: 'Bifuel Ethanol', 12: 'Bifuel LPG', 13: 'Bifuel CNG', 14: 'Bifuel Propane',
+        15: 'Bifuel Electricity', 16: 'Bifuel Mixed', 17: 'Hybrid Gasoline',
+        18: 'Hybrid Ethanol', 19: 'Hybrid Diesel', 20: 'Hybrid Electric',
+        21: 'Hybrid Mixed', 22: 'Direct Injection Diesel', 23: 'Hydrogen'
+      };
+      return { pid: '51', name: 'Fuel Type', value: fuelTypes[byteA] || `Type_${byteA}`, unit: 'enum' };
+    }
     case '5C': // Engine Oil Temp
       return { pid: '5C', name: 'Engine Oil Temp', value: byteA - 40, unit: '°C' };
     default:
