@@ -58,11 +58,16 @@ class ObdTelemetryServiceTest(
 
     @Test
     fun testParseRpmResponse() {
-        val scope = CoroutineScope(Dispatchers.Unconfined + Job())
+        val job = Job()
+        val scope = CoroutineScope(Dispatchers.Unconfined + job)
         val service = ObdTelemetryService(scope, null)
 
-        val actualRpm = service.parseRpmResponse(rawResponse)
-        assertEquals("Failed test case: $description", expectedRpm, actualRpm)
-        service.stopTelemetryLoop()
+        try {
+            val actualRpm = service.parseRpmResponse(rawResponse)
+            assertEquals("Failed test case: $description", expectedRpm, actualRpm)
+        } finally {
+            service.stopTelemetryLoop()
+            job.cancel()
+        }
     }
 }
