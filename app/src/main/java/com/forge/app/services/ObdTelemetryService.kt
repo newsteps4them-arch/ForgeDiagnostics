@@ -8,13 +8,15 @@ package com.forge.app.services
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.InputStream
 import java.io.OutputStream
@@ -66,38 +68,42 @@ class ObdTelemetryService(
         startTelemetryLoop()
     }
 
-    private var telemetryJob: kotlinx.coroutines.Job? = null
+    private var telemetryJob: Job? = null
 
     fun startTelemetryLoop() {
-        if (isRunning) return
+        if (isRunning && telemetryJob?.isActive == true) return
         isRunning = true
         telemetryJob = scope.launch(ioDispatcher) {
-            while (isRunning) {
-                val current = _telemetry.value
+            try {
+                while (isRunning && isActive) {
+                    val current = _telemetry.value
 
-                if (current.isConnected) {
-                    val success = when (current.connectionType) {
-                        "SIMULATED" -> {
-                            simulationTick += 1
-                            updateLiveDataStream(current, simulationTick)
-                            true
+                    if (current.isConnected) {
+                        val success = when (current.connectionType) {
+                            "SIMULATED" -> {
+                                simulationTick += 1
+                                updateLiveDataStream(current, simulationTick)
+                                true
+                            }
+                            "BLUETOOTH" -> tryConnectAndReadBluetoothObd()
+                            "USB_OTG" -> tryConnectAndReadUsbOtgObd()
+                            "OBD_SCANNER_WIFI" -> tryConnectAndReadWifiObdScanner()
+                            "TORQUE_PRO" -> tryConnectTorqueProBridge()
+                            "ALFA_OBD" -> tryConnectAlfaObdBridge()
+                            "REPAIR2SOLUTIONS" -> tryConnectRepairSolutions2Bridge()
+                            else -> false
                         }
-                        "BLUETOOTH" -> tryConnectAndReadBluetoothObd()
-                        "USB_OTG" -> tryConnectAndReadUsbOtgObd()
-                        "OBD_SCANNER_WIFI" -> tryConnectAndReadWifiObdScanner()
-                        "TORQUE_PRO" -> tryConnectTorqueProBridge()
-                        "ALFA_OBD" -> tryConnectAlfaObdBridge()
-                        "REPAIR2SOLUTIONS" -> tryConnectRepairSolutions2Bridge()
-                        else -> false
+                        if (!success) {
+                            _telemetry.value = current.copy(
+                                connectionStatusText = "No valid telemetry response received"
+                            )
+                        }
                     }
-                    if (!success) {
-                        _telemetry.value = current.copy(
-                            connectionStatusText = "No valid telemetry response received"
-                        )
-                    }
-                }
 
-                delay(300)
+                    delay(300)
+                }
+            } finally {
+                isRunning = false
             }
         }
     }
