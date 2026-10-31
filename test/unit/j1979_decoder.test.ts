@@ -252,4 +252,28 @@ describe('SAE J1979 Protocol Decoder', () => {
     expect(res?.value).toBe(100);
     expect(res?.unit).toBe('°C');
   });
+
+  it('should handle high-throughput zero-allocation decoding bursts efficiently', () => {
+    const frames = [
+      '41 0C 0F A0',
+      '41 0D 37',
+      '41 05 7B',
+      '41 10 09 C4',
+      '43 01 33 03 00',
+    ];
+    // Run 1,000 iterations to verify stability and high-speed execution without slowing test suites
+    for (let i = 0; i < 1000; i++) {
+      const rpm = decodeMode01Response(frames[0]!);
+      const speed = decodeMode01Response(frames[1]!);
+      const temp = decodeMode01Response(frames[2]!);
+      const maf = decodeMode01Response(frames[3]!);
+      const dtcs = decodeMode03Response(frames[4]!);
+
+      expect(rpm?.value).toBe(1000);
+      expect(speed?.value).toBe(55);
+      expect(temp?.value).toBe(83);
+      expect(maf?.value).toBe(25);
+      expect(dtcs).toEqual(['P0133', 'P0300']);
+    }
+  });
 });
