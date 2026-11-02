@@ -17,3 +17,6 @@
 ## 2026-09-08 - [Empty States] Actionable Empty States
 **Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
 **Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+## 2026-11-02 - [Accessibility] Avoid redundant screen reader announcements in NavigationBarItem
+**Learning:** In Jetpack Compose, setting the `contentDescription` of an `Icon` inside a `NavigationBarItem` to its title causes screen readers (like TalkBack) to announce the text twice (once for the icon, once for the adjacent label).
+**Action:** Always set the `contentDescription` of decorative `Icon`s inside `NavigationBarItem` or similar components with explicit labels to `null` to avoid redundant and poor auditory UX.
