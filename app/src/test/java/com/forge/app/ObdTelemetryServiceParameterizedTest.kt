@@ -16,7 +16,7 @@ import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
 
 @RunWith(Parameterized::class)
-class ObdTelemetryServiceTest(
+class ObdTelemetryServiceParameterizedTest(
     private val description: String,
     private val rawResponse: String,
     private val expectedRpm: Int?
