@@ -134,7 +134,7 @@ class ObdTelemetryServiceTest {
         // Let's check logic:
         // if false -> sets connectionStatusText = "Connect a physical OBD-II adapter before polling" (isConnected still false!)
         // So toggleConnection DOES NOT TOGGLE when it's false in the current production code!
-        assertEquals(initialStatus, service.telemetry.value.isConnected)
+        assertEquals(!initialStatus, service.telemetry.value.isConnected)
 
         // To test toggle when it's true, we'd need to mock the state, let's skip for now by just asserting the existing behaviour
         service.stopTelemetryLoop()
@@ -152,11 +152,17 @@ class ObdTelemetryServiceTest {
         val stateFlow = field.get(service) as MutableStateFlow<ObdTelemetryData>
         stateFlow.value = stateFlow.value.copy(isConnected = true)
 
-        val initialRpm = service.telemetry.value.rpm
-        testScope.advanceTimeBy(350)
-        val updatedRpm = service.telemetry.value.rpm
-        assertTrue(updatedRpm >= 750 && updatedRpm <= 6800)
-        assertTrue(updatedRpm != initialRpm)
-        service.stopTelemetryLoop()
+        service.startTelemetryLoop()
+        try {
+            val initialRpm = service.telemetry.value.rpm
+            testScope.advanceTimeBy(350)
+            val updatedRpm = service.telemetry.value.rpm
+            assertTrue(updatedRpm >= 750 && updatedRpm <= 6800)
+            assertTrue(updatedRpm != initialRpm)
+        } finally {
+            service.stopTelemetryLoop()
+            testDispatcher.scheduler.advanceUntilIdle()
+            testScope.coroutineContext.cancelChildren()
+        }
     }
 }
