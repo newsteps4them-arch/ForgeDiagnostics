@@ -68,6 +68,12 @@ fun DynoTelematicsScreen(
         ((calculatedWHP * 5252) / baseRpm).coerceAtLeast(30)
     }
 
+    // Bolt Optimization: Pre-allocate Path instances outside Canvas DrawScope using remember.
+    // Reusing and clearing Path objects via .reset() on each frame prevents heap garbage
+    // and frequent GC pressure on the UI thread during real-time telemetry rendering.
+    val hpPath = remember { Path() }
+    val torquePath = remember { Path() }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -226,9 +232,10 @@ fun DynoTelematicsScreen(
                         )
                     }
 
-                    // Dyno HP Curve (Cyan)
-                    val hpPath = Path()
-                    val torquePath = Path()
+                    // Dyno HP Curve (Cyan) and Torque Curve (Amber)
+                    // Reset pre-allocated Path instances to avoid per-draw object allocations
+                    hpPath.reset()
+                    torquePath.reset()
 
                     val points = 50
                     for (i in 0..points) {
