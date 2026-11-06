@@ -17,3 +17,7 @@
 ## 2026-09-08 - [Empty States] Actionable Empty States
 **Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
 **Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+
+## 2026-11-05 - Context-aware ARIA equivalents in lists (Delete Action)
+**Learning:** In Jetpack Compose, when adding an icon-only `IconButton` in a list for deleting items, using a generic `contentDescription` like "Delete Session" repeats the same label for screen reader users without providing context on which item will be deleted.
+**Action:** Always include specific details from the list item in the `contentDescription` for delete actions, such as `"Delete session: ${active.title ?: active.id}"`, to ensure contextual clarity.
