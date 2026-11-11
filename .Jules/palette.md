@@ -17,3 +17,6 @@
 ## 2026-09-08 - [Empty States] Actionable Empty States
 **Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
 **Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+## 2024-11-12 - Redundant TalkBack announcements in NavigationBarItem
+**Learning:** Icons inside `NavigationBarItem` that have an adjacent visible `Text` label shouldn't have a `contentDescription`, as it causes TalkBack to read the item title twice.
+**Action:** Set `contentDescription = null` for `Icon` components when accompanied by a visible label in navigation bars or lists to improve screen reader experience.
