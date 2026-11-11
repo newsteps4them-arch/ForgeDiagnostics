@@ -129,18 +129,33 @@ export function decodeMode01Response(hexString: string): DecodedPid | null {
       return { pid: '11', name: 'Throttle Position', value: (byteA * 100) / 255, unit: '%' };
     case '14': // O2 Sensor 1 Voltage
       return { pid: '14', name: 'O2 Sensor 1 Voltage', value: byteA / 200, unit: 'V' };
+    case '1F': // Run Time Since Engine Start
+      if (bytes.length < 4) return null;
+      return { pid: '1F', name: 'Engine Run Time', value: (byteA * 256) + byteB, unit: 's' };
     case '21': // Distance Traveled with MIL on
       if (bytes.length < 4) return null;
       return { pid: '21', name: 'Distance Traveled with MIL', value: (byteA * 256) + byteB, unit: 'km' };
+    case '2C': // Commanded EGR
+      return { pid: '2C', name: 'Commanded EGR', value: (byteA * 100) / 255, unit: '%' };
+    case '2E': // Commanded Evaporative Purge
+      return { pid: '2E', name: 'Commanded Evaporative Purge', value: (byteA * 100) / 255, unit: '%' };
     case '2F': // Fuel Tank Level
       return { pid: '2F', name: 'Fuel Tank Level', value: (byteA * 100) / 255, unit: '%' };
+    case '31': // Distance Traveled Since Codes Cleared
+      if (bytes.length < 4) return null;
+      return { pid: '31', name: 'Distance Since Codes Cleared', value: (byteA * 256) + byteB, unit: 'km' };
     case '33': // Absolute Barometric Pressure
       return { pid: '33', name: 'Barometric Pressure', value: byteA, unit: 'kPa' };
     case '42': // Control Module Voltage
       if (bytes.length < 4) return null;
       return { pid: '42', name: 'Control Module Voltage', value: ((byteA * 256) + byteB) / 1000, unit: 'V' };
+    case '46': // Ambient Air Temperature
+      return { pid: '46', name: 'Ambient Air Temp', value: byteA - 40, unit: '°C' };
     case '5C': // Engine Oil Temp
       return { pid: '5C', name: 'Engine Oil Temp', value: byteA - 40, unit: '°C' };
+    case '5E': // Engine Fuel Rate
+      if (bytes.length < 4) return null;
+      return { pid: '5E', name: 'Engine Fuel Rate', value: ((byteA * 256) + byteB) / 20, unit: 'L/h' };
     default:
       return { pid, name: `PID_${pid}`, value: byteA, unit: 'raw' };
   }

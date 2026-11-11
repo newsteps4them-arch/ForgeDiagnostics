@@ -173,7 +173,7 @@ object DtcExplanationService {
                 rawGeminiAnalysis = geminiText
             )
 
-            "P0301", "P0302", "P0303", "P0304" -> {
+            "P0301", "P0302", "P0303", "P0304", "P0305", "P0306", "P0307", "P0308" -> {
                 val cylNum = code.last()
                 DtcExplanation(
                     code = code,
@@ -306,39 +306,42 @@ object DtcExplanationService {
                 rawGeminiAnalysis = geminiText
             )
 
-            "P0420" -> DtcExplanation(
-                code = "P0420",
-                standardTitle = "Catalyst System Efficiency Below Threshold (Bank 1)",
-                severity = DtcSeverity.MODERATE,
-                systemCategory = getSaeJ2012Category("P0420"),
-                laymanSummary = "The catalytic converter on Bank 1 is not cleaning the exhaust gases as efficiently as designed by the manufacturer. The secondary oxygen sensor behind the converter is seeing too much fluctuation, meaning the precious metal catalyst bed is worn or fouled.",
-                isSafeToDrive = "YES — Safe for Normal Driving (Fix Before State Emissions Inspection)",
-                safeToDriveReason = "This is strictly an exhaust emissions efficiency fault. The car will drive normally in most cases, but it will fail state smog inspections and may cause mild exhaust odor.",
-                commonSymptoms = listOf(
-                    "Steady Check Engine Light illuminated",
-                    "Slight sulfur or rotten egg smell from tailpipe",
-                    "Failed state vehicle emissions / smog test",
-                    "Reduced engine top-end power if converter is physically clogged",
-                    "Slight decrease in highway fuel efficiency"
-                ),
-                probableCauses = listOf(
-                    DtcProbableCause("Aged or Degraded Catalytic Converter Bed", 50, "Loss of cerium oxygen storage capacity from high mileage (>100k miles)."),
-                    DtcProbableCause("Contamination from Prior Engine Misfires or Oil Burning", 25, "Unburned fuel or phosphorus/silicone poisoned the internal platinum/palladium washcoat."),
-                    DtcProbableCause("Faulty Downstream Oxygen Sensor (Bank 1 Sensor 2)", 15, "Lazy or drifted O2 sensor reporting inaccurate exhaust oxygen fluctuation."),
-                    DtcProbableCause("Exhaust Pipe Leak Near Converter", 10, "Cracked flex pipe or gasket drawing fresh air into post-cat exhaust stream.")
-                ),
-                diagnosticSteps = listOf(
-                    "Check for active misfire (P0300) or fuel trim (P0171/P0172) codes first — fix upstream issues before replacing cat.",
-                    "Graph upstream vs. downstream O2 sensor voltages on oscilloscope: Downstream should remain flat (~0.65V to 0.75V) under steady cruise.",
-                    "Use infrared thermometer to measure inlet vs. outlet converter temp: Outlet should be 50 degrees F - 100 degrees F hotter.",
-                    "Inspect exhaust manifold and flex pipe for pinhole cracks or black soot leaks."
-                ),
-                estimatedRepairCostRange = "$120 - $250 (Downstream O2 Sensor / Gasket) / $600 - $1,800 (OEM Direct-Fit Catalytic Converter)",
-                diyDifficulty = "Moderate (Sensor) / Professional Required (Welding / Exhaust Drop)",
-                verifiedOemSource = "EPA OBD-II Catalyst Monitoring Protocol & SAE J1979 Standards",
-                technicalDetails = "Downstream O2 sensor switch ratio compared against upstream sensor exceeds 0.70 limit, indicating total oxygen storage capacity depletion in catalytic core.",
-                rawGeminiAnalysis = geminiText
-            )
+            "P0420", "P0430" -> {
+                val bank = if (code == "P0420") "Bank 1" else "Bank 2"
+                DtcExplanation(
+                    code = code,
+                    standardTitle = "Catalyst System Efficiency Below Threshold ($bank)",
+                    severity = DtcSeverity.MODERATE,
+                    systemCategory = getSaeJ2012Category(code),
+                    laymanSummary = "The catalytic converter on $bank is not cleaning the exhaust gases as efficiently as designed by the manufacturer. The secondary oxygen sensor behind the converter is seeing too much fluctuation, meaning the precious metal catalyst bed is worn or fouled.",
+                    isSafeToDrive = "YES — Safe for Normal Driving (Fix Before State Emissions Inspection)",
+                    safeToDriveReason = "This is strictly an exhaust emissions efficiency fault. The car will drive normally in most cases, but it will fail state smog inspections and may cause mild exhaust odor.",
+                    commonSymptoms = listOf(
+                        "Steady Check Engine Light illuminated",
+                        "Slight sulfur or rotten egg smell from tailpipe",
+                        "Failed state vehicle emissions / smog test",
+                        "Reduced engine top-end power if converter is physically clogged",
+                        "Slight decrease in highway fuel efficiency"
+                    ),
+                    probableCauses = listOf(
+                        DtcProbableCause("Aged or Degraded Catalytic Converter Bed", 50, "Loss of cerium oxygen storage capacity from high mileage (>100k miles)."),
+                        DtcProbableCause("Contamination from Prior Engine Misfires or Oil Burning", 25, "Unburned fuel or phosphorus/silicone poisoned the internal platinum/palladium washcoat."),
+                        DtcProbableCause("Faulty Downstream Oxygen Sensor ($bank Sensor 2)", 15, "Lazy or drifted O2 sensor reporting inaccurate exhaust oxygen fluctuation."),
+                        DtcProbableCause("Exhaust Pipe Leak Near Converter", 10, "Cracked flex pipe or gasket drawing fresh air into post-cat exhaust stream.")
+                    ),
+                    diagnosticSteps = listOf(
+                        "Check for active misfire (P0300) or fuel trim (P0171/P0172) codes first — fix upstream issues before replacing cat.",
+                        "Graph upstream vs. downstream O2 sensor voltages on oscilloscope: Downstream should remain flat (~0.65V to 0.75V) under steady cruise.",
+                        "Use infrared thermometer to measure inlet vs. outlet converter temp: Outlet should be 50 degrees F - 100 degrees F hotter.",
+                        "Inspect exhaust manifold and flex pipe for pinhole cracks or black soot leaks."
+                    ),
+                    estimatedRepairCostRange = "$120 - $250 (Downstream O2 Sensor / Gasket) / $600 - $1,800 (OEM Direct-Fit Catalytic Converter)",
+                    diyDifficulty = "Moderate (Sensor) / Professional Required (Welding / Exhaust Drop)",
+                    verifiedOemSource = "EPA OBD-II Catalyst Monitoring Protocol & SAE J1979 Standards",
+                    technicalDetails = "Downstream O2 sensor switch ratio compared against upstream sensor exceeds 0.70 limit, indicating total oxygen storage capacity depletion in catalytic core.",
+                    rawGeminiAnalysis = geminiText
+                )
+            }
 
             "P0128" -> DtcExplanation(
                 code = "P0128",
