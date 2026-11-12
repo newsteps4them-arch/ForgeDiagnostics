@@ -145,7 +145,7 @@ fun NavigationDrawerContent(
                             ) {
                                 Icon(
                                     imageVector = item.icon,
-                                    contentDescription = item.title,
+                                    contentDescription = null,
                                     tint = if (selected) ForgeAmber else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp)
                                 )
