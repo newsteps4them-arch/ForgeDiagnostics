@@ -11,16 +11,22 @@ import dtc_utils
 class TestDtcUtils(unittest.TestCase):
 
     def test_is_hex_value(self):
-        self.assertTrue(dtc_utils.is_hex_value("0"))
-        self.assertTrue(dtc_utils.is_hex_value("f"))
-        self.assertTrue(dtc_utils.is_hex_value("A"))
-        self.assertFalse(dtc_utils.is_hex_value("g"))
-        self.assertFalse(dtc_utils.is_hex_value("Z"))
-        self.assertFalse(dtc_utils.is_hex_value(""))
+        valid_hex = ["0", "5", "9", "A", "F", "a", "f"]
+        invalid_hex = ["G", "z", "!", " ", "10", ""]
+
+        for char in valid_hex:
+            self.assertTrue(dtc_utils.is_hex_value(char), f"Expected {char} to be hex")
+
+        for char in invalid_hex:
+            self.assertFalse(dtc_utils.is_hex_value(char), f"Expected {char} not to be hex")
 
     def test_is_dtc_valid(self):
         # Valid DTCs for all groups (P, C, B, U) and types (0, 1, 2, 3)
         self.assertTrue(dtc_utils.is_dtc_valid("P0001"))
+        self.assertTrue(dtc_utils.is_dtc_valid("P0100"))
+        self.assertTrue(dtc_utils.is_dtc_valid("C0171"))
+        self.assertTrue(dtc_utils.is_dtc_valid("B0001"))
+        self.assertTrue(dtc_utils.is_dtc_valid("U0100"))
         self.assertTrue(dtc_utils.is_dtc_valid("B1477"))
         self.assertTrue(dtc_utils.is_dtc_valid("C2123"))
         self.assertTrue(dtc_utils.is_dtc_valid("U3FFF"))
@@ -52,12 +58,15 @@ class TestDtcUtils(unittest.TestCase):
         self.assertEqual(dtc_utils.get_dtc_first_byte("C2123"), bytes([0x61]))
         # U3FFF -> U=11, 3=11 -> 0xF0 | 0x0F = 0xFF
         self.assertEqual(dtc_utils.get_dtc_first_byte("U3FFF"), bytes([0xFF]))
+        # C0171 -> C=01, 0=00 -> 0x40 | 0x01 = 0x41
+        self.assertEqual(dtc_utils.get_dtc_first_byte("C0171"), bytes([0x41]))
 
     def test_get_dtc_second_byte(self):
         self.assertEqual(dtc_utils.get_dtc_second_byte("P0001"), bytes([0x01]))
         self.assertEqual(dtc_utils.get_dtc_second_byte("B1477"), bytes([0x77]))
         self.assertEqual(dtc_utils.get_dtc_second_byte("C2123"), bytes([0x23]))
         self.assertEqual(dtc_utils.get_dtc_second_byte("U3FFF"), bytes([0xFF]))
+        self.assertEqual(dtc_utils.get_dtc_second_byte("C0171"), bytes([0x71]))
 
     def test_encode_obd_dtcs(self):
         # Empty list
