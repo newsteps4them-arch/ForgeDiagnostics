@@ -833,7 +833,7 @@ fun MacroButton(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(imageVector = icon, contentDescription = title, tint = color, modifier = Modifier.size(18.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = title,
@@ -946,7 +946,7 @@ fun QuickToolButton(title: String, icon: androidx.compose.ui.graphics.vector.Ima
             modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(imageVector = icon, contentDescription = title, tint = ForgeCyan, modifier = Modifier.size(20.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = ForgeCyan, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.height(6.dp))
             Text(text = title, fontSize = 10.sp, fontWeight = FontWeight.Medium, color = ForgeOnSurface)
         }
