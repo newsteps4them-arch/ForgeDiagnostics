@@ -62,6 +62,10 @@ fun OpenManusTelemetryDashboard(
     val fuelTrimHistory = remember { mutableStateListOf<Float>() }
     val coolantHistory = remember { mutableStateListOf<Float>() }
 
+    // Performance Optimization (Bolt): Pre-allocate Path object outside DrawScope and reuse via .reset()
+    // Prevents allocating Path objects per redraw during continuous high-frequency telemetry ingestion.
+    val sparklinePath = remember { Path() }
+
     // Capture rolling data points when unpaused
     LaunchedEffect(telemetry.rpm, isStreamPaused) {
         if (!isStreamPaused) {
@@ -446,18 +450,18 @@ fun OpenManusTelemetryDashboard(
                             if (currentHistory.size >= 2) {
                                 val minVal = currentHistory.minOrNull() ?: 0f
                                 val maxVal = (currentHistory.maxOrNull() ?: 1f).coerceAtLeast(minVal + 1f)
-                                val path = Path()
+                                sparklinePath.reset()
                                 val stepX = width / (currentHistory.size - 1)
 
                                 currentHistory.forEachIndexed { index, value ->
                                     val norm = (value - minVal) / (maxVal - minVal)
                                     val x = index * stepX
                                     val y = height - (norm * (height - 8f) + 4f)
-                                    if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                                    if (index == 0) sparklinePath.moveTo(x, y) else sparklinePath.lineTo(x, y)
                                 }
 
                                 drawPath(
-                                    path = path,
+                                    path = sparklinePath,
                                     color = graphColor,
                                     style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
                                 )
