@@ -47,6 +47,11 @@ fun OscilloscopeScreen() {
     var showPhosphorGlow by remember { mutableStateOf(true) }
     var activeChannelTab by remember { mutableIntStateOf(0) } // 0 = CH1+CH2, 1 = CH1, 2 = CH2
 
+    // Pre-allocated Path instances reused across DrawScope frames to prevent GC jank
+    val pathCH1 = remember { Path() }
+    val glowPathCH1 = remember { Path() }
+    val pathCH2 = remember { Path() }
+
     // Continuous Real-Time Sweep / Phase Shift Animation
     val infiniteTransition = rememberInfiniteTransition(label = "scope_anim")
     val phaseOffset by infiniteTransition.animateFloat(
@@ -215,8 +220,9 @@ fun OscilloscopeScreen() {
 
                     // CH1 Waveform (Amber - Crank Sensor 60-2 Square Pulse with missing teeth pattern)
                     if (activeChannelTab == 0 || activeChannelTab == 1) {
-                        val pathCH1 = Path()
-                        val glowPathCH1 = Path()
+                        // Reset pre-allocated paths to eliminate per-frame allocations during 60fps rendering
+                        pathCH1.reset()
+                        glowPathCH1.reset()
                         val points = 240
 
                         for (p in 0 until points) {
@@ -256,7 +262,8 @@ fun OscilloscopeScreen() {
 
                     // CH2 Waveform (Cyan - Camshaft Sine / Hall pulse)
                     if (activeChannelTab == 0) {
-                        val pathCH2 = Path()
+                        // Reset pre-allocated path to eliminate per-frame allocations during 60fps rendering
+                        pathCH2.reset()
                         val points = 240
 
                         for (p in 0 until points) {
