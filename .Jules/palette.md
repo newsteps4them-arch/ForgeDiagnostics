@@ -17,3 +17,6 @@
 ## 2026-09-08 - [Empty States] Actionable Empty States
 **Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
 **Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+## 2026-10-26 - Context-aware ARIA equivalents in lists (JulesAgentDialog)
+**Learning:** Found an accessibility issue where an icon-only `IconButton` in `JulesAgentDialog.kt` for deleting a session had a generic contentDescription ("Delete Session"). This repeats for every item in a list without context.
+**Action:** Replaced static contentDescription with dynamic, context-aware string: `"Delete session: ${active.title ?: active.id}"` to specifically identify which session is being acted upon for screen readers.
