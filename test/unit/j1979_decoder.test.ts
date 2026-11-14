@@ -252,4 +252,63 @@ describe('SAE J1979 Protocol Decoder', () => {
     expect(res?.value).toBe(100);
     expect(res?.unit).toBe('°C');
   });
+
+  it('should decode Monitor Status since DTCs cleared (PID 01)', () => {
+    const res = decodeMode01Response('41 01 82 07 65 04');
+    expect(res?.pid).toBe('01');
+    expect(res?.name).toBe('Monitor Status');
+    expect(res?.value).toBe('MIL: ON, DTCs: 2');
+    expect(res?.unit).toBe('status');
+  });
+
+  it('should decode Fuel System Status (PID 03)', () => {
+    const res = decodeMode01Response('41 03 02 00');
+    expect(res?.pid).toBe('03');
+    expect(res?.name).toBe('Fuel System Status');
+    expect(res?.value).toBe('Sys1: 2, Sys2: 0');
+    expect(res?.unit).toBe('status');
+  });
+
+  it('should decode Run Time Since Engine Start (PID 1F)', () => {
+    const res = decodeMode01Response('41 1F 0E 10');
+    expect(res?.pid).toBe('1F');
+    expect(res?.name).toBe('Run Time Since Engine Start');
+    expect(res?.value).toBe(3600);
+    expect(res?.unit).toBe('s');
+  });
+
+  it('should decode Commanded EGR (PID 2C)', () => {
+    const res = decodeMode01Response('41 2C 80');
+    expect(res?.pid).toBe('2C');
+    expect(res?.name).toBe('Commanded EGR');
+    expect(res?.value).toBeCloseTo(50.196, 3);
+    expect(res?.unit).toBe('%');
+  });
+
+  it('should decode Commanded Evaporative Purge (PID 2E)', () => {
+    const res = decodeMode01Response('41 2E BF');
+    expect(res?.pid).toBe('2E');
+    expect(res?.name).toBe('Commanded Evaporative Purge');
+    expect(res?.value).toBeCloseTo(74.902, 3);
+    expect(res?.unit).toBe('%');
+  });
+
+  it('should decode Ambient Air Temperature (PID 46)', () => {
+    const res = decodeMode01Response('41 46 5A');
+    expect(res?.pid).toBe('46');
+    expect(res?.name).toBe('Ambient Air Temp');
+    expect(res?.value).toBe(50);
+    expect(res?.unit).toBe('°C');
+  });
+
+  it('should decode Fuel Type (PID 51)', () => {
+    const resGas = decodeMode01Response('41 51 01');
+    expect(resGas?.pid).toBe('51');
+    expect(resGas?.name).toBe('Fuel Type');
+    expect(resGas?.value).toBe('Gasoline');
+    expect(resGas?.unit).toBe('enum');
+
+    const resDiesel = decodeMode01Response('41 51 04');
+    expect(resDiesel?.value).toBe('Diesel');
+  });
 });
