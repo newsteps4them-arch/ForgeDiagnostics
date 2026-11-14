@@ -252,4 +252,56 @@ describe('SAE J1979 Protocol Decoder', () => {
     expect(res?.value).toBe(100);
     expect(res?.unit).toBe('°C');
   });
+
+  it('should decode OBD Standards Compliance (PID 1C)', () => {
+    const res = decodeMode01Response('41 1C 06');
+    expect(res?.pid).toBe('1C');
+    expect(res?.name).toBe('OBD Standards Compliance');
+    expect(res?.value).toBe(6);
+    expect(res?.unit).toBe('standard');
+  });
+
+  it('should decode Run Time Since Engine Start (PID 1F)', () => {
+    const res = decodeMode01Response('41 1F 01 2C');
+    expect(res?.pid).toBe('1F');
+    expect(res?.name).toBe('Run Time Since Engine Start');
+    expect(res?.value).toBe(300);
+    expect(res?.unit).toBe('s');
+  });
+
+  it('should return null for truncated Run Time response (PID 1F)', () => {
+    expect(decodeMode01Response('41 1F 01')).toBeNull();
+  });
+
+  it('should decode Distance Traveled Since Codes Cleared (PID 31)', () => {
+    const res = decodeMode01Response('41 31 01 F4');
+    expect(res?.pid).toBe('31');
+    expect(res?.name).toBe('Distance Traveled Since Codes Cleared');
+    expect(res?.value).toBe(500);
+    expect(res?.unit).toBe('km');
+  });
+
+  it('should return null for truncated Distance Traveled Since Codes Cleared (PID 31)', () => {
+    expect(decodeMode01Response('41 31 01')).toBeNull();
+  });
+
+  it('should decode Ambient Air Temp (PID 46)', () => {
+    const res = decodeMode01Response('41 46 5A');
+    expect(res?.pid).toBe('46');
+    expect(res?.name).toBe('Ambient Air Temp');
+    expect(res?.value).toBe(50);
+    expect(res?.unit).toBe('°C');
+  });
+
+  it('should decode Engine Fuel Rate (PID 5E)', () => {
+    const res = decodeMode01Response('41 5E 00 FA');
+    expect(res?.pid).toBe('5E');
+    expect(res?.name).toBe('Engine Fuel Rate');
+    expect(res?.value).toBeCloseTo(12.5, 1);
+    expect(res?.unit).toBe('L/h');
+  });
+
+  it('should return null for truncated Engine Fuel Rate response (PID 5E)', () => {
+    expect(decodeMode01Response('41 5E 00')).toBeNull();
+  });
 });
