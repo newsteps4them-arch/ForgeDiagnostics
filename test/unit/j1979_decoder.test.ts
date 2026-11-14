@@ -157,6 +157,11 @@ describe('SAE J1979 Protocol Decoder', () => {
     expect(decodeMode01Response('41 0D 3')).toBeNull();
   });
 
+  it('should reject oversized hex strings exceeding buffer capacity without throwing', () => {
+    const oversizedHex = '41 0D ' + '00'.repeat(300);
+    expect(decodeMode01Response(oversizedHex)).toBeNull();
+  });
+
   it('should decode signed and maximum single-byte PID boundaries', () => {
     expect(decodeMode01Response('41 05 00')?.value).toBe(-40);
     expect(decodeMode01Response('41 0F FF')?.value).toBe(215);
