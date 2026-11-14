@@ -17,3 +17,4 @@
 ## 2026-09-08 - [Empty States] Actionable Empty States
 **Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
 **Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+## 2026-10-21 - [Accessibility] Dynamic contentDescription for stateful toggle buttons\n**Learning:** Found a toggle button (Torch/Flashlight) in `BarcodeScannerSheet.kt` that had a static `contentDescription = "Toggle Torch"`. For screen reader users, this is unhelpful because it doesn't indicate the current state or the result of the action.\n**Action:** Replaced static string with a state-aware string: `if (isFlashOn) "Turn Torch Off" else "Turn Torch On"` to ensure users know exactly what the button will do.
