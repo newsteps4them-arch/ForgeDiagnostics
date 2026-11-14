@@ -50,6 +50,12 @@ def get_engine_temperature():
     return random.randrange(ENGINE_TEMP_MIN, ENGINE_TEMP_MAX).to_bytes(1, BIG_ENDIAN)
 
 
+def get_engine_rpm():
+    # RPM formula: ((A * 256) + B) / 4. Target ~800-3000 RPM -> A*256+B in [3200, 12000]
+    rpm_raw = random.randrange(3200, 12000)
+    return rpm_raw.to_bytes(2, BIG_ENDIAN)
+
+
 def get_map_pressure():
     # 30 to 100 kPa
     return random.randrange(30, 101).to_bytes(1, BIG_ENDIAN)
