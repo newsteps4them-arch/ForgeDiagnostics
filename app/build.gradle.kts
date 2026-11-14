@@ -1,5 +1,7 @@
 import java.util.Properties
 import java.io.FileInputStream
+import org.gradle.api.Action
+import org.gradle.api.execution.TaskExecutionGraph
 
 plugins {
     alias(libs.plugins.android.application)
@@ -38,8 +40,9 @@ val hasReleaseSigning = !releaseStoreFile.isNullOrBlank()
 // (and CI before the keystore exists) still configure and run.
 gradle.taskGraph.whenReady(object : Action<TaskExecutionGraph> {
     override fun execute(graph: TaskExecutionGraph) {
+        val releaseTaskNames = setOf("assembleRelease", "bundleRelease", "packageRelease")
         val buildingRelease = graph.allTasks.any { task ->
-            task.name.contains("Release", ignoreCase = true)
+            releaseTaskNames.contains(task.name)
         }
         if (buildingRelease && !hasReleaseSigning) {
             throw GradleException(
