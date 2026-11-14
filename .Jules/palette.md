@@ -17,3 +17,7 @@
 ## 2026-09-08 - [Empty States] Actionable Empty States
 **Learning:** Found an empty state in `ProjectDashboard.kt` that displayed a static message ("No tasks found...") without offering a way forward. This leaves users at a dead end when starting a new project.
 **Action:** Always include a relevant Call-To-Action (CTA) button and contextual guidance within empty states to encourage interaction and reduce user friction.
+
+## 2024-05-24 - [Accessibility] Fix duplicate reading in NavigationBarItem
+**Learning:** In Android Jetpack Compose, setting the `contentDescription` of an `Icon` inside a `NavigationBarItem` to the item's title causes screen readers (like TalkBack) to read the label twice, because the parent `NavigationBarItem` and its text label are already announced. The `contentDescription` for the `Icon` should be set to `null` to avoid redundancy.
+**Action:** When using `NavigationBarItem` or similar components containing both an `Icon` and text `label`, set the `Icon`'s `contentDescription` to `null` to prevent double-readings by screen readers.
